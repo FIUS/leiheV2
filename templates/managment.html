@@ -1,0 +1,126 @@
+{{ define "content" }}
+<div class="mb-8 flex justify-between items-center">
+    <h2 class="text-3xl font-bold text-gray-800">Spieleverwaltung</h2>
+</div>
+
+<!-- FORMULAR: Neues Spiel anlegen -->
+<div class="bg-white p-6 rounded-lg shadow-md mb-10">
+    <h3 class="text-xl font-semibold mb-4">Neues Spiel hinzufügen</h3>
+
+    <!-- Wir senden die Daten per POST an unsere API -->
+    <form action="/api/items" method="POST" class="space-y-4">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Name & BGG Suche -->
+            <div class="col-span-1 md:col-span-2 flex gap-2">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700">Spielname</label>
+                    <input type="text" id="gameName" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+                <div class="flex items-end">
+                    <button type="button" onclick="searchBGG()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                        Daten aus BGG laden
+                    </button>
+                </div>
+            </div>
+
+            <!-- BGG ID & Bild (Versteckt / Readonly für den Nutzer) -->
+            <input type="hidden" id="bggId" name="bgg_id">
+            <input type="hidden" id="imageUrl" name="image_url">
+
+            <!-- Spieleranzahl -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Min. Spieler</label>
+                <input type="number" id="minPlayers" name="min_players" value="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Max. Spieler</label>
+                <input type="number" id="maxPlayers" name="max_players" value="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+            </div>
+
+            <!-- Spieldauer -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Min. Dauer (Minuten)</label>
+                <input type="number" id="minPlaytime" name="min_playtime" value="15" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Max. Dauer (Minuten)</label>
+                <input type="number" id="maxPlaytime" name="max_playtime" value="60" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+            </div>
+        </div>
+
+        <div class="mt-4 flex justify-end">
+            <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 transition">
+                Speichern
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- TABELLE: Bestand -->
+<div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+        <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Spieler</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktion</th>
+        </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+        {{ range .Games }}
+        <tr>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#{{ .ID }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ .Name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ .MinPlayers }} - {{ .MaxPlayers }}</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                {{ if eq .Status "available" }}
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Verfügbar</span>
+                {{ else }}
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">{{ .Status }}</span>
+                {{ end }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <a href="#" class="text-blue-600 hover:text-blue-900">Bearbeiten</a>
+            </td>
+        </tr>
+        {{ end }}
+        </tbody>
+    </table>
+</div>
+
+<!-- SCRIPT: BGG Live-Suche (Ersatz für Livewire) -->
+<script>
+    async function searchBGG() {
+        const nameInput = document.getElementById('gameName').value;
+        if (!nameInput) {
+            alert("Bitte zuerst einen Namen eingeben!");
+            return;
+        }
+
+        try {
+            // Ruft unsere Go-Route auf, die wir vorhin besprochen haben
+            const response = await fetch(`/api/bgg/search?name=${encodeURIComponent(nameInput)}`);
+
+            if (!response.ok) {
+                throw new Error("Spiel nicht bei BGG gefunden");
+            }
+
+            const data = await response.json();
+
+            document.getElementById('minPlayers').value = data.min_players;
+            document.getElementById('maxPlayers').value = data.max_players;
+
+            if (data.image_url) {
+                document.getElementById('imageUrl').value = data.image_url;
+                alert("BGG Daten & Cover erfolgreich geladen!");
+            }
+
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+</script>
+{{ end }}

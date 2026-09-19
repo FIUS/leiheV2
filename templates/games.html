@@ -1,0 +1,34 @@
+{{ define "content" }}
+<h2 class="text-3xl font-bold mb-6">Unsere Spiele</h2>
+
+<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    <!-- Go Template Schleife über das Array, das wir von Gin übergeben -->
+    {{ range .Games }}
+    <div class="bg-white p-4 rounded-lg shadow">
+
+        <!-- Bild anzeigen (Fallback, falls keins da ist) -->
+        {{ if .CustomImageUrl.Valid }}
+        <img src="{{ .CustomImageUrl.String }}" class="w-full h-48 object-cover rounded mb-4" alt="Cover">
+        {{ else if .ImageUrl.Valid }}
+        <img src="{{ .ImageUrl.String }}" class="w-full h-48 object-cover rounded mb-4" alt="Cover">
+        {{ else }}
+        <div class="w-full h-48 bg-gray-200 flex items-center justify-center rounded mb-4">Kein Bild</div>
+        {{ end }}
+
+        <!-- Spieldaten -->
+        <h3 class="text-xl font-bold">{{ .Name }}</h3>
+        <p class="text-gray-600 mt-2">Spieler: {{ .MinPlayers }} - {{ .MaxPlayers }}</p>
+        <p class="text-gray-600">Dauer: {{ .MinPlaytime }} - {{ .MaxPlaytime }} Min.</p>
+
+        <!-- Status Badge -->
+        <div class="mt-4">
+            {{ if eq .Status "available" }}
+            <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">Verfügbar</span>
+            {{ else }}
+            <span class="bg-red-100 text-red-800 px-2 py-1 rounded text-sm">Ausgeliehen</span>
+            {{ end }}
+        </div>
+    </div>
+    {{ end }}
+</div>
+{{ end }}
