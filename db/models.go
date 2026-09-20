@@ -27,16 +27,17 @@ type Category struct {
 }
 
 type Item struct {
-	ID          int32
-	Name        string
-	Isbn        sql.NullString
-	Description sql.NullString
-	ImageUrl    sql.NullString
-	MinPlayers  int32
-	MaxPlayers  int32
-	MinPlaytime int32
-	MaxPlaytime int32
-	Status      string
+	ID             int32
+	Name           string
+	Isbn           sql.NullString
+	Description    sql.NullString
+	ImageUrl       sql.NullString
+	CustomImageUrl sql.NullString
+	MinPlayers     int32
+	MaxPlayers     int32
+	MinPlaytime    int32
+	MaxPlaytime    int32
+	Status         string
 }
 
 type ItemCategory struct {

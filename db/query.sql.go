@@ -56,23 +56,24 @@ func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (B
 
 const createItem = `-- name: CreateItem :one
 INSERT INTO items (
-    name, isbn, description, image_url,
+    name, isbn, description, image_url, custom_image_url,
     min_players, max_players, min_playtime, max_playtime, status
 ) VALUES (
-             $1, $2, $3, $4, $5, $6, $7, $8, $9
-         ) RETURNING id, name, isbn, description, image_url, min_players, max_players, min_playtime, max_playtime, status
+             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+         ) RETURNING id, name, isbn, description, image_url, custom_image_url, min_players, max_players, min_playtime, max_playtime, status
 `
 
 type CreateItemParams struct {
-	Name        string
-	Isbn        sql.NullString
-	Description sql.NullString
-	ImageUrl    sql.NullString
-	MinPlayers  int32
-	MaxPlayers  int32
-	MinPlaytime int32
-	MaxPlaytime int32
-	Status      string
+	Name           string
+	Isbn           sql.NullString
+	Description    sql.NullString
+	ImageUrl       sql.NullString
+	CustomImageUrl sql.NullString
+	MinPlayers     int32
+	MaxPlayers     int32
+	MinPlaytime    int32
+	MaxPlaytime    int32
+	Status         string
 }
 
 func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, error) {
@@ -81,6 +82,7 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 		arg.Isbn,
 		arg.Description,
 		arg.ImageUrl,
+		arg.CustomImageUrl,
 		arg.MinPlayers,
 		arg.MaxPlayers,
 		arg.MinPlaytime,
@@ -94,6 +96,7 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 		&i.Isbn,
 		&i.Description,
 		&i.ImageUrl,
+		&i.CustomImageUrl,
 		&i.MinPlayers,
 		&i.MaxPlayers,
 		&i.MinPlaytime,
@@ -104,7 +107,7 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 }
 
 const getItem = `-- name: GetItem :one
-SELECT id, name, isbn, description, image_url, min_players, max_players, min_playtime, max_playtime, status FROM items WHERE id = $1 LIMIT 1
+SELECT id, name, isbn, description, image_url, custom_image_url, min_players, max_players, min_playtime, max_playtime, status FROM items WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetItem(ctx context.Context, id int32) (Item, error) {
@@ -116,6 +119,7 @@ func (q *Queries) GetItem(ctx context.Context, id int32) (Item, error) {
 		&i.Isbn,
 		&i.Description,
 		&i.ImageUrl,
+		&i.CustomImageUrl,
 		&i.MinPlayers,
 		&i.MaxPlayers,
 		&i.MinPlaytime,
@@ -125,8 +129,35 @@ func (q *Queries) GetItem(ctx context.Context, id int32) (Item, error) {
 	return i, err
 }
 
+const listCategories = `-- name: ListCategories :many
+SELECT id, name FROM categories ORDER BY name
+`
+
+func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
+	rows, err := q.db.QueryContext(ctx, listCategories)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Category
+	for rows.Next() {
+		var i Category
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listItems = `-- name: ListItems :many
-SELECT id, name, isbn, description, image_url, min_players, max_players, min_playtime, max_playtime, status FROM items ORDER BY name
+SELECT id, name, isbn, description, image_url, custom_image_url, min_players, max_players, min_playtime, max_playtime, status FROM items ORDER BY name
 `
 
 func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
@@ -144,6 +175,7 @@ func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
 			&i.Isbn,
 			&i.Description,
 			&i.ImageUrl,
+			&i.CustomImageUrl,
 			&i.MinPlayers,
 			&i.MaxPlayers,
 			&i.MinPlaytime,
@@ -161,6 +193,107 @@ func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const listItemsWithCategories = `-- name: ListItemsWithCategories :many
+SELECT items.id, items.name, items.isbn, items.description, items.image_url, items.custom_image_url, items.min_players, items.max_players, items.min_playtime, items.max_playtime, items.status, COALESCE(string_agg(categories.name, ','), '')::text AS category_names
+FROM items
+         LEFT JOIN item_categories ON items.id = item_categories.item_id
+         LEFT JOIN categories ON item_categories.category_id = categories.id
+GROUP BY items.id
+ORDER BY items.name
+`
+
+type ListItemsWithCategoriesRow struct {
+	ID             int32
+	Name           string
+	Isbn           sql.NullString
+	Description    sql.NullString
+	ImageUrl       sql.NullString
+	CustomImageUrl sql.NullString
+	MinPlayers     int32
+	MaxPlayers     int32
+	MinPlaytime    int32
+	MaxPlaytime    int32
+	Status         string
+	CategoryNames  string
+}
+
+func (q *Queries) ListItemsWithCategories(ctx context.Context) ([]ListItemsWithCategoriesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listItemsWithCategories)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListItemsWithCategoriesRow
+	for rows.Next() {
+		var i ListItemsWithCategoriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Isbn,
+			&i.Description,
+			&i.ImageUrl,
+			&i.CustomImageUrl,
+			&i.MinPlayers,
+			&i.MaxPlayers,
+			&i.MinPlaytime,
+			&i.MaxPlaytime,
+			&i.Status,
+			&i.CategoryNames,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateItem = `-- name: UpdateItem :exec
+UPDATE items
+SET name = $2, min_players = $3, max_players = $4, min_playtime = $5, max_playtime = $6
+WHERE id = $1
+`
+
+type UpdateItemParams struct {
+	ID          int32
+	Name        string
+	MinPlayers  int32
+	MaxPlayers  int32
+	MinPlaytime int32
+	MaxPlaytime int32
+}
+
+func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) error {
+	_, err := q.db.ExecContext(ctx, updateItem,
+		arg.ID,
+		arg.Name,
+		arg.MinPlayers,
+		arg.MaxPlayers,
+		arg.MinPlaytime,
+		arg.MaxPlaytime,
+	)
+	return err
+}
+
+const updateItemCustomImage = `-- name: UpdateItemCustomImage :exec
+UPDATE items SET custom_image_url = $1 WHERE id = $2
+`
+
+type UpdateItemCustomImageParams struct {
+	CustomImageUrl sql.NullString
+	ID             int32
+}
+
+func (q *Queries) UpdateItemCustomImage(ctx context.Context, arg UpdateItemCustomImageParams) error {
+	_, err := q.db.ExecContext(ctx, updateItemCustomImage, arg.CustomImageUrl, arg.ID)
+	return err
 }
 
 const updateItemStatus = `-- name: UpdateItemStatus :exec

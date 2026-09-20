@@ -1,34 +1,222 @@
-{{ define "content" }}
-<h2 class="text-3xl font-bold mb-6">Unsere Spiele</h2>
+{{ template "header" . }}
 
-<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-    <!-- Go Template Schleife über das Array, das wir von Gin übergeben -->
-    {{ range .Games }}
-    <div class="bg-white p-4 rounded-lg shadow">
+<div class="space-y-6 relative"
+     x-data="{
+        search: '',
+        sortBy: 'name',
+        viewMode: 'grid', /* 'grid', 'list-img', 'list' */
+        playersFilter: 0,
+        minDurationFilter: 5,
+        maxDurationFilter: 245,
+        selectedCategories: [],
 
-        <!-- Bild anzeigen (Fallback, falls keins da ist) -->
-        {{ if .CustomImageUrl.Valid }}
-        <img src="{{ .CustomImageUrl.String }}" class="w-full h-48 object-cover rounded mb-4" alt="Cover">
-        {{ else if .ImageUrl.Valid }}
-        <img src="{{ .ImageUrl.String }}" class="w-full h-48 object-cover rounded mb-4" alt="Cover">
-        {{ else }}
-        <div class="w-full h-48 bg-gray-200 flex items-center justify-center rounded mb-4">Kein Bild</div>
-        {{ end }}
+        validateMinDuration() {
+            if (parseInt(this.minDurationFilter) > parseInt(this.maxDurationFilter)) {
+                this.maxDurationFilter = this.minDurationFilter;
+            }
+        },
+        validateMaxDuration() {
+            if (parseInt(this.maxDurationFilter) < parseInt(this.minDurationFilter)) {
+                this.minDurationFilter = this.maxDurationFilter;
+            }
+        },
 
-        <!-- Spieldaten -->
-        <h3 class="text-xl font-bold">{{ .Name }}</h3>
-        <p class="text-gray-600 mt-2">Spieler: {{ .MinPlayers }} - {{ .MaxPlayers }}</p>
-        <p class="text-gray-600">Dauer: {{ .MinPlaytime }} - {{ .MaxPlaytime }} Min.</p>
+        resetFilters() {
+            this.search = '';
+            this.playersFilter = 0;
+            this.minDurationFilter = 5;
+            this.maxDurationFilter = 245;
+        }
+     }">
 
-        <!-- Status Badge -->
-        <div class="mt-4">
-            {{ if eq .Status "available" }}
-            <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">Verfügbar</span>
-            {{ else }}
-            <span class="bg-red-100 text-red-800 px-2 py-1 rounded text-sm">Ausgeliehen</span>
-            {{ end }}
+    <!-- Top Bar (Suche, Sortierung, Ansichten) -->
+    <div class="bg-fius-card p-4 rounded-xl shadow-sm border border-fius-border flex flex-col lg:flex-row justify-between items-center gap-4">
+
+        <!-- Suche -->
+        <div class="w-full lg:w-80 relative">
+            <input type="text" x-model="search" placeholder="Durchsuchen..." class="w-full pl-10 pr-4 py-2 bg-fius-bg border border-fius-border rounded-md text-gray-100 text-sm focus:outline-none focus:border-blue-500">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center text-fius-muted">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+        </div>
+
+        <!-- Sortieren (UI-Dummy für späteres Backend/JS-Sorting) -->
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-semibold uppercase text-fius-muted mr-1">Sortieren:</span>
+            <button @click="sortBy = 'name'" :class="sortBy === 'name' ? 'bg-[#1E2532] border-blue-500 text-blue-500' : 'bg-fius-bg border-fius-border text-gray-100'" class="px-3 py-1.5 text-xs rounded-md border transition-colors">Name</button>
+            <button @click="sortBy = 'duration'" :class="sortBy === 'duration' ? 'bg-[#1E2532] border-blue-500 text-blue-500' : 'bg-fius-bg border-fius-border text-gray-100'" class="px-3 py-1.5 text-xs rounded-md border transition-colors">Dauer</button>
+            <button @click="sortBy = 'players'" :class="sortBy === 'players' ? 'bg-[#1E2532] border-blue-500 text-blue-500' : 'bg-fius-bg border-fius-border text-gray-100'" class="px-3 py-1.5 text-xs rounded-md border transition-colors">Spieler</button>
+        </div>
+
+        <!-- View Modes (Kachel, Liste+Bild, Liste) -->
+        <div class="flex items-center gap-4">
+            <div class="inline-flex rounded-md shadow-sm border border-fius-border p-0.5 bg-fius-bg">
+                <!-- Kacheln -->
+                <button @click="viewMode = 'grid'" title="Kacheln" :class="viewMode === 'grid' ? 'bg-fius-card text-blue-500 shadow-sm' : 'text-fius-muted'" class="p-1.5 rounded transition-colors">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                </button>
+                <!-- Liste mit Bild (Neu) -->
+                <button @click="viewMode = 'list-img'" title="Liste mit Bild" :class="viewMode === 'list-img' ? 'bg-fius-card text-blue-500 shadow-sm' : 'text-fius-muted'" class="p-1.5 rounded transition-colors">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16M4 6v4h4V6H4z"></path></svg>
+                </button>
+                <!-- Liste pur -->
+                <button @click="viewMode = 'list'" title="Liste pur" :class="viewMode === 'list' ? 'bg-fius-card text-blue-500 shadow-sm' : 'text-fius-muted'" class="p-1.5 rounded transition-colors">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+            </div>
+
+            <!-- Leihkorb Icon -->
+            <a href="#leihkorb" class="relative inline-flex items-center p-2 text-sm text-gray-100 bg-fius-bg border border-fius-border rounded-lg">
+                <svg class="w-6 h-6 text-fius-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            </a>
         </div>
     </div>
-    {{ end }}
+
+    <!-- Main Content Area: Sidebar + Games -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+
+        <!-- Sidebar (Filter) -->
+        <div class="lg:col-span-1 bg-fius-card p-5 rounded-xl border border-fius-border shadow-sm h-fit space-y-6">
+            <div class="flex justify-between items-center border-b border-fius-border pb-3">
+                <h3 class="font-bold text-gray-100 text-xs uppercase">Filter</h3>
+                <button @click="resetFilters()" type="button" class="text-xs text-blue-500 hover:underline">Zurücksetzen</button>
+            </div>
+
+            <!-- Range: Spieler -->
+            <div class="space-y-3 pt-2">
+                <label class="block text-xs font-bold text-fius-muted uppercase flex justify-between">
+                    <span>Spieler</span>
+                    <span class="font-mono text-blue-500 text-[11px] bg-fius-bg px-2 py-0.5 rounded border border-fius-border" x-text="playersFilter == 0 ? 'Alle' : playersFilter + ' P.'"></span>
+                </label>
+                <input type="range" x-model="playersFilter" min="0" max="10" class="w-full h-1 bg-fius-border rounded-lg appearance-none accent-blue-500">
+            </div>
+
+            <!-- Auswahl: Kategorien -->
+            <div class="space-y-3 mb-6">
+                <label class="block text-xs font-bold text-fius-muted uppercase">Kategorien</label>
+                <div class="max-h-48 overflow-y-auto space-y-2 pr-1">
+                    {{ range .Categories }}
+                    <label class="flex items-center gap-3 text-sm text-gray-200 cursor-pointer">
+                        <input type="checkbox" value="{{ .Name }}" x-model="selectedCategories" class="accent-blue-500 w-4 h-4 bg-fius-bg border-fius-border">
+                        <span>{{ .Name }}</span>
+                    </label>
+                    {{ end }}
+                </div>
+            </div>
+
+            <!-- Range: Dauer -->
+            <div class="space-y-3 pt-4 border-t border-fius-border">
+                <label class="block text-xs font-bold text-fius-muted uppercase flex justify-between mb-2">
+                    <span>Dauer</span>
+                    <span class="font-mono text-blue-500 text-[11px] bg-fius-bg px-2 py-0.5 rounded border border-fius-border">
+            <span x-text="minDurationFilter"></span> - <span x-text="maxDurationFilter > 240 ? '240+' : maxDurationFilter"></span> m
+        </span>
+                </label>
+                <div class="space-y-3">
+                    <div class="flex items-center gap-3">
+                        <span class="text-[10px] text-fius-muted w-6">Min</span>
+                        <!-- HIER @input eingefügt -->
+                        <input type="range" x-model="minDurationFilter" @input="validateMinDuration()" min="5" max="240" step="5" class="w-full h-1 bg-fius-border rounded-lg appearance-none accent-blue-500">
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-[10px] text-fius-muted w-6">Max</span>
+                        <!-- HIER @input eingefügt -->
+                        <input type="range" x-model="maxDurationFilter" @input="validateMaxDuration()" min="5" max="245" step="5" class="w-full h-1 bg-fius-border rounded-lg appearance-none accent-blue-500">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Games Container -->
+        <div class="lg:col-span-3 xl:col-span-4">
+
+            <!-- Dynamischer Container basierend auf ViewMode -->
+            <div :class="viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6' : 'flex flex-col gap-4'">
+
+                {{ range .Games }}
+                <div x-show="
+                        (search === '' || `{{ .Name }}`.toLowerCase().includes(search.toLowerCase())) &&
+                        (playersFilter == 0 || ({{ .MinPlayers }} <= playersFilter && {{ .MaxPlayers }} >= playersFilter)) &&
+                        (maxDurationFilter > 240 ? {{ .MaxPlaytime }} >= minDurationFilter : ({{ .MinPlaytime }} <= maxDurationFilter && {{ .MaxPlaytime }} >= minDurationFilter)) &&
+                        (selectedCategories.length === 0 || selectedCategories.some(cat => `{{ .CategoryNames }}`.includes(cat)))
+                "
+                     :class="viewMode === 'grid' ? 'flex-col justify-between h-full' : 'flex-row items-center'"
+                     class="bg-fius-card rounded-xl border border-fius-border shadow-md overflow-hidden flex hover:border-blue-500 transition duration-300 group">
+
+                    <!-- Cover-Bereich (wird im 'list' Modus komplett ausgeblendet) -->
+                    <div x-show="viewMode !== 'list'"
+                         :class="viewMode === 'grid' ? 'w-full h-48 border-b border-fius-border' : 'w-32 h-32 flex-shrink-0 border-r border-fius-border'"
+                         class="relative flex items-center justify-center overflow-hidden bg-fius-bg/50 cursor-pointer">
+
+                        {{ if .CustomImageUrl.Valid }}
+                        <img src="{{ .CustomImageUrl.String }}" class="object-cover h-full w-full group-hover:scale-105 transition duration-500">
+                        {{ else if .ImageUrl.Valid }}
+                        <img src="{{ .ImageUrl.String }}" class="object-cover h-full w-full group-hover:scale-105 transition duration-500">
+                        {{ else }}
+                        <svg class="w-12 h-12 text-fius-border/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        {{ end }}
+
+                        <!-- Status Badge (Absolute im Bild) -->
+                        <div class="absolute top-3 right-3" x-show="viewMode === 'grid'">
+                            {{ if eq .Status "available" }}
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold shadow-sm backdrop-blur-md bg-green-500/20 text-green-500 border border-green-500/30">Verfügbar</span>
+                            {{ else }}
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold shadow-sm backdrop-blur-md bg-red-500/20 text-red-500 border border-red-500/30">Ausgeliehen</span>
+                            {{ end }}
+                        </div>
+                    </div>
+
+                    <!-- Spieldaten -->
+                    <div class="p-5 flex-1 flex flex-col justify-between">
+                        <div class="space-y-3">
+                            <h3 class="text-lg font-bold text-white line-clamp-1 group-hover:text-blue-500 transition cursor-pointer">
+                                {{ .Name }}
+                            </h3>
+
+                            <div :class="viewMode === 'grid' ? 'flex-col gap-1' : 'flex-row gap-6'" class="flex text-sm text-gray-300">
+                                <span><strong class="text-fius-muted">Spieler:</strong> {{ .MinPlayers }} - {{ .MaxPlayers }}</span>
+                                <span>
+                                    <strong class="text-fius-muted">Dauer:</strong>
+                                    {{ if and (gt .MinPlaytime 0) (ne .MinPlaytime .MaxPlaytime) }}
+                                        {{ .MinPlaytime }} - {{ .MaxPlaytime }} Min.
+                                    {{ else if gt .MaxPlaytime 0 }}
+                                        {{ .MaxPlaytime }} Min.
+                                    {{ else if gt .MinPlaytime 0 }}
+                                        {{ .MinPlaytime }} Min.
+                                    {{ else }}
+                                        k.A.
+                                    {{ end }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Action Button & List-Status -->
+                        <div class="mt-5 pt-4 border-t border-fius-border flex items-center justify-between">
+
+                            <!-- Status für Listen-Ansichten (da das absolute Badge oben ausgeblendet wird) -->
+                            <div x-show="viewMode !== 'grid'">
+                                {{ if eq .Status "available" }}
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-500/20 text-green-500 border border-green-500/30">Verfügbar</span>
+                                {{ else }}
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-500/20 text-red-500 border border-red-500/30">Ausgeliehen</span>
+                                {{ end }}
+                            </div>
+
+                            <!-- Button -->
+                            {{ if eq .Status "rented" }}
+                            <button disabled class="w-full text-center text-xs bg-fius-bg text-fius-muted font-semibold py-2.5 px-3 rounded cursor-not-allowed border border-fius-border" :class="viewMode !== 'grid' ? 'w-auto' : ''">Ausgeliehen</button>
+                            {{ else }}
+                            <button type="button" class="w-full text-center text-xs bg-[#5B83C2]/10 hover:bg-blue-600 text-[#5B83C2] hover:text-white font-bold py-2.5 px-3 rounded-lg border border-[#5B83C2]/30 transition duration-300" :class="viewMode !== 'grid' ? 'w-auto' : ''">In den Leihkorb</button>
+                            {{ end }}
+                        </div>
+                    </div>
+
+                </div>
+                {{ end }}
+
+            </div>
+        </div>
+    </div>
 </div>
-{{ end }}
+
+{{ template "footer" . }}
