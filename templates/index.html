@@ -12,20 +12,24 @@
             </div>
 
             <div x-data="{
-                    items: {{ .GameNames }},
+                    items: {{ .GameNames }} || [],
                     index: 0
                  }"
                  x-init="
-                    index = Math.floor(Math.random() * items.length);
+                    if (items && items.length > 0) {
+                        index = Math.floor(Math.random() * items.length);
+                    }
 
-                    setInterval(() => {
-                        let newIndex;
-                        do {
-                            newIndex = Math.floor(Math.random() * items.length);
-                        } while (newIndex === index);
+                    if (items && items.length > 1) {
+                        setInterval(() => {
+                            let newIndex;
+                            do {
+                                newIndex = Math.floor(Math.random() * items.length);
+                            } while (newIndex === index);
 
-                        index = newIndex;
-                    }, 2500)
+                            index = newIndex;
+                        }, 2500);
+                    }
                  "
                  class="relative flex justify-center items-center overflow-hidden h-16 w-full max-w-sm sm:max-w-lg bg-fius-card border border-fius-border rounded-2xl shadow-lg">
 

@@ -40,3 +40,14 @@ FROM items
          LEFT JOIN categories ON item_categories.category_id = categories.id
 GROUP BY items.id
 ORDER BY items.name;
+
+-- name: UpsertUser :one
+INSERT INTO users (oidc_sub, email, name, role, last_login)
+VALUES ($1, $2, $3, $4, NOW())
+    ON CONFLICT (oidc_sub)
+DO UPDATE SET
+    email = EXCLUDED.email,
+           name = EXCLUDED.name,
+           role = EXCLUDED.role,
+           last_login = NOW()
+           RETURNING *;

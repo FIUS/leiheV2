@@ -18,12 +18,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq" // Postgres Treiber laden
+	_ "github.com/lib/pq"
 )
 
 var bggMutex sync.Mutex
 var bggLastCall time.Time
+
+// var oauth2Config oauth2.Config
+// var verifier *oidc.IDTokenVerifier
+var queries *db.Queries
 
 func enforceBGGCooldown() {
 	bggMutex.Lock()
@@ -35,6 +41,73 @@ func enforceBGGCooldown() {
 		time.Sleep(cooldown - elapsed)
 	}
 	bggLastCall = time.Now()
+}
+
+func handleDevLogin(c *gin.Context) {
+	role := c.Query("role")
+	if role != "admin" && role != "maintainer" {
+		role = "user" // Fallback
+	}
+
+	// Dummy-Nutzer in der Datenbank anlegen oder updaten (mit deiner neuen sqlc Query!)
+	dummySub := "dev-dummy-" + role
+	_, err := queries.UpsertUser(context.Background(), db.UpsertUserParams{
+		OidcSub: dummySub,
+		Email:   role + "@fius.local",
+		Name:    "Test " + strings.ToUpper(role),
+		Role:    db.UserRole(role), // Setzt die Rolle auf user, maintainer oder admin
+	})
+
+	if err != nil {
+		c.String(http.StatusInternalServerError, "DB Fehler beim Dev-Login: "+err.Error())
+		return
+	}
+
+	// Session setzen, genau wie es der echte OIDC-Callback tun würde
+	session := sessions.Default(c)
+	session.Set("user_id", dummySub)
+	session.Set("user_role", role)
+	session.Save()
+
+	c.Redirect(http.StatusTemporaryRedirect, "/")
+}
+
+// RequireRole prüft, ob der Nutzer eingeloggt ist UND eine der erlaubten Rollen hat
+func RequireRole(allowedRoles ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session := sessions.Default(c)
+		userRole := session.Get("user_role")
+
+		// 1. Gar nicht eingeloggt?
+		if userRole == nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Bitte einloggen"})
+			return
+		}
+
+		roleStr := userRole.(string)
+
+		// 2. Darf die Rolle auf diese Route zugreifen?
+		hasAccess := false
+		for _, allowed := range allowedRoles {
+			if roleStr == allowed {
+				hasAccess = true
+				break
+			}
+		}
+
+		// Admin-Override: Admins dürfen immer alles, was Maintainer dürfen
+		if roleStr == "admin" {
+			hasAccess = true
+		}
+
+		if !hasAccess {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Keine Berechtigung"})
+			return
+		}
+
+		// Alles cool, lass den Nutzer durch!
+		c.Next()
+	}
 }
 
 type BGGSearchResponse struct {
@@ -87,10 +160,17 @@ func main() {
 	defer database.Close()
 
 	// 2. sqlc Queries initialisieren
-	queries := db.New(database)
+	queries = db.New(database)
 
 	// 3. Gin Webserver einrichten
 	r := gin.Default()
+
+	// Session-Middleware einhängen
+	store := cookie.NewStore([]byte("geheimes-fius-session-secret"))
+	r.Use(sessions.Sessions("fius_session", store))
+
+	// Dev-Login Route registrieren
+	r.GET("/dev-login", handleDevLogin)
 
 	// 4. Erste API-Route definieren
 	r.Static("/static", "./static")
@@ -142,6 +222,9 @@ func main() {
 
 	// Startseite
 	r.GET("/", func(c *gin.Context) {
+		session := sessions.Default(c)
+		userRole := session.Get("user_role")
+
 		items, err := queries.ListItems(context.Background())
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Datenbankfehler")
@@ -149,7 +232,7 @@ func main() {
 		}
 
 		// Alle Spielnamen in eine einfache Liste extrahieren
-		var names []string
+		names := make([]string, 0, len(items))
 		for _, item := range items {
 			names = append(names, item.Name)
 		}
@@ -159,11 +242,15 @@ func main() {
 
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"TotalItems": len(items),
-			"GameNames":  template.JS(namesJSON), // template.JS sichert sauberen JS-Code
+			"GameNames":  template.JS(namesJSON),
+			"UserRole":   userRole, // <-- Hier hinzugefügt
 		})
 	})
 
 	r.GET("/games", func(c *gin.Context) {
+		session := sessions.Default(c)
+		userRole := session.Get("user_role")
+
 		items, err := queries.ListItemsWithCategories(context.Background())
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Datenbankfehler")
@@ -175,15 +262,20 @@ func main() {
 		c.HTML(http.StatusOK, "games.html", gin.H{
 			"Games":      items,
 			"Categories": categories,
+			"UserRole":   userRole,
 		})
 	})
 
-	// Admin: Spieleverwaltung anzeigen (angepasste Route)
+	// Admin: Spieleverwaltung anzeigen
 	r.GET("/admin", func(c *gin.Context) {
+		session := sessions.Default(c)
+		userRole := session.Get("user_role")
+
 		items, _ := queries.ListItems(context.Background())
 		// ... Error handling ...
 		c.HTML(http.StatusOK, "managment.html", gin.H{
-			"Games": items,
+			"Games":    items,
+			"UserRole": userRole,
 		})
 	})
 
@@ -444,6 +536,14 @@ func main() {
 			"categories":   categories,
 		})
 	})
+
+	r.GET("/logout", func(c *gin.Context) {
+		session := sessions.Default(c)
+		session.Clear()
+		session.Save()
+		c.Redirect(http.StatusTemporaryRedirect, "/")
+	})
+
 	// 5. Server starten
 	log.Println("🚀 FIUS Verleih-Backend startet auf http://localhost:8080")
 	r.Run(":8080")

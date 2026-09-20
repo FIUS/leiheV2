@@ -309,3 +309,42 @@ func (q *Queries) UpdateItemStatus(ctx context.Context, arg UpdateItemStatusPara
 	_, err := q.db.ExecContext(ctx, updateItemStatus, arg.ID, arg.Status)
 	return err
 }
+
+const upsertUser = `-- name: UpsertUser :one
+INSERT INTO users (oidc_sub, email, name, role, last_login)
+VALUES ($1, $2, $3, $4, NOW())
+    ON CONFLICT (oidc_sub)
+DO UPDATE SET
+    email = EXCLUDED.email,
+           name = EXCLUDED.name,
+           role = EXCLUDED.role,
+           last_login = NOW()
+           RETURNING id, email, name, oidc_sub, role, created_at, last_login
+`
+
+type UpsertUserParams struct {
+	OidcSub string
+	Email   string
+	Name    string
+	Role    UserRole
+}
+
+func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, upsertUser,
+		arg.OidcSub,
+		arg.Email,
+		arg.Name,
+		arg.Role,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.OidcSub,
+		&i.Role,
+		&i.CreatedAt,
+		&i.LastLogin,
+	)
+	return i, err
+}

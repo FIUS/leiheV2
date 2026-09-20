@@ -1,10 +1,14 @@
+-- Mapping from OIDC role types to sxstem roles
+CREATE TYPE user_role AS ENUM ('user', 'maintainer', 'admin');
+
 CREATE TABLE users (
                        id SERIAL PRIMARY KEY,
                        email VARCHAR(255) UNIQUE NOT NULL,
                        name VARCHAR(255) NOT NULL,
-                       is_admin BOOLEAN NOT NULL DEFAULT FALSE,
-                       has_lending_rights BOOLEAN NOT NULL DEFAULT FALSE,
-                       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                       oidc_sub VARCHAR(255) UNIQUE NOT NULL,
+                       role user_role DEFAULT 'user' NOT NULL,
+                       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                       last_login TIMESTAMP
 );
 
 CREATE TABLE categories (
