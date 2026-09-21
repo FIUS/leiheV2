@@ -93,7 +93,8 @@ type ItemCategory struct {
 type User struct {
 	ID        int32
 	Email     string
-	Name      string
+	FirstName string
+	LastName  string
 	OidcSub   string
 	Role      UserRole
 	CreatedAt time.Time

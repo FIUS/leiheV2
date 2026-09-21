@@ -7,7 +7,6 @@ import (
 	"encoding/xml"
 	"html/template"
 	"io"
-	"leiheV2/db" // Dein generierter Code!
 	"log"
 	"net/http"
 	"net/url"
@@ -18,17 +17,20 @@ import (
 	"sync"
 	"time"
 
+	"leiheV2/db" // Dein generierter Code!
+
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 )
 
+// ==========================================
+// GLOBALE VARIABLEN & MIDDLEWARES
+// ==========================================
+
 var bggMutex sync.Mutex
 var bggLastCall time.Time
-
-// var oauth2Config oauth2.Config
-// var verifier *oidc.IDTokenVerifier
 var queries *db.Queries
 
 func enforceBGGCooldown() {
@@ -43,50 +45,17 @@ func enforceBGGCooldown() {
 	bggLastCall = time.Now()
 }
 
-func handleDevLogin(c *gin.Context) {
-	role := c.Query("role")
-	if role != "admin" && role != "maintainer" {
-		role = "user" // Fallback
-	}
-
-	// Dummy-Nutzer in der Datenbank anlegen oder updaten (mit deiner neuen sqlc Query!)
-	dummySub := "dev-dummy-" + role
-	_, err := queries.UpsertUser(context.Background(), db.UpsertUserParams{
-		OidcSub: dummySub,
-		Email:   role + "@fius.local",
-		Name:    "Test " + strings.ToUpper(role),
-		Role:    db.UserRole(role), // Setzt die Rolle auf user, maintainer oder admin
-	})
-
-	if err != nil {
-		c.String(http.StatusInternalServerError, "DB Fehler beim Dev-Login: "+err.Error())
-		return
-	}
-
-	// Session setzen, genau wie es der echte OIDC-Callback tun würde
-	session := sessions.Default(c)
-	session.Set("user_id", dummySub)
-	session.Set("user_role", role)
-	session.Save()
-
-	c.Redirect(http.StatusTemporaryRedirect, "/")
-}
-
-// RequireRole prüft, ob der Nutzer eingeloggt ist UND eine der erlaubten Rollen hat
 func RequireRole(allowedRoles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		session := sessions.Default(c)
 		userRole := session.Get("user_role")
 
-		// 1. Gar nicht eingeloggt?
 		if userRole == nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Bitte einloggen"})
 			return
 		}
 
 		roleStr := userRole.(string)
-
-		// 2. Darf die Rolle auf diese Route zugreifen?
 		hasAccess := false
 		for _, allowed := range allowedRoles {
 			if roleStr == allowed {
@@ -95,7 +64,6 @@ func RequireRole(allowedRoles ...string) gin.HandlerFunc {
 			}
 		}
 
-		// Admin-Override: Admins dürfen immer alles, was Maintainer dürfen
 		if roleStr == "admin" {
 			hasAccess = true
 		}
@@ -104,10 +72,48 @@ func RequireRole(allowedRoles ...string) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Keine Berechtigung"})
 			return
 		}
-
-		// Alles cool, lass den Nutzer durch!
 		c.Next()
 	}
+}
+
+// ==========================================
+// DATENSTRUKTUREN (REQUESTS & RESPONSES)
+// ==========================================
+
+type CreateItemRequest struct {
+	Name        string `form:"name" binding:"required"`
+	MinPlayers  int32  `form:"min_players"`
+	MaxPlayers  int32  `form:"max_players"`
+	MinPlaytime int32  `form:"min_playtime"`
+	MaxPlaytime int32  `form:"max_playtime"`
+	BggID       string `form:"bgg_id"`
+	ImageUrl    string `form:"image_url"`
+}
+
+type UpdateItemRequest struct {
+	ID          int32  `form:"id" binding:"required"`
+	Name        string `form:"name" binding:"required"`
+	MinPlayers  int32  `form:"min_players"`
+	MaxPlayers  int32  `form:"max_players"`
+	MinPlaytime int32  `form:"min_playtime"`
+	MaxPlaytime int32  `form:"max_playtime"`
+}
+
+type CreateUserRequest struct {
+	FirstName string `form:"first_name" binding:"required"`
+	LastName  string `form:"last_name" binding:"required"`
+	Email     string `form:"email" binding:"required"`
+	Role      string `form:"role"`
+	OidcSub   string `form:"oidc_sub"`
+}
+
+type UpdateUserRequest struct {
+	ID        int32  `form:"id" binding:"required"`
+	FirstName string `form:"first_name" binding:"required"`
+	LastName  string `form:"last_name" binding:"required"`
+	Email     string `form:"email" binding:"required"`
+	Role      string `form:"role" binding:"required"`
+	OidcSub   string `form:"oidc_sub"`
 }
 
 type BGGSearchResponse struct {
@@ -145,11 +151,13 @@ type BGGThingResponse struct {
 	} `xml:"item"`
 }
 
+// ==========================================
+// MAIN & SETUP
+// ==========================================
+
 func main() {
-	// 1. Datenbankverbindung herstellen
 	connStr := os.Getenv("DB_URL")
 	if connStr == "" {
-		// Bequemer Fallback für deine lokale Windows-Entwicklung
 		connStr = "host=localhost port=5432 user=fius password=pleasechangeme dbname=verleih sslmode=disable"
 	}
 
@@ -159,131 +167,106 @@ func main() {
 	}
 	defer database.Close()
 
-	// 2. sqlc Queries initialisieren
 	queries = db.New(database)
 
-	// 3. Gin Webserver einrichten
 	r := gin.Default()
-
-	// Session-Middleware einhängen
 	store := cookie.NewStore([]byte("geheimes-fius-session-secret"))
 	r.Use(sessions.Sessions("fius_session", store))
 
-	// Dev-Login Route registrieren
-	r.GET("/dev-login", handleDevLogin)
-
-	// 4. Erste API-Route definieren
 	r.Static("/static", "./static")
 	r.LoadHTMLGlob("templates/*.html")
 
-	// Eigene Struktur für eingehende Daten (unterstützt JSON und HTML-Formulare)
-	type CreateItemRequest struct {
-		Name        string `form:"name" json:"name" binding:"required"`
-		MinPlayers  int32  `form:"min_players" json:"min_players"`
-		MaxPlayers  int32  `form:"max_players" json:"max_players"`
-		MinPlaytime int32  `form:"min_playtime" json:"min_playtime"`
-		MaxPlaytime int32  `form:"max_playtime" json:"max_playtime"`
-		BggID       string `form:"bgg_id" json:"bgg_id"`
-		ImageUrl    string `form:"image_url" json:"image_url"`
-	}
-
-	// Neues Item anlegen (POST-Route flexibel für JSON & Formular)
-	r.POST("/api/items", func(c *gin.Context) {
-		var req CreateItemRequest
-
-		// ShouldBind erkennt anhand des Headers automatisch, ob es JSON oder ein Formular ist
-		if err := c.ShouldBind(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültige Eingabe: " + err.Error()})
-			return
+	// ==========================================
+	// AUTHENTIFIZIERUNG
+	// ==========================================
+	r.GET("/dev-login", func(c *gin.Context) {
+		role := c.Query("role")
+		if role != "admin" && role != "maintainer" {
+			role = "user"
 		}
 
-		// Daten an die von sqlc generierte Struktur übergeben
-		dbReq := db.CreateItemParams{
-			Name:        req.Name,
-			MinPlayers:  req.MinPlayers,
-			MaxPlayers:  req.MaxPlayers,
-			MinPlaytime: req.MinPlaytime,
-			MaxPlaytime: req.MaxPlaytime,
-			Status:      "available", // Standardstatus für neue Spiele
-		}
+		dummySub := "dev-dummy-" + role
+		_, err := queries.UpsertUser(context.Background(), db.UpsertUserParams{
+			OidcSub:   dummySub,
+			Email:     role + "@fius.local",
+			FirstName: "Test",
+			LastName:  strings.ToUpper(role),
+			Role:      db.UserRole(role),
+		})
 
-		// Falls du die Bild-Felder im Schema schon angepasst hast:
-		// dbReq.ImageUrl = sql.NullString{String: req.ImageUrl, Valid: req.ImageUrl != ""}
-
-		_, err := queries.CreateItem(context.Background(), dbReq)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Konnte Item nicht in DB speichern"})
+			c.String(http.StatusInternalServerError, "DB Fehler beim Dev-Login: "+err.Error())
 			return
 		}
 
-		// Nach erfolgreichem Speichern direkt zurück zur Ansicht leiten
-		c.Redirect(http.StatusFound, "/admin")
+		session := sessions.Default(c)
+		session.Set("user_id", dummySub)
+		session.Set("user_role", role)
+		session.Save()
+		c.Redirect(http.StatusTemporaryRedirect, "/")
 	})
 
-	// Startseite
+	r.GET("/logout", func(c *gin.Context) {
+		session := sessions.Default(c)
+		session.Clear()
+		session.Save()
+		c.Redirect(http.StatusTemporaryRedirect, "/")
+	})
+
+	// ==========================================
+	// SEITEN (HTML RENDERING)
+	// ==========================================
 	r.GET("/", func(c *gin.Context) {
 		session := sessions.Default(c)
-		userRole := session.Get("user_role")
-
 		items, err := queries.ListItems(context.Background())
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Datenbankfehler")
 			return
 		}
 
-		// Alle Spielnamen in eine einfache Liste extrahieren
 		names := make([]string, 0, len(items))
 		for _, item := range items {
 			names = append(names, item.Name)
 		}
-
-		// Als JSON verpacken, damit JavaScript (Alpine) es nativ lesen kann
 		namesJSON, _ := json.Marshal(names)
 
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"TotalItems": len(items),
 			"GameNames":  template.JS(namesJSON),
-			"UserRole":   userRole, // <-- Hier hinzugefügt
+			"UserRole":   session.Get("user_role"),
 		})
 	})
 
 	r.GET("/games", func(c *gin.Context) {
 		session := sessions.Default(c)
-		userRole := session.Get("user_role")
-
 		items, err := queries.ListItemsWithCategories(context.Background())
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Datenbankfehler")
 			return
 		}
-
 		categories, _ := queries.ListCategories(context.Background())
 
 		c.HTML(http.StatusOK, "games.html", gin.H{
 			"Games":      items,
 			"Categories": categories,
-			"UserRole":   userRole,
+			"UserRole":   session.Get("user_role"),
 		})
 	})
 
-	// Admin: Spieleverwaltung anzeigen
-	r.GET("/admin", func(c *gin.Context) {
+	r.GET("/admin", RequireRole("admin", "maintainer"), func(c *gin.Context) {
 		session := sessions.Default(c)
-		userRole := session.Get("user_role")
-
 		items, _ := queries.ListItems(context.Background())
-		// ... Error handling ...
+		users, _ := queries.ListUsers(context.Background())
+
 		c.HTML(http.StatusOK, "managment.html", gin.H{
 			"Games":    items,
-			"UserRole": userRole,
+			"Users":    users,
+			"UserRole": session.Get("user_role"),
 		})
 	})
 
-	// GET: Zeigt das nächste Bild an
-	r.GET("/setup-bilder", func(c *gin.Context) {
+	r.GET("/setup-bilder", RequireRole("admin", "maintainer"), func(c *gin.Context) {
 		skipParam := c.Query("skip")
-
-		// Übersprungene Bilder in eine Map packen
 		skippedMap := make(map[string]bool)
 		for _, s := range strings.Split(skipParam, ",") {
 			if s != "" {
@@ -298,22 +281,16 @@ func main() {
 		}
 
 		games, _ := queries.ListItems(c)
-
 		mappedImages := make(map[string]bool)
 		for _, game := range games {
 			if game.CustomImageUrl.Valid {
-				fileName := filepath.Base(game.CustomImageUrl.String)
-				mappedImages[fileName] = true
+				mappedImages[filepath.Base(game.CustomImageUrl.String)] = true
 			}
 		}
 
 		var currentImage string
 		for _, file := range files {
-			if file.IsDir() {
-				continue
-			}
-			// Überspringen, wenn in DB oder in der Skip-Liste
-			if mappedImages[file.Name()] || skippedMap[file.Name()] {
+			if file.IsDir() || mappedImages[file.Name()] || skippedMap[file.Name()] {
 				continue
 			}
 			currentImage = file.Name()
@@ -321,37 +298,29 @@ func main() {
 		}
 
 		if currentImage == "" {
-			c.HTML(http.StatusOK, "setup-bilder.html", gin.H{
-				"Finished": true,
-			})
+			c.HTML(http.StatusOK, "setup-bilder.html", gin.H{"Finished": true})
 			return
 		}
 
 		c.HTML(http.StatusOK, "setup-bilder.html", gin.H{
 			"CurrentImage": currentImage,
-			"CurrentSkips": skipParam, // Wir geben die bisherige Liste ans Template weiter
+			"CurrentSkips": skipParam,
 			"Games":        games,
 		})
 	})
 
-	// POST: Speichert die Zuordnung und leitet weiter
-	r.POST("/setup-bilder", func(c *gin.Context) {
+	r.POST("/setup-bilder", RequireRole("admin", "maintainer"), func(c *gin.Context) {
 		imageName := c.PostForm("image_name")
 		itemIDStr := c.PostForm("item_id")
-		skips := c.PostForm("skips") // Retten der Skip-Liste beim Speichern
+		skips := c.PostForm("skips")
 
-		itemID, err := strconv.Atoi(itemIDStr)
-		if err == nil {
-			dbErr := queries.UpdateItemCustomImage(c, db.UpdateItemCustomImageParams{
+		if itemID, err := strconv.Atoi(itemIDStr); err == nil {
+			_ = queries.UpdateItemCustomImage(c, db.UpdateItemCustomImageParams{
 				CustomImageUrl: sql.NullString{String: "/static/custom_images/" + imageName, Valid: true},
 				ID:             int32(itemID),
 			})
-			if dbErr != nil {
-				log.Println("FEHLER BEIM BILD-SPEICHERN:", dbErr)
-			}
 		}
 
-		// Leite um und hänge die Skip-Liste wieder an, falls vorhanden
 		redirectURL := "/setup-bilder"
 		if skips != "" {
 			redirectURL += "?skip=" + skips
@@ -359,18 +328,32 @@ func main() {
 		c.Redirect(http.StatusFound, redirectURL)
 	})
 
-	// Bestehendes Spiel aktualisieren
-	r.POST("/api/items/update", func(c *gin.Context) {
-		// Wir können die gleiche Struktur wie beim Erstellen nutzen, plus die ID
-		type UpdateItemRequest struct {
-			ID          int32  `form:"id" binding:"required"`
-			Name        string `form:"name" binding:"required"`
-			MinPlayers  int32  `form:"min_players"`
-			MaxPlayers  int32  `form:"max_players"`
-			MinPlaytime int32  `form:"min_playtime"`
-			MaxPlaytime int32  `form:"max_playtime"`
+	// ==========================================
+	// API: ITEMS (SPIELE)
+	// ==========================================
+	r.POST("/api/items", RequireRole("admin", "maintainer"), func(c *gin.Context) {
+		var req CreateItemRequest
+		if err := c.ShouldBind(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültige Eingabe: " + err.Error()})
+			return
 		}
 
+		_, err := queries.CreateItem(context.Background(), db.CreateItemParams{
+			Name:        req.Name,
+			MinPlayers:  req.MinPlayers,
+			MaxPlayers:  req.MaxPlayers,
+			MinPlaytime: req.MinPlaytime,
+			MaxPlaytime: req.MaxPlaytime,
+			Status:      "available",
+		})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Konnte Item nicht speichern"})
+			return
+		}
+		c.Redirect(http.StatusFound, "/admin?tab=spiele")
+	})
+
+	r.POST("/api/items/update", RequireRole("admin", "maintainer"), func(c *gin.Context) {
 		var req UpdateItemRequest
 		if err := c.ShouldBind(&req); err != nil {
 			c.String(http.StatusBadRequest, "Ungültige Eingabe: "+err.Error())
@@ -385,57 +368,138 @@ func main() {
 			MinPlaytime: req.MinPlaytime,
 			MaxPlaytime: req.MaxPlaytime,
 		})
-
 		if err != nil {
-			log.Println("FEHLER BEIM UPDATEN:", err)
 			c.String(http.StatusInternalServerError, "Konnte Änderungen nicht speichern")
 			return
 		}
-
-		c.Redirect(http.StatusFound, "/admin")
+		c.Redirect(http.StatusFound, "/admin?tab=spiele")
 	})
 
-	// --- BGG XML STRUKTUREN ---
-	type BGGSearchResponse struct {
-		Items []struct {
-			ID   string `xml:"id,attr"`
-			Name struct {
-				Value string `xml:"value,attr"`
-			} `xml:"name"`
-			Year struct {
-				Value string `xml:"value,attr"`
-			} `xml:"yearpublished"`
-		} `xml:"item"`
-	}
+	r.POST("/api/items/delete", RequireRole("admin", "maintainer"), func(c *gin.Context) {
+		itemID, _ := strconv.Atoi(c.PostForm("id"))
+		if c.PostForm("confirm_name") != c.PostForm("real_name") {
+			c.String(http.StatusBadRequest, "Bestätigungsname stimmt nicht.")
+			return
+		}
+		_ = queries.DeleteItem(context.Background(), int32(itemID))
+		c.Redirect(http.StatusFound, "/admin?tab=spiele")
+	})
 
-	type BGGThingResponse struct {
-		Items []struct {
-			ID         string `xml:"id,attr"`
-			Image      string `xml:"image"`
-			MinPlayers struct {
-				Value string `xml:"value,attr"`
-			} `xml:"minplayers"`
-			MaxPlayers struct {
-				Value string `xml:"value,attr"`
-			} `xml:"maxplayers"`
-			MinPlaytime struct {
-				Value string `xml:"value,attr"`
-			} `xml:"minplaytime"`
-			MaxPlaytime struct {
-				Value string `xml:"value,attr"`
-			} `xml:"maxplaytime"`
-			Links []struct {
-				Type  string `xml:"type,attr"`
-				Value string `xml:"value,attr"`
-			} `xml:"link"`
-		} `xml:"item"`
-	}
+	// NEU: Details Endpunkt für das Modal und den Kalender
+	r.GET("/api/items/details", func(c *gin.Context) {
+		idStr := c.Query("id")
+		itemID, err := strconv.Atoi(idStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültige ID"})
+			return
+		}
 
-	// --- BGG API ROUTEN ---
+		item, err := queries.GetItem(context.Background(), int32(itemID))
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Spiel nicht gefunden"})
+			return
+		}
 
-	// 1. Suche: Gibt eine Liste von möglichen Spielen zurück (Fuzzy)
-	// 1. Suche: Gibt eine Liste von möglichen Spielen zurück (Fuzzy)
-	r.GET("/api/bgg/search", func(c *gin.Context) {
+		bookings, err := queries.GetUpcomingBookingsForItem(context.Background(), int32(itemID))
+		if err != nil {
+			bookings = []db.GetUpcomingBookingsForItemRow{}
+		}
+
+		var images []string
+		if item.CustomImageUrl.Valid && item.CustomImageUrl.String != "" {
+			images = append(images, item.CustomImageUrl.String)
+		}
+		if item.ImageUrl.Valid && item.ImageUrl.String != "" {
+			images = append(images, item.ImageUrl.String)
+		}
+		if len(images) == 0 {
+			images = append(images, "/static/placeholder.png")
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"id":           item.ID,
+			"name":         item.Name,
+			"description":  item.Description.String,
+			"min_players":  item.MinPlayers,
+			"max_players":  item.MaxPlayers,
+			"min_playtime": item.MinPlaytime,
+			"max_playtime": item.MaxPlaytime,
+			"status":       item.Status,
+			"images":       images,
+			"bookings":     bookings,
+		})
+	})
+
+	// ==========================================
+	// API: USERS (NUTZER)
+	// ==========================================
+	r.POST("/api/users", RequireRole("admin"), func(c *gin.Context) {
+		var req CreateUserRequest
+		if err := c.ShouldBind(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültige Eingabe"})
+			return
+		}
+
+		role, oidcSub := req.Role, strings.TrimSpace(req.OidcSub)
+		if role != "admin" && role != "maintainer" {
+			role = "user"
+		}
+		if oidcSub == "" {
+			oidcSub = "manual-" + strings.TrimSpace(req.Email)
+		}
+
+		_, _ = queries.CreateUser(context.Background(), db.CreateUserParams{
+			FirstName: strings.TrimSpace(req.FirstName),
+			LastName:  strings.TrimSpace(req.LastName),
+			Email:     strings.TrimSpace(req.Email),
+			Role:      db.UserRole(role),
+			OidcSub:   oidcSub,
+		})
+		c.Redirect(http.StatusFound, "/admin?tab=nutzer")
+	})
+
+	r.POST("/api/users/update", RequireRole("admin"), func(c *gin.Context) {
+		var req UpdateUserRequest
+		if err := c.ShouldBind(&req); err != nil {
+			c.String(http.StatusBadRequest, "Ungültige Eingabe")
+			return
+		}
+
+		role, oidcSub := req.Role, strings.TrimSpace(req.OidcSub)
+		if role != "admin" && role != "maintainer" {
+			role = "user"
+		}
+		if oidcSub == "" {
+			if existing, err := queries.GetUser(context.Background(), req.ID); err == nil {
+				oidcSub = existing.OidcSub
+			} else {
+				oidcSub = "manual-" + strings.TrimSpace(req.Email)
+			}
+		}
+
+		_ = queries.UpdateUser(context.Background(), db.UpdateUserParams{
+			ID:        req.ID,
+			FirstName: strings.TrimSpace(req.FirstName),
+			LastName:  strings.TrimSpace(req.LastName),
+			Email:     strings.TrimSpace(req.Email),
+			Role:      db.UserRole(role),
+			OidcSub:   oidcSub,
+		})
+		c.Redirect(http.StatusFound, "/admin?tab=nutzer")
+	})
+
+	r.POST("/api/users/delete", RequireRole("admin"), func(c *gin.Context) {
+		userID, _ := strconv.Atoi(c.PostForm("id"))
+		if c.PostForm("confirm_name") == c.PostForm("real_name") {
+			_ = queries.DeleteUser(context.Background(), int32(userID))
+		}
+		c.Redirect(http.StatusFound, "/admin?tab=nutzer")
+	})
+
+	// ==========================================
+	// API: BOARDGAMEGEEK (BGG)
+	// ==========================================
+	r.GET("/api/bgg/search", RequireRole("admin", "maintainer"), func(c *gin.Context) {
 		query := c.Query("q")
 		if query == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Leerer Suchbegriff"})
@@ -445,42 +509,30 @@ func main() {
 		bggURL := "https://boardgamegeek.com/xmlapi2/search?type=boardgame&query=" + url.QueryEscape(query)
 		enforceBGGCooldown()
 
-		// Eigener Client mit FIUS User-Agent
 		req, _ := http.NewRequest("GET", bggURL, nil)
 		req.Header.Set("User-Agent", "FIUS-LeiheV2/1.0 (University of Stuttgart)")
 		client := &http.Client{}
 
 		resp, err := client.Do(req)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "BGG API nicht erreichbar"})
+		if err != nil || resp.StatusCode != http.StatusOK {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "BGG API Fehler"})
 			return
 		}
 		defer resp.Body.Close()
 
 		body, _ := io.ReadAll(resp.Body)
-
-		// Fehler gnadenlos ins Terminal loggen
-		if resp.StatusCode != http.StatusOK {
-			log.Printf("BGG Search Fehler: Status %d - %s\n", resp.StatusCode, string(body))
-			c.JSON(resp.StatusCode, gin.H{"error": "BGG hat die Anfrage abgelehnt"})
-			return
-		}
-
 		var bggResult BGGSearchResponse
 		if err := xml.Unmarshal(body, &bggResult); err != nil {
-			log.Println("XML Parse Fehler (Search):", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "BGG XML konnte nicht gelesen werden"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "XML Parse Fehler"})
 			return
 		}
-
 		c.JSON(http.StatusOK, bggResult.Items)
 	})
 
-	// 2. Details: Holt die genauen Daten für eine spezifische BGG-ID
-	r.GET("/api/bgg/details", func(c *gin.Context) {
+	r.GET("/api/bgg/details", RequireRole("admin", "maintainer"), func(c *gin.Context) {
 		id := c.Query("id")
 		if id == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Keine ID übergeben"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Keine ID"})
 			return
 		}
 
@@ -492,29 +544,16 @@ func main() {
 		client := &http.Client{}
 
 		resp, err := client.Do(req)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "BGG API nicht erreichbar"})
+		if err != nil || resp.StatusCode != http.StatusOK {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "BGG API Fehler"})
 			return
 		}
 		defer resp.Body.Close()
 
 		body, _ := io.ReadAll(resp.Body)
-
-		if resp.StatusCode != http.StatusOK {
-			log.Printf("BGG Details Fehler: Status %d - %s\n", resp.StatusCode, string(body))
-			c.JSON(resp.StatusCode, gin.H{"error": "BGG hat die Anfrage abgelehnt"})
-			return
-		}
-
 		var bggResult BGGThingResponse
-		if err := xml.Unmarshal(body, &bggResult); err != nil {
-			log.Println("XML Parse Fehler (Details):", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "BGG XML konnte nicht gelesen werden"})
-			return
-		}
-
-		if len(bggResult.Items) == 0 {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Spiel nicht gefunden"})
+		if err := xml.Unmarshal(body, &bggResult); err != nil || len(bggResult.Items) == 0 {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "XML Parse Fehler oder nicht gefunden"})
 			return
 		}
 
@@ -537,14 +576,9 @@ func main() {
 		})
 	})
 
-	r.GET("/logout", func(c *gin.Context) {
-		session := sessions.Default(c)
-		session.Clear()
-		session.Save()
-		c.Redirect(http.StatusTemporaryRedirect, "/")
-	})
-
-	// 5. Server starten
+	// ==========================================
+	// START SERVER
+	// ==========================================
 	log.Println("🚀 FIUS Verleih-Backend startet auf http://localhost:8080")
 	r.Run(":8080")
 }

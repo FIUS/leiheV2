@@ -47,11 +47,11 @@
             <div x-show="open" class="absolute top-12 right-0 w-48 bg-fius-card border border-fius-border rounded-xl shadow-lg py-2 z-50" style="display: none;">
 
                 {{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }}
-                <a href="/admin" class="block px-4 py-2 text-sm text-gray-200 hover:bg-fius-bg hover:text-blue-500 transition">⚙️ Admin Panel</a>
+                <a href="/admin" class="block px-4 py-2 text-sm text-gray-200 hover:bg-fius-bg hover:text-blue-500 transition">Admin Panel</a>
                 <div class="border-t border-fius-border my-1"></div>
                 {{ end }}
 
-                <a href="/logout" class="block px-4 py-2 text-sm text-red-400 hover:bg-fius-bg hover:text-red-300 transition">🚪 Logout</a>
+                <a href="/logout" class="block px-4 py-2 text-sm text-red-400 hover:bg-fius-bg hover:text-red-300 transition">Logout</a>
             </div>
 
             {{ else }}

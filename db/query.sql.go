@@ -106,6 +106,62 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 	return i, err
 }
 
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (
+    first_name, last_name, email, oidc_sub, role
+) VALUES (
+             $1, $2, $3, $4, $5
+         ) RETURNING id, email, first_name, last_name, oidc_sub, role, created_at, last_login
+`
+
+type CreateUserParams struct {
+	FirstName string
+	LastName  string
+	Email     string
+	OidcSub   string
+	Role      UserRole
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, createUser,
+		arg.FirstName,
+		arg.LastName,
+		arg.Email,
+		arg.OidcSub,
+		arg.Role,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.FirstName,
+		&i.LastName,
+		&i.OidcSub,
+		&i.Role,
+		&i.CreatedAt,
+		&i.LastLogin,
+	)
+	return i, err
+}
+
+const deleteItem = `-- name: DeleteItem :exec
+DELETE FROM items WHERE id = $1
+`
+
+func (q *Queries) DeleteItem(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteItem, id)
+	return err
+}
+
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM users WHERE id = $1
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteUser, id)
+	return err
+}
+
 const getItem = `-- name: GetItem :one
 SELECT id, name, isbn, description, image_url, custom_image_url, min_players, max_players, min_playtime, max_playtime, status FROM items WHERE id = $1 LIMIT 1
 `
@@ -125,6 +181,62 @@ func (q *Queries) GetItem(ctx context.Context, id int32) (Item, error) {
 		&i.MinPlaytime,
 		&i.MaxPlaytime,
 		&i.Status,
+	)
+	return i, err
+}
+
+const getUpcomingBookingsForItem = `-- name: GetUpcomingBookingsForItem :many
+SELECT start_date, end_date, status
+FROM bookings
+WHERE item_id = $1 AND end_date >= CURRENT_DATE
+ORDER BY start_date ASC
+`
+
+type GetUpcomingBookingsForItemRow struct {
+	StartDate time.Time
+	EndDate   time.Time
+	Status    string
+}
+
+func (q *Queries) GetUpcomingBookingsForItem(ctx context.Context, itemID int32) ([]GetUpcomingBookingsForItemRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUpcomingBookingsForItem, itemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUpcomingBookingsForItemRow
+	for rows.Next() {
+		var i GetUpcomingBookingsForItemRow
+		if err := rows.Scan(&i.StartDate, &i.EndDate, &i.Status); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUser = `-- name: GetUser :one
+SELECT id, email, first_name, last_name, oidc_sub, role, created_at, last_login FROM users WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUser, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.FirstName,
+		&i.LastName,
+		&i.OidcSub,
+		&i.Role,
+		&i.CreatedAt,
+		&i.LastLogin,
 	)
 	return i, err
 }
@@ -255,6 +367,42 @@ func (q *Queries) ListItemsWithCategories(ctx context.Context) ([]ListItemsWithC
 	return items, nil
 }
 
+const listUsers = `-- name: ListUsers :many
+SELECT id, email, first_name, last_name, oidc_sub, role, created_at, last_login FROM users ORDER BY last_name ASC, first_name ASC
+`
+
+func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, listUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.FirstName,
+			&i.LastName,
+			&i.OidcSub,
+			&i.Role,
+			&i.CreatedAt,
+			&i.LastLogin,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateItem = `-- name: UpdateItem :exec
 UPDATE items
 SET name = $2, min_players = $3, max_players = $4, min_playtime = $5, max_playtime = $6
@@ -310,37 +458,68 @@ func (q *Queries) UpdateItemStatus(ctx context.Context, arg UpdateItemStatusPara
 	return err
 }
 
+const updateUser = `-- name: UpdateUser :exec
+UPDATE users
+SET first_name = $2, last_name = $3, email = $4, role = $5, oidc_sub = $6
+WHERE id = $1
+`
+
+type UpdateUserParams struct {
+	ID        int32
+	FirstName string
+	LastName  string
+	Email     string
+	Role      UserRole
+	OidcSub   string
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
+	_, err := q.db.ExecContext(ctx, updateUser,
+		arg.ID,
+		arg.FirstName,
+		arg.LastName,
+		arg.Email,
+		arg.Role,
+		arg.OidcSub,
+	)
+	return err
+}
+
 const upsertUser = `-- name: UpsertUser :one
-INSERT INTO users (oidc_sub, email, name, role, last_login)
-VALUES ($1, $2, $3, $4, NOW())
+INSERT INTO users (oidc_sub, email, first_name, last_name, role, last_login)
+VALUES ($1, $2, $3, $4, $5, NOW())
     ON CONFLICT (oidc_sub)
 DO UPDATE SET
     email = EXCLUDED.email,
-           name = EXCLUDED.name,
-           role = EXCLUDED.role,
+           first_name = EXCLUDED.first_name,
+           last_name = EXCLUDED.last_name,
+           -- WICHTIG: role wird hier nicht überschrieben, damit Admins ihre Rechte behalten!
            last_login = NOW()
-           RETURNING id, email, name, oidc_sub, role, created_at, last_login
+           RETURNING id, email, first_name, last_name, oidc_sub, role, created_at, last_login
 `
 
 type UpsertUserParams struct {
-	OidcSub string
-	Email   string
-	Name    string
-	Role    UserRole
+	OidcSub   string
+	Email     string
+	FirstName string
+	LastName  string
+	Role      UserRole
 }
 
 func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (User, error) {
 	row := q.db.QueryRowContext(ctx, upsertUser,
 		arg.OidcSub,
 		arg.Email,
-		arg.Name,
+		arg.FirstName,
+		arg.LastName,
 		arg.Role,
 	)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.Name,
+		&i.FirstName,
+		&i.LastName,
 		&i.OidcSub,
 		&i.Role,
 		&i.CreatedAt,

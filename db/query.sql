@@ -15,6 +15,9 @@ INSERT INTO items (
 -- name: UpdateItemStatus :exec
 UPDATE items SET status = $2 WHERE id = $1;
 
+-- name: DeleteItem :exec
+DELETE FROM items WHERE id = $1;
+
 -- name: CreateBooking :one
 INSERT INTO bookings (
     item_id, user_id, guest_name, guest_email, start_date, end_date, status
@@ -42,12 +45,40 @@ GROUP BY items.id
 ORDER BY items.name;
 
 -- name: UpsertUser :one
-INSERT INTO users (oidc_sub, email, name, role, last_login)
-VALUES ($1, $2, $3, $4, NOW())
+INSERT INTO users (oidc_sub, email, first_name, last_name, role, last_login)
+VALUES ($1, $2, $3, $4, $5, NOW())
     ON CONFLICT (oidc_sub)
 DO UPDATE SET
     email = EXCLUDED.email,
-           name = EXCLUDED.name,
-           role = EXCLUDED.role,
+           first_name = EXCLUDED.first_name,
+           last_name = EXCLUDED.last_name,
+           -- WICHTIG: role wird hier nicht überschrieben, damit Admins ihre Rechte behalten!
            last_login = NOW()
            RETURNING *;
+
+-- name: ListUsers :many
+SELECT * FROM users ORDER BY last_name ASC, first_name ASC;
+
+-- name: GetUser :one
+SELECT * FROM users WHERE id = $1 LIMIT 1;
+
+-- name: CreateUser :one
+INSERT INTO users (
+    first_name, last_name, email, oidc_sub, role
+) VALUES (
+             $1, $2, $3, $4, $5
+         ) RETURNING *;
+
+-- name: UpdateUser :exec
+UPDATE users
+SET first_name = $2, last_name = $3, email = $4, role = $5, oidc_sub = $6
+WHERE id = $1;
+
+-- name: DeleteUser :exec
+DELETE FROM users WHERE id = $1;
+
+-- name: GetUpcomingBookingsForItem :many
+SELECT start_date, end_date, status
+FROM bookings
+WHERE item_id = $1 AND end_date >= CURRENT_DATE
+ORDER BY start_date ASC;
