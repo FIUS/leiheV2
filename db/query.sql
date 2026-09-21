@@ -7,9 +7,9 @@ SELECT * FROM items WHERE id = $1 LIMIT 1;
 -- name: CreateItem :one
 INSERT INTO items (
     name, isbn, description, image_url, custom_image_url,
-    min_players, max_players, min_playtime, max_playtime, status
+    min_players, max_players, min_playtime, max_playtime, status, room, shelf
 ) VALUES (
-             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
          ) RETURNING *;
 
 -- name: UpdateItemStatus :exec
@@ -30,7 +30,7 @@ UPDATE items SET custom_image_url = $1 WHERE id = $2;
 
 -- name: UpdateItem :exec
 UPDATE items
-SET name = $2, min_players = $3, max_players = $4, min_playtime = $5, max_playtime = $6
+SET name = $2, min_players = $3, max_players = $4, min_playtime = $5, max_playtime = $6, room = $7, shelf = $8
 WHERE id = $1;
 
 -- name: ListCategories :many
@@ -82,3 +82,12 @@ SELECT start_date, end_date, status
 FROM bookings
 WHERE item_id = $1 AND end_date >= CURRENT_DATE
 ORDER BY start_date ASC;
+
+-- name: GetItemHistory :many
+SELECT
+    b.id, b.start_date, b.end_date, b.status,
+    b.guest_name, u.first_name, u.last_name
+FROM bookings b
+         LEFT JOIN users u ON b.user_id = u.id
+WHERE b.item_id = $1
+ORDER BY b.start_date DESC;

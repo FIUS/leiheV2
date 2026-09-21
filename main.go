@@ -86,8 +86,8 @@ type CreateItemRequest struct {
 	MaxPlayers  int32  `form:"max_players"`
 	MinPlaytime int32  `form:"min_playtime"`
 	MaxPlaytime int32  `form:"max_playtime"`
-	BggID       string `form:"bgg_id"`
-	ImageUrl    string `form:"image_url"`
+	Room        string `form:"room"`
+	Shelf       string `form:"shelf"`
 }
 
 type UpdateItemRequest struct {
@@ -97,6 +97,8 @@ type UpdateItemRequest struct {
 	MaxPlayers  int32  `form:"max_players"`
 	MinPlaytime int32  `form:"min_playtime"`
 	MaxPlaytime int32  `form:"max_playtime"`
+	Room        string `form:"room"`
+	Shelf       string `form:"shelf"`
 }
 
 type CreateUserRequest struct {
@@ -345,6 +347,8 @@ func main() {
 			MinPlaytime: req.MinPlaytime,
 			MaxPlaytime: req.MaxPlaytime,
 			Status:      "available",
+			Room:        sql.NullString{String: req.Room, Valid: req.Room != ""},
+			Shelf:       sql.NullString{String: req.Shelf, Valid: req.Shelf != ""},
 		})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Konnte Item nicht speichern"})
@@ -367,6 +371,8 @@ func main() {
 			MaxPlayers:  req.MaxPlayers,
 			MinPlaytime: req.MinPlaytime,
 			MaxPlaytime: req.MaxPlaytime,
+			Room:        sql.NullString{String: req.Room, Valid: req.Room != ""},
+			Shelf:       sql.NullString{String: req.Shelf, Valid: req.Shelf != ""},
 		})
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Konnte Änderungen nicht speichern")
@@ -427,7 +433,49 @@ func main() {
 			"status":       item.Status,
 			"images":       images,
 			"bookings":     bookings,
+			"room":         item.Room.String,
+			"shelf":        item.Shelf.String,
 		})
+	})
+
+	// NEU: Historie laden (nur für Theke & Admins)
+	r.GET("/api/items/history", RequireRole("admin", "maintainer"), func(c *gin.Context) {
+		idStr := c.Query("id")
+		itemID, _ := strconv.Atoi(idStr)
+
+		history, err := queries.GetItemHistory(context.Background(), int32(itemID))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Konnte Historie nicht laden"})
+			return
+		}
+
+		type HistoryResponse struct {
+			ID        int32  `json:"id"`
+			StartDate string `json:"start_date"`
+			EndDate   string `json:"end_date"`
+			Status    string `json:"status"`
+			Borrower  string `json:"borrower"`
+		}
+
+		var resp []HistoryResponse
+		for _, h := range history {
+			borrower := "Unbekannt"
+			if h.GuestName.Valid && h.GuestName.String != "" {
+				borrower = "Gast: " + h.GuestName.String
+			} else if h.FirstName.Valid {
+				borrower = h.FirstName.String + " " + h.LastName.String
+			}
+
+			resp = append(resp, HistoryResponse{
+				ID:        h.ID,
+				StartDate: h.StartDate.Format("02.01.2006"),
+				EndDate:   h.EndDate.Format("02.01.2006"),
+				Status:    string(h.Status),
+				Borrower:  borrower,
+			})
+		}
+
+		c.JSON(http.StatusOK, resp)
 	})
 
 	// ==========================================

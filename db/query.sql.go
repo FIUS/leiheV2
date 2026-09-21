@@ -57,10 +57,10 @@ func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (B
 const createItem = `-- name: CreateItem :one
 INSERT INTO items (
     name, isbn, description, image_url, custom_image_url,
-    min_players, max_players, min_playtime, max_playtime, status
+    min_players, max_players, min_playtime, max_playtime, status, room, shelf
 ) VALUES (
-             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-         ) RETURNING id, name, isbn, description, image_url, custom_image_url, min_players, max_players, min_playtime, max_playtime, status
+             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+         ) RETURNING id, name, isbn, description, image_url, custom_image_url, room, shelf, min_players, max_players, min_playtime, max_playtime, status
 `
 
 type CreateItemParams struct {
@@ -74,6 +74,8 @@ type CreateItemParams struct {
 	MinPlaytime    int32
 	MaxPlaytime    int32
 	Status         string
+	Room           sql.NullString
+	Shelf          sql.NullString
 }
 
 func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, error) {
@@ -88,6 +90,8 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 		arg.MinPlaytime,
 		arg.MaxPlaytime,
 		arg.Status,
+		arg.Room,
+		arg.Shelf,
 	)
 	var i Item
 	err := row.Scan(
@@ -97,6 +101,8 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 		&i.Description,
 		&i.ImageUrl,
 		&i.CustomImageUrl,
+		&i.Room,
+		&i.Shelf,
 		&i.MinPlayers,
 		&i.MaxPlayers,
 		&i.MinPlaytime,
@@ -163,7 +169,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 }
 
 const getItem = `-- name: GetItem :one
-SELECT id, name, isbn, description, image_url, custom_image_url, min_players, max_players, min_playtime, max_playtime, status FROM items WHERE id = $1 LIMIT 1
+SELECT id, name, isbn, description, image_url, custom_image_url, room, shelf, min_players, max_players, min_playtime, max_playtime, status FROM items WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetItem(ctx context.Context, id int32) (Item, error) {
@@ -176,6 +182,8 @@ func (q *Queries) GetItem(ctx context.Context, id int32) (Item, error) {
 		&i.Description,
 		&i.ImageUrl,
 		&i.CustomImageUrl,
+		&i.Room,
+		&i.Shelf,
 		&i.MinPlayers,
 		&i.MaxPlayers,
 		&i.MinPlaytime,
@@ -183,6 +191,57 @@ func (q *Queries) GetItem(ctx context.Context, id int32) (Item, error) {
 		&i.Status,
 	)
 	return i, err
+}
+
+const getItemHistory = `-- name: GetItemHistory :many
+SELECT
+    b.id, b.start_date, b.end_date, b.status,
+    b.guest_name, u.first_name, u.last_name
+FROM bookings b
+         LEFT JOIN users u ON b.user_id = u.id
+WHERE b.item_id = $1
+ORDER BY b.start_date DESC
+`
+
+type GetItemHistoryRow struct {
+	ID        int32
+	StartDate time.Time
+	EndDate   time.Time
+	Status    string
+	GuestName sql.NullString
+	FirstName sql.NullString
+	LastName  sql.NullString
+}
+
+func (q *Queries) GetItemHistory(ctx context.Context, itemID int32) ([]GetItemHistoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, getItemHistory, itemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetItemHistoryRow
+	for rows.Next() {
+		var i GetItemHistoryRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.StartDate,
+			&i.EndDate,
+			&i.Status,
+			&i.GuestName,
+			&i.FirstName,
+			&i.LastName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getUpcomingBookingsForItem = `-- name: GetUpcomingBookingsForItem :many
@@ -269,7 +328,7 @@ func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
 }
 
 const listItems = `-- name: ListItems :many
-SELECT id, name, isbn, description, image_url, custom_image_url, min_players, max_players, min_playtime, max_playtime, status FROM items ORDER BY name
+SELECT id, name, isbn, description, image_url, custom_image_url, room, shelf, min_players, max_players, min_playtime, max_playtime, status FROM items ORDER BY name
 `
 
 func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
@@ -288,6 +347,8 @@ func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
 			&i.Description,
 			&i.ImageUrl,
 			&i.CustomImageUrl,
+			&i.Room,
+			&i.Shelf,
 			&i.MinPlayers,
 			&i.MaxPlayers,
 			&i.MinPlaytime,
@@ -308,7 +369,7 @@ func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
 }
 
 const listItemsWithCategories = `-- name: ListItemsWithCategories :many
-SELECT items.id, items.name, items.isbn, items.description, items.image_url, items.custom_image_url, items.min_players, items.max_players, items.min_playtime, items.max_playtime, items.status, COALESCE(string_agg(categories.name, ','), '')::text AS category_names
+SELECT items.id, items.name, items.isbn, items.description, items.image_url, items.custom_image_url, items.room, items.shelf, items.min_players, items.max_players, items.min_playtime, items.max_playtime, items.status, COALESCE(string_agg(categories.name, ','), '')::text AS category_names
 FROM items
          LEFT JOIN item_categories ON items.id = item_categories.item_id
          LEFT JOIN categories ON item_categories.category_id = categories.id
@@ -323,6 +384,8 @@ type ListItemsWithCategoriesRow struct {
 	Description    sql.NullString
 	ImageUrl       sql.NullString
 	CustomImageUrl sql.NullString
+	Room           sql.NullString
+	Shelf          sql.NullString
 	MinPlayers     int32
 	MaxPlayers     int32
 	MinPlaytime    int32
@@ -347,6 +410,8 @@ func (q *Queries) ListItemsWithCategories(ctx context.Context) ([]ListItemsWithC
 			&i.Description,
 			&i.ImageUrl,
 			&i.CustomImageUrl,
+			&i.Room,
+			&i.Shelf,
 			&i.MinPlayers,
 			&i.MaxPlayers,
 			&i.MinPlaytime,
@@ -405,7 +470,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 
 const updateItem = `-- name: UpdateItem :exec
 UPDATE items
-SET name = $2, min_players = $3, max_players = $4, min_playtime = $5, max_playtime = $6
+SET name = $2, min_players = $3, max_players = $4, min_playtime = $5, max_playtime = $6, room = $7, shelf = $8
 WHERE id = $1
 `
 
@@ -416,6 +481,8 @@ type UpdateItemParams struct {
 	MaxPlayers  int32
 	MinPlaytime int32
 	MaxPlaytime int32
+	Room        sql.NullString
+	Shelf       sql.NullString
 }
 
 func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) error {
@@ -426,6 +493,8 @@ func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) error {
 		arg.MaxPlayers,
 		arg.MinPlaytime,
 		arg.MaxPlaytime,
+		arg.Room,
+		arg.Shelf,
 	)
 	return err
 }

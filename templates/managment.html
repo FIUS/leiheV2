@@ -20,10 +20,14 @@
                 min_players: dataset.minPlayers,
                 max_players: dataset.maxPlayers,
                 min_playtime: dataset.minPlaytime,
-                max_playtime: dataset.maxPlaytime
+                max_playtime: dataset.maxPlaytime,
+                room: dataset.room,
+                shelf: dataset.shelf,
             };
             this.editModalOpen = true;
         },
+
+        itemHistory: [],
 
         openBGGModal(name) {
             this.bggQuery = name;
@@ -67,6 +71,9 @@
         },
 
         // Nutzer Modal State
+
+        userRole: '{{ .UserRole }}',
+
         editUserModalOpen: false,
         editUser: {},
 
@@ -159,6 +166,8 @@
                             <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Spieler</label><input type="number" name="max_players" value="4" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
                             <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Dauer (m)</label><input type="number" name="min_playtime" value="15" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
                             <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Dauer (m)</label><input type="number" name="max_playtime" value="45" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Raum</label><input type="text" name="room" placeholder="z.B. V38.008" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Regal</label><input type="text" name="shelf" placeholder="z.B. A1" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
                         </div>
 
                         <div class="pt-4 flex justify-end">

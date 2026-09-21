@@ -24,6 +24,8 @@ CREATE TABLE items (
                        description TEXT,
                        image_url VARCHAR(255),
                        custom_image_url VARCHAR(255),
+                       room VARCHAR(100),
+                       shelf VARCHAR(100),
 
                        min_players INT NOT NULL DEFAULT 0,
                        max_players INT NOT NULL DEFAULT 0,

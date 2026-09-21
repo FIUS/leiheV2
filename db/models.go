@@ -78,6 +78,8 @@ type Item struct {
 	Description    sql.NullString
 	ImageUrl       sql.NullString
 	CustomImageUrl sql.NullString
+	Room           sql.NullString
+	Shelf          sql.NullString
 	MinPlayers     int32
 	MaxPlayers     int32
 	MinPlaytime    int32
