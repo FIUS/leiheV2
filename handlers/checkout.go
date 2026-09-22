@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"time"
 
@@ -42,31 +43,42 @@ func HandleCreateBooking(c *gin.Context) {
 	ctx := context.Background()
 
 	// String Pointer Logik
-	var guestName, guestEmail *string
+	var guestName, guestEmail sql.NullString
 	if req.GuestName != "" {
-		guestName = &req.GuestName
-		guestEmail = &req.GuestEmail
+		guestName = sql.NullString{String: req.GuestName, Valid: true}
+	}
+	if req.GuestEmail != "" {
+		guestEmail = sql.NullString{String: req.GuestEmail, Valid: true}
 	}
 
-	booking, err := queries.CreateBooking(ctx, db.CreateBookingParams{
-		PublicToken: token,
-		GuestName:   guestName,
-		GuestEmail:  guestEmail,
-		StartDate:   startDate,
-		EndDate:     endDate,
-		Status:      db.BookingStatusPending,
-	})
+	var booking db.Booking
+	err = queries.InTx(ctx, func(txQueries *db.Queries) error {
+		var txErr error
+		booking, txErr = txQueries.CreateBooking(ctx, db.CreateBookingParams{
+			PublicToken: token,
+			GuestName:   guestName,
+			GuestEmail:  guestEmail,
+			StartDate:   startDate,
+			EndDate:     endDate,
+			Status:      db.BookingStatusPending,
+		})
+		if txErr != nil {
+			return txErr
+		}
 
+		for _, gameID := range req.Games {
+			if txErr := txQueries.AddBookingItem(ctx, db.AddBookingItemParams{
+				BookingID: booking.ID,
+				ItemID:    gameID,
+			}); txErr != nil {
+				return txErr
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Buchung fehlgeschlagen"})
 		return
-	}
-
-	for _, gameID := range req.Games {
-		_ = queries.AddBookingItem(ctx, db.AddBookingItemParams{
-			BookingID: booking.ID,
-			ItemID:    gameID,
-		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Erfolgreich", "token": token})

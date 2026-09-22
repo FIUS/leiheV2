@@ -2,6 +2,7 @@ package main
 
 import (
 	"leiheV2/handlers"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,9 +15,21 @@ func SetupRoutes(r *gin.Engine) {
 	// HTML Pages
 	r.GET("/", handlers.RenderIndex)
 	r.GET("/games", handlers.RenderGamesCatalog)
-	r.GET("/admin", handlers.RequireRole("admin", "maintainer"), handlers.RenderAdmin)
 	r.GET("/setup-bilder", handlers.RequireRole("admin", "maintainer"), handlers.RenderSetupBilder)
-	r.GET("/checkout", handlers.RenderCheckoutPage) // NEU!
+	r.GET("/checkout", handlers.RenderCheckoutPage)
+
+	// Admin HTML Pages
+	admin := r.Group("/admin")
+	admin.Use(handlers.RequireRole("maintainer", "admin"))
+	{
+		admin.GET("", func(c *gin.Context) { c.Redirect(http.StatusMovedPermanently, "/admin/dashboard") })
+		admin.GET("/dashboard", handlers.RenderAdminDashboard)
+		admin.GET("/games", handlers.RenderAdminGames)
+		admin.GET("/bookings", handlers.RenderAdminBookings)
+
+		admin.GET("/users", handlers.RequireRole("admin"), handlers.RenderAdminUsers)
+		admin.GET("/settings", handlers.RequireRole("admin"), handlers.RenderAdminSettings)
+	}
 
 	// API: Items
 	r.POST("/api/items", handlers.RequireRole("admin", "maintainer"), handlers.CreateItem)

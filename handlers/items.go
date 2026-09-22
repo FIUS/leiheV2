@@ -176,8 +176,8 @@ func GetItemHistory(c *gin.Context) {
 	var resp []HistoryResponse
 	for _, h := range history {
 		borrower := "Unbekannt"
-		if h.GuestName != nil && *h.GuestName != "" {
-			borrower = "Gast: " + *h.GuestName
+		if h.GuestName.Valid && h.GuestName.String != "" {
+			borrower = "Gast: " + h.GuestName.String
 		} else if h.FirstName.Valid {
 			borrower = h.FirstName.String + " " + h.LastName.String
 		}

@@ -25,7 +25,11 @@ func RenderIndex(c *gin.Context) {
 	for _, item := range items {
 		names = append(names, item.Name)
 	}
-	namesJSON, _ := json.Marshal(names)
+	namesJSON, err := json.Marshal(names)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Datenbankfehler")
+		return
+	}
 
 	c.HTML(http.StatusOK, "index.html", gin.H{
 		"TotalItems": len(items),
@@ -41,24 +45,109 @@ func RenderGamesCatalog(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Datenbankfehler")
 		return
 	}
-	categories, _ := queries.ListCategories(context.Background())
+	categories, err := queries.ListCategories(context.Background())
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Datenbankfehler")
+		return
+	}
+
+	type gameCatalogItem struct {
+		ID    int32  `json:"id"`
+		Name  string `json:"name"`
+		Image string `json:"image"`
+	}
+	games := make([]gameCatalogItem, 0, len(items))
+	for _, item := range items {
+		image := ""
+		if item.CustomImageUrl.Valid {
+			image = item.CustomImageUrl.String
+		} else if item.ImageUrl.Valid {
+			image = item.ImageUrl.String
+		}
+		games = append(games, gameCatalogItem{
+			ID:    item.ID,
+			Name:  item.Name,
+			Image: image,
+		})
+	}
+	gamesJSON, err := json.Marshal(games)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Datenbankfehler")
+		return
+	}
 
 	c.HTML(http.StatusOK, "games.html", gin.H{
 		"Games":      items,
 		"Categories": categories,
 		"UserRole":   session.Get("user_role"),
+		"GamesJSON":  string(gamesJSON),
 	})
 }
 
-func RenderAdmin(c *gin.Context) {
+func RenderAdminDashboard(c *gin.Context) {
+	items, err := queries.ListItems(context.Background())
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Datenbankfehler")
+		return
+	}
+	users, err := queries.ListUsers(context.Background())
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Datenbankfehler")
+		return
+	}
 	session := sessions.Default(c)
-	items, _ := queries.ListItems(context.Background())
-	users, _ := queries.ListUsers(context.Background())
 
-	c.HTML(http.StatusOK, "managment.html", gin.H{
-		"Games":    items,
-		"Users":    users,
-		"UserRole": session.Get("user_role"),
+	c.HTML(http.StatusOK, "admin_dashboard.html", gin.H{
+		"ActiveTab": "dashboard",
+		"Games":     items,
+		"Users":     users,
+		"UserRole":  session.Get("user_role"),
+	})
+}
+
+func RenderAdminGames(c *gin.Context) {
+	items, err := queries.ListItems(context.Background())
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Datenbankfehler")
+		return
+	}
+	session := sessions.Default(c)
+
+	c.HTML(http.StatusOK, "admin_games.html", gin.H{
+		"ActiveTab": "games",
+		"Games":     items,
+		"UserRole":  session.Get("user_role"),
+	})
+}
+
+func RenderAdminUsers(c *gin.Context) {
+	users, err := queries.ListUsers(context.Background())
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Datenbankfehler")
+		return
+	}
+	session := sessions.Default(c)
+
+	c.HTML(http.StatusOK, "admin_users.html", gin.H{
+		"ActiveTab": "users",
+		"Users":     users,
+		"UserRole":  session.Get("user_role"),
+	})
+}
+
+func RenderAdminBookings(c *gin.Context) {
+	session := sessions.Default(c)
+	c.HTML(http.StatusOK, "admin_bookings.html", gin.H{
+		"ActiveTab": "bookings",
+		"UserRole":  session.Get("user_role"),
+	})
+}
+
+func RenderAdminSettings(c *gin.Context) {
+	session := sessions.Default(c)
+	c.HTML(http.StatusOK, "admin_settings.html", gin.H{
+		"ActiveTab": "settings",
+		"UserRole":  session.Get("user_role"),
 	})
 }
 
@@ -88,7 +177,11 @@ func RenderSetupBilder(c *gin.Context) {
 		return
 	}
 
-	games, _ := queries.ListItems(c)
+	games, err := queries.ListItems(c)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Datenbankfehler")
+		return
+	}
 	mappedImages := make(map[string]bool)
 	for _, game := range games {
 		if game.CustomImageUrl.Valid {

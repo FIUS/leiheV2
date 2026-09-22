@@ -1,118 +1,10 @@
 {{ template "header" . }}
 
 <div class="relative -mt-8"
-     x-data='{
-        search: "",
-        sortBy: "name",
-        viewMode: "grid",
-        playersFilter: 0,
-        minDurationFilter: 5,
-        maxDurationFilter: 245,
-        selectedCategories: [],
-
-        cart: [],
-        cartOpen: false,
-
-        gamesList: [
-            {{ range .Games }}
-            {
-                id: {{ .ID }},
-                name: {{ .Name | printf "%q" }},
-                image: {{ if .CustomImageUrl.Valid }}{{ .CustomImageUrl.String | printf "%q" }}{{ else if .ImageUrl.Valid }}{{ .ImageUrl.String | printf "%q" }}{{ else }}""{{ end }}
-            },
-            {{ end }}
-        ],
-
-        get cartDetails() {
-            return this.cart.map(id => this.gamesList.find(g => g.id === id)).filter(Boolean);
-        },
-
-        minRatingFilter: 0,
-        userRole: "{{ .UserRole }}",
-        itemHistory: [],
-
-        validateMinDuration() {
-            if (parseInt(this.minDurationFilter) > parseInt(this.maxDurationFilter)) this.maxDurationFilter = this.minDurationFilter;
-        },
-        validateMaxDuration() {
-            if (parseInt(this.maxDurationFilter) < parseInt(this.minDurationFilter)) this.minDurationFilter = this.maxDurationFilter;
-        },
-
-        resetFilters() {
-            this.search = ""; this.playersFilter = 0; this.minDurationFilter = 5;
-            this.maxDurationFilter = 245; this.selectedCategories = [];
-            this.minRatingFilter = 0; this.sortBy = "name";
-        },
-
-        sortItems() {
-            this.$nextTick(() => {
-                let container = document.getElementById("games-container");
-                if(!container) return;
-                let items = Array.from(container.children);
-                items.sort((a, b) => {
-                    let vA = a.dataset[this.sortBy];
-                    let vB = b.dataset[this.sortBy];
-                    if (this.sortBy === "name") return vA.localeCompare(vB);
-                    if (this.sortBy === "rating") return parseFloat(vB || 0) - parseFloat(vA || 0);
-                    return parseFloat(vA || 0) - parseFloat(vB || 0);
-                });
-                items.forEach(i => container.appendChild(i));
-            });
-        },
-
-        detailModalOpen: false,
-        activeItem: null,
-        isLoadingDetails: false,
-        activeImageIndex: 0,
-        calendarMonth: new Date().getMonth(),
-        calendarYear: new Date().getFullYear(),
-
-        async openDetails(id) {
-            this.isLoadingDetails = true;
-            this.detailModalOpen = true;
-            this.activeItem = null;
-            this.activeImageIndex = 0;
-            this.calendarMonth = new Date().getMonth();
-            this.calendarYear = new Date().getFullYear();
-
-            try {
-                const res = await fetch("/api/items/details?id=" + id);
-                if (res.ok) {
-                    this.activeItem = await res.json();
-                    if (this.userRole === "admin" || this.userRole === "maintainer") {
-                        const histRes = await fetch("/api/items/history?id=" + id);
-                        if (histRes.ok) this.itemHistory = await histRes.json();
-                    }
-                }
-            } catch (e) {
-                console.error("Details Fehler", e);
-            }
-            this.isLoadingDetails = false;
-        },
-
-        isBooked(day) {
-            if (!this.activeItem || !this.activeItem.bookings) return false;
-            const checkDate = new Date(this.calendarYear, this.calendarMonth, day).setHours(0,0,0,0);
-            for (let b of this.activeItem.bookings) {
-                let start = new Date(b.start_date).setHours(0,0,0,0);
-                let end = new Date(b.end_date).setHours(0,0,0,0);
-                if (checkDate >= start && checkDate <= end) return true;
-            }
-            return false;
-        },
-
-        get blankDays() {
-            let firstDay = new Date(this.calendarYear, this.calendarMonth, 1).getDay();
-            return firstDay === 0 ? 6 : firstDay - 1;
-        },
-
-        get daysInMonth() {
-            return new Date(this.calendarYear, this.calendarMonth + 1, 0).getDate();
-        }
-     }'
-     x-init="$watch('sortBy', () => sortItems()); sortItems();">
-
-    <!-- Top Bar (Suche, Ansichten) -->
+     id="games-root"
+     data-user-role="{{ .UserRole }}"
+     data-games='{{ printf "%s" .GamesJSON }}'
+     x-data="gamesCatalog">
     <div class=" p-4 rounded-xl shadow-sm border  flex flex-col lg:flex-row justify-between items-center gap-4 mt-4">
 
         <!-- Suche -->
@@ -218,6 +110,8 @@
 
                 {{ range .Games }}
                 <div data-name="{{ .Name }}" data-duration="{{ .MinPlaytime }}" data-players="{{ .MinPlayers }}" data-rating="8.1"
+                     data-game-id="{{ .ID }}" data-game-name="{{ .Name }}"
+                     data-game-image="{{ if .CustomImageUrl.Valid }}{{ .CustomImageUrl.String }}{{ else if .ImageUrl.Valid }}{{ .ImageUrl.String }}{{ end }}"
                      x-show="
                         (search === '' || `{{ .Name }}`.toLowerCase().includes(search.toLowerCase())) &&
                         (playersFilter == 0 || ({{ .MinPlayers }} <= playersFilter && {{ .MaxPlayers }} >= playersFilter)) &&
@@ -274,7 +168,7 @@
                             </div>
                             <div :class="{ 'w-full': viewMode === 'grid', 'w-full sm:w-48': viewMode === 'list-img', 'w-full sm:w-36': viewMode === 'list' }">
                                 <button x-show="cart.includes({{ .ID }})" style="display: none;" @click="cart = cart.filter(i => i !== {{ .ID }})" class="w-full text-center text-xs bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 font-semibold py-2.5 px-3 rounded-lg border border-orange-500/30 transition duration-300">Entfernen</button>
-                                <button x-show="!cart.includes({{ .ID }})" @click="cart.push({{ .ID }})" class="w-full text-center text-xs bg-[#5B83C2]/10 hover:bg-blue-600 text-[#5B83C2] hover:text-white font-bold py-2.5 px-3 rounded-lg border border-[#5B83C2]/30 transition duration-300">In den Leihkorb</button>
+                                <button x-show="!cart.includes({{ .ID }})" @click='addToCart({{ .ID }}, {{ .Name | printf "%q" }}, {{ if .CustomImageUrl.Valid }}{{ .CustomImageUrl.String | printf "%q" }}{{ else if .ImageUrl.Valid }}{{ .ImageUrl.String | printf "%q" }}{{ else }}""{{ end }})' class="w-full text-center text-xs bg-[#5B83C2]/10 hover:bg-blue-600 text-[#5B83C2] hover:text-white font-bold py-2.5 px-3 rounded-lg border border-[#5B83C2]/30 transition duration-300">In den Leihkorb</button>
                             </div>
                         </div>
                     </div>
@@ -335,7 +229,7 @@
         </div>
 
         <div class="p-6 border-t  bg-[#0B101A]" x-show="cart.length > 0">
-            <button @click="cartOpen = false; alert('Weiter zum Checkout Flow!');" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-600/20 transition flex items-center justify-center gap-2">
+            <button @click="proceedToCheckout()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-600/20 transition flex items-center justify-center gap-2">
                 Weiter zur Ausleihe
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
             </button>
@@ -395,7 +289,7 @@
                         <div class="mt-auto pt-6">
                             <template x-if="activeItem?.status === 'rented'"><div class="text-xs text-orange-400 mb-3 text-center bg-orange-500/10 border border-orange-500/20 py-2.5 px-3 rounded-xl flex items-center justify-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>Aktuell verliehen. Vormerken möglich.</span></div></template>
                             <template x-if="cart.includes(activeItem?.id)"><button @click="cart = cart.filter(i => i !== activeItem.id)" type="button" class="w-full text-center text-sm bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 font-bold py-3.5 px-4 rounded-xl border border-orange-500/30 transition duration-300 flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Aus Leihkorb entfernen</button></template>
-                            <template x-if="!cart.includes(activeItem?.id)"><button @click="cart.push(activeItem.id)" type="button" class="w-full text-center text-sm bg-[#5B83C2]/10 hover:bg-blue-600 text-[#5B83C2] hover:text-white font-bold py-3.5 px-4 rounded-xl border border-[#5B83C2]/30 transition duration-300 flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg> In den Leihkorb</button></template>
+                            <template x-if="!cart.includes(activeItem?.id)"><button @click="addToCart(activeItem.id, activeItem.name, activeItem.images?.[0] || '')" type="button" class="w-full text-center text-sm bg-[#5B83C2]/10 hover:bg-blue-600 text-[#5B83C2] hover:text-white font-bold py-3.5 px-4 rounded-xl border border-[#5B83C2]/30 transition duration-300 flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg> In den Leihkorb</button></template>
                         </div>
                     </div>
 
@@ -450,5 +344,8 @@
 </div>
 
 <style> [x-cloak] { display: none !important; } </style>
+
+<!-- import .js-->
+<script src="/static/js/games.js"></script>
 
 {{ template "footer" . }}
