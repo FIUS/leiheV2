@@ -11,6 +11,94 @@ import (
 	"time"
 )
 
+type BookingStatus string
+
+const (
+	BookingStatusPending   BookingStatus = "pending"
+	BookingStatusActive    BookingStatus = "active"
+	BookingStatusReturned  BookingStatus = "returned"
+	BookingStatusCancelled BookingStatus = "cancelled"
+)
+
+func (e *BookingStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = BookingStatus(s)
+	case string:
+		*e = BookingStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for BookingStatus: %T", src)
+	}
+	return nil
+}
+
+type NullBookingStatus struct {
+	BookingStatus BookingStatus
+	Valid         bool // Valid is true if BookingStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullBookingStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.BookingStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.BookingStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullBookingStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.BookingStatus), nil
+}
+
+type ItemStatus string
+
+const (
+	ItemStatusAvailable   ItemStatus = "available"
+	ItemStatusRented      ItemStatus = "rented"
+	ItemStatusMaintenance ItemStatus = "maintenance"
+	ItemStatusLost        ItemStatus = "lost"
+)
+
+func (e *ItemStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ItemStatus(s)
+	case string:
+		*e = ItemStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ItemStatus: %T", src)
+	}
+	return nil
+}
+
+type NullItemStatus struct {
+	ItemStatus ItemStatus
+	Valid      bool // Valid is true if ItemStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullItemStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ItemStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ItemStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullItemStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ItemStatus), nil
+}
+
 type UserRole string
 
 const (
@@ -55,15 +143,20 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 }
 
 type Booking struct {
-	ID         int32
-	ItemID     int32
-	UserID     sql.NullInt32
-	GuestName  sql.NullString
-	GuestEmail sql.NullString
-	StartDate  time.Time
-	EndDate    time.Time
-	Status     string
-	CreatedAt  time.Time
+	ID          int32
+	PublicToken string
+	UserID      sql.NullInt32
+	GuestName   sql.NullString
+	GuestEmail  sql.NullString
+	StartDate   time.Time
+	EndDate     time.Time
+	Status      BookingStatus
+	CreatedAt   time.Time
+}
+
+type BookingItem struct {
+	BookingID int32
+	ItemID    int32
 }
 
 type Category struct {
@@ -84,7 +177,7 @@ type Item struct {
 	MaxPlayers     int32
 	MinPlaytime    int32
 	MaxPlaytime    int32
-	Status         string
+	Status         ItemStatus
 }
 
 type ItemCategory struct {

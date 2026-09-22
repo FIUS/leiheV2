@@ -1,6 +1,9 @@
--- Mapping from OIDC role types to sxstem roles
+-- ENUMS
 CREATE TYPE user_role AS ENUM ('user', 'maintainer', 'admin');
+CREATE TYPE item_status AS ENUM ('available', 'rented', 'maintenance', 'lost');
+CREATE TYPE booking_status AS ENUM ('pending', 'active', 'returned', 'cancelled');
 
+-- USERS
 CREATE TABLE users (
                        id SERIAL PRIMARY KEY,
                        email VARCHAR(255) UNIQUE NOT NULL,
@@ -12,11 +15,13 @@ CREATE TABLE users (
                        last_login TIMESTAMP
 );
 
+-- CATEGORIES
 CREATE TABLE categories (
                             id SERIAL PRIMARY KEY,
                             name VARCHAR(100) UNIQUE NOT NULL
 );
 
+-- ITEMS (Spiele)
 CREATE TABLE items (
                        id SERIAL PRIMARY KEY,
                        name VARCHAR(255) NOT NULL,
@@ -26,40 +31,43 @@ CREATE TABLE items (
                        custom_image_url VARCHAR(255),
                        room VARCHAR(100),
                        shelf VARCHAR(100),
-
                        min_players INT NOT NULL DEFAULT 0,
                        max_players INT NOT NULL DEFAULT 0,
                        min_playtime INT NOT NULL DEFAULT 0,
                        max_playtime INT NOT NULL DEFAULT 0,
-
-                       status VARCHAR(50) NOT NULL DEFAULT 'available'
-                           CHECK (status IN ('available', 'rented', 'maintenance', 'lost'))
+                       status item_status NOT NULL DEFAULT 'available'
 );
 
+-- ITEM_CATEGORIES
 CREATE TABLE item_categories (
                                  item_id INT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
                                  category_id INT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
                                  PRIMARY KEY (item_id, category_id)
 );
 
+-- BOOKINGS (Der Buchungs-Deckel)
 CREATE TABLE bookings (
                           id SERIAL PRIMARY KEY,
-                          item_id INT NOT NULL REFERENCES items(id) ON DELETE RESTRICT,
-
+                          public_token VARCHAR(12) UNIQUE NOT NULL,
                           user_id INT REFERENCES users(id) ON DELETE SET NULL,
                           guest_name VARCHAR(255),
                           guest_email VARCHAR(255),
-
                           start_date TIMESTAMPTZ NOT NULL,
                           end_date TIMESTAMPTZ NOT NULL,
-
-                          status VARCHAR(50) NOT NULL DEFAULT 'pending'
-                              CHECK (status IN ('pending', 'active', 'returned', 'cancelled')),
-
+                          status booking_status NOT NULL DEFAULT 'pending',
                           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- BOOKING_ITEMS (Der Korb-Inhalt)
+CREATE TABLE booking_items (
+                               booking_id INT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+                               item_id INT NOT NULL REFERENCES items(id) ON DELETE RESTRICT,
+                               PRIMARY KEY (booking_id, item_id)
+);
+
+-- INDIZES
 CREATE INDEX idx_items_status ON items(status);
 CREATE INDEX idx_items_players ON items(min_players, max_players);
 CREATE INDEX idx_items_playtime ON items(min_playtime, max_playtime);
 CREATE INDEX idx_bookings_status ON bookings(status);
+CREATE INDEX idx_bookings_token ON bookings(public_token);

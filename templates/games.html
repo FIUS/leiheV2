@@ -1,46 +1,71 @@
 {{ template "header" . }}
 
-<div class="space-y-6 relative"
-     x-data="{
-        search: '',
-        sortBy: 'name',
-        viewMode: 'grid', /* 'grid', 'list-img', 'list' */
+<div class="relative -mt-8"
+     x-data='{
+        search: "",
+        sortBy: "name",
+        viewMode: "grid",
         playersFilter: 0,
         minDurationFilter: 5,
         maxDurationFilter: 245,
         selectedCategories: [],
+
         cart: [],
+        cartOpen: false,
+
+        gamesList: [
+            {{ range .Games }}
+            {
+                id: {{ .ID }},
+                name: {{ .Name | printf "%q" }},
+                image: {{ if .CustomImageUrl.Valid }}{{ .CustomImageUrl.String | printf "%q" }}{{ else if .ImageUrl.Valid }}{{ .ImageUrl.String | printf "%q" }}{{ else }}""{{ end }}
+            },
+            {{ end }}
+        ],
+
+        get cartDetails() {
+            return this.cart.map(id => this.gamesList.find(g => g.id === id)).filter(Boolean);
+        },
+
         minRatingFilter: 0,
-        userRole: '{{ .UserRole }}',
+        userRole: "{{ .UserRole }}",
         itemHistory: [],
 
-        validateMinDuration() { if (parseInt(this.minDurationFilter) > parseInt(this.maxDurationFilter)) this.maxDurationFilter = this.minDurationFilter; },
-        validateMaxDuration() { if (parseInt(this.maxDurationFilter) < parseInt(this.minDurationFilter)) this.minDurationFilter = this.maxDurationFilter; },
+        validateMinDuration() {
+            if (parseInt(this.minDurationFilter) > parseInt(this.maxDurationFilter)) this.maxDurationFilter = this.minDurationFilter;
+        },
+        validateMaxDuration() {
+            if (parseInt(this.maxDurationFilter) < parseInt(this.minDurationFilter)) this.minDurationFilter = this.maxDurationFilter;
+        },
 
         resetFilters() {
-            this.search = ''; this.playersFilter = 0; this.minDurationFilter = 5;
+            this.search = ""; this.playersFilter = 0; this.minDurationFilter = 5;
             this.maxDurationFilter = 245; this.selectedCategories = [];
-            this.minRatingFilter = 0; this.sortBy = 'name';
+            this.minRatingFilter = 0; this.sortBy = "name";
         },
 
         sortItems() {
             this.$nextTick(() => {
-                let container = document.getElementById('games-container');
+                let container = document.getElementById("games-container");
                 if(!container) return;
                 let items = Array.from(container.children);
                 items.sort((a, b) => {
                     let vA = a.dataset[this.sortBy];
                     let vB = b.dataset[this.sortBy];
-                    if (this.sortBy === 'name') return vA.localeCompare(vB);
-                    if (this.sortBy === 'rating') return parseFloat(vB || 0) - parseFloat(vA || 0);
+                    if (this.sortBy === "name") return vA.localeCompare(vB);
+                    if (this.sortBy === "rating") return parseFloat(vB || 0) - parseFloat(vA || 0);
                     return parseFloat(vA || 0) - parseFloat(vB || 0);
                 });
                 items.forEach(i => container.appendChild(i));
             });
         },
 
-        detailModalOpen: false, activeItem: null, isLoadingDetails: false,
-        activeImageIndex: 0, calendarMonth: new Date().getMonth(), calendarYear: new Date().getFullYear(),
+        detailModalOpen: false,
+        activeItem: null,
+        isLoadingDetails: false,
+        activeImageIndex: 0,
+        calendarMonth: new Date().getMonth(),
+        calendarYear: new Date().getFullYear(),
 
         async openDetails(id) {
             this.isLoadingDetails = true;
@@ -51,15 +76,17 @@
             this.calendarYear = new Date().getFullYear();
 
             try {
-                const res = await fetch('/api/items/details?id=' + id);
+                const res = await fetch("/api/items/details?id=" + id);
                 if (res.ok) {
                     this.activeItem = await res.json();
-                    if (this.userRole === 'admin' || this.userRole === 'maintainer') {
-                        const histRes = await fetch('/api/items/history?id=' + id);
+                    if (this.userRole === "admin" || this.userRole === "maintainer") {
+                        const histRes = await fetch("/api/items/history?id=" + id);
                         if (histRes.ok) this.itemHistory = await histRes.json();
                     }
                 }
-            } catch (e) { console.error('Details Fehler', e); }
+            } catch (e) {
+                console.error("Details Fehler", e);
+            }
             this.isLoadingDetails = false;
         },
 
@@ -73,17 +100,24 @@
             }
             return false;
         },
-        get blankDays() { let firstDay = new Date(this.calendarYear, this.calendarMonth, 1).getDay(); return firstDay === 0 ? 6 : firstDay - 1; },
-        get daysInMonth() { return new Date(this.calendarYear, this.calendarMonth + 1, 0).getDate(); }
-     }"
+
+        get blankDays() {
+            let firstDay = new Date(this.calendarYear, this.calendarMonth, 1).getDay();
+            return firstDay === 0 ? 6 : firstDay - 1;
+        },
+
+        get daysInMonth() {
+            return new Date(this.calendarYear, this.calendarMonth + 1, 0).getDate();
+        }
+     }'
      x-init="$watch('sortBy', () => sortItems()); sortItems();">
 
     <!-- Top Bar (Suche, Ansichten) -->
-    <div class="bg-fius-card p-4 rounded-xl shadow-sm border border-fius-border flex flex-col lg:flex-row justify-between items-center gap-4">
+    <div class=" p-4 rounded-xl shadow-sm border  flex flex-col lg:flex-row justify-between items-center gap-4 mt-4">
 
         <!-- Suche -->
         <div class="w-full lg:flex-1 max-w-md relative">
-            <input type="text" x-model="search" placeholder="Durchsuchen..." class="w-full pl-10 pr-4 py-2 bg-fius-bg border border-fius-border rounded-md text-gray-100 text-sm focus:outline-none focus:border-blue-500">
+            <input type="text" x-model="search" placeholder="Durchsuchen..." class="w-full pl-10 pr-4 py-2 bg-fius-bg border  rounded-md text-gray-100 text-sm focus:outline-none focus:border-blue-500">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center text-fius-muted">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
@@ -91,27 +125,27 @@
 
         <!-- View Modes & Leihkorb -->
         <div class="flex items-center gap-4 w-full justify-between lg:w-auto lg:justify-end">
-            <!-- View Modes (Kachel, Liste+Bild, Liste) -->
-            <div class="inline-flex rounded-md shadow-sm border border-fius-border p-0.5 bg-fius-bg">
-                <button @click="viewMode = 'grid'" title="Kacheln" :class="viewMode === 'grid' ? 'bg-fius-card text-blue-500 shadow-sm' : 'text-fius-muted'" class="p-1.5 rounded transition-colors"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg></button>
-                <button @click="viewMode = 'list-img'" title="Liste mit Bild" :class="viewMode === 'list-img' ? 'bg-fius-card text-blue-500 shadow-sm' : 'text-fius-muted'" class="p-1.5 rounded transition-colors"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16M4 6v4h4V6H4z"></path></svg></button>
-                <button @click="viewMode = 'list'" title="Liste pur" :class="viewMode === 'list' ? 'bg-fius-card text-blue-500 shadow-sm' : 'text-fius-muted'" class="p-1.5 rounded transition-colors"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+            <!-- View Modes -->
+            <div class="inline-flex rounded-md shadow-sm border  p-0.5 bg-fius-bg">
+                <button @click="viewMode = 'grid'" title="Kacheln" :class="viewMode === 'grid' ? 'text-blue-500 shadow-sm' : 'text-fius-muted'" class="p-1.5 rounded transition-colors"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg></button>
+                <button @click="viewMode = 'list-img'" title="Liste mit Bild" :class="viewMode === 'list-img' ?  'text-blue-500 shadow-sm' : 'text-fius-muted'" class="p-1.5 rounded transition-colors"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16M4 6v4h4V6H4z"></path></svg></button>
+                <button @click="viewMode = 'list'" title="Liste pur" :class="viewMode === 'list' ? 'text-blue-500 shadow-sm' : 'text-fius-muted'" class="p-1.5 rounded transition-colors"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
             </div>
 
             <!-- Leihkorb Icon mit Zähler-Badge -->
-            <a href="#leihkorb" class="relative inline-flex items-center p-2 text-sm text-gray-100 bg-fius-bg border border-fius-border rounded-lg transition hover:border-blue-500">
+            <button @click="cartOpen = true" class="relative inline-flex items-center p-2 text-sm text-gray-100 bg-fius-bg border  rounded-lg transition hover:border-blue-500 cursor-pointer shadow-sm">
                 <svg class="w-6 h-6 text-fius-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                 <span x-show="cart.length > 0" x-text="cart.length" style="display: none;" class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow"></span>
-            </a>
+            </button>
         </div>
     </div>
 
     <!-- Main Content Area: Sidebar + Games -->
-    <div class="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-6 mt-4">
 
         <!-- Sidebar (Filter) -->
-        <div class="lg:col-span-1 bg-fius-card p-5 rounded-xl border border-fius-border shadow-sm h-fit space-y-6">
-            <div class="flex justify-between items-center border-b border-fius-border pb-3">
+        <div class="lg:col-span-1  p-5 rounded-xl border  shadow-sm h-fit space-y-6">
+            <div class="flex justify-between items-center border-b  pb-3">
                 <h3 class="font-bold text-gray-100 text-xs uppercase">Filter</h3>
                 <button @click="resetFilters()" type="button" class="text-xs text-blue-500 hover:underline">Zurücksetzen</button>
             </div>
@@ -120,7 +154,7 @@
             <div class="space-y-3 pt-2">
                 <label class="block text-xs font-bold text-fius-muted uppercase flex justify-between">
                     <span>Spieler</span>
-                    <span class="font-mono text-blue-500 text-[11px] bg-fius-bg px-2 py-0.5 rounded border border-fius-border" x-text="playersFilter == 0 ? 'Alle' : playersFilter + ' P.'"></span>
+                    <span class="font-mono text-blue-500 text-[11px] bg-fius-bg px-2 py-0.5 rounded border " x-text="playersFilter == 0 ? 'Alle' : playersFilter + ' P.'"></span>
                 </label>
                 <input type="range" x-model="playersFilter" min="0" max="10" class="w-full h-1 bg-fius-border rounded-lg appearance-none accent-blue-500">
             </div>
@@ -131,7 +165,7 @@
                 <div class="max-h-48 overflow-y-auto space-y-2 pr-1">
                     {{ range .Categories }}
                     <label class="flex items-center gap-3 text-sm text-gray-200 cursor-pointer">
-                        <input type="checkbox" value="{{ .Name }}" x-model="selectedCategories" class="accent-blue-500 w-4 h-4 bg-fius-bg border-fius-border">
+                        <input type="checkbox" value="{{ .Name }}" x-model="selectedCategories" class="accent-blue-500 w-4 h-4 bg-fius-bg ">
                         <span>{{ .Name }}</span>
                     </label>
                     {{ end }}
@@ -139,10 +173,10 @@
             </div>
 
             <!-- Range: Dauer -->
-            <div class="space-y-3 pt-4 border-t border-fius-border">
+            <div class="space-y-3 pt-4 border-t ">
                 <label class="block text-xs font-bold text-fius-muted uppercase flex justify-between mb-2">
                     <span>Dauer</span>
-                    <span class="font-mono text-blue-500 text-[11px] bg-fius-bg px-2 py-0.5 rounded border border-fius-border">
+                    <span class="font-mono text-blue-500 text-[11px] bg-fius-bg px-2 py-0.5 rounded border ">
                         <span x-text="minDurationFilter"></span> - <span x-text="maxDurationFilter > 240 ? '240+' : maxDurationFilter"></span> m
                     </span>
                 </label>
@@ -153,10 +187,10 @@
             </div>
 
             <!-- Filter: BGG Sterne-Bewertung -->
-            <div class="space-y-3 pt-4 border-t border-fius-border" x-data="{ hoverRating: 0 }">
+            <div class="space-y-3 pt-4 border-t " x-data="{ hoverRating: 0 }">
                 <label class="block text-xs font-bold text-fius-muted uppercase flex justify-between">
                     <span>Min. BGG Bewertung</span>
-                    <span class="font-mono text-blue-500 text-[11px] bg-fius-bg px-2 py-0.5 rounded border border-fius-border" x-text="minRatingFilter === 0 ? 'Alle' : minRatingFilter + ' Sterne+'"></span>
+                    <span class="font-mono text-blue-500 text-[11px] bg-fius-bg px-2 py-0.5 rounded border " x-text="minRatingFilter === 0 ? 'Alle' : minRatingFilter + ' Sterne+'"></span>
                 </label>
                 <div class="flex items-center gap-1 cursor-pointer py-1">
                     <template x-for="star in [1, 2, 3, 4, 5]">
@@ -167,13 +201,13 @@
             </div>
 
             <!-- Sortierung -->
-            <div class="space-y-3 pt-4 border-t border-fius-border">
+            <div class="space-y-3 pt-4 border-t ">
                 <label class="block text-xs font-bold text-fius-muted uppercase">Sortieren nach</label>
                 <div class="flex flex-col gap-2">
-                    <label class="flex items-center gap-3 text-sm text-gray-200 cursor-pointer hover:text-white transition"><input type="radio" value="name" x-model="sortBy" class="accent-blue-500 w-4 h-4 bg-fius-bg border-fius-border"> <span>Name (A-Z)</span></label>
-                    <label class="flex items-center gap-3 text-sm text-gray-200 cursor-pointer hover:text-white transition"><input type="radio" value="duration" x-model="sortBy" class="accent-blue-500 w-4 h-4 bg-fius-bg border-fius-border"> <span>Dauer (aufsteigend)</span></label>
-                    <label class="flex items-center gap-3 text-sm text-gray-200 cursor-pointer hover:text-white transition"><input type="radio" value="players" x-model="sortBy" class="accent-blue-500 w-4 h-4 bg-fius-bg border-fius-border"> <span>Spieleranzahl</span></label>
-                    <label class="flex items-center gap-3 text-sm text-gray-200 cursor-pointer hover:text-white transition"><input type="radio" value="rating" x-model="sortBy" class="accent-blue-500 w-4 h-4 bg-fius-bg border-fius-border"> <span>BGG Rating (beste zuerst)</span></label>
+                    <label class="flex items-center gap-3 text-sm text-gray-200 cursor-pointer hover:text-white transition"><input type="radio" value="name" x-model="sortBy" class="accent-blue-500 w-4 h-4 bg-fius-bg "> <span>Name (A-Z)</span></label>
+                    <label class="flex items-center gap-3 text-sm text-gray-200 cursor-pointer hover:text-white transition"><input type="radio" value="duration" x-model="sortBy" class="accent-blue-500 w-4 h-4 bg-fius-bg "> <span>Dauer (aufsteigend)</span></label>
+                    <label class="flex items-center gap-3 text-sm text-gray-200 cursor-pointer hover:text-white transition"><input type="radio" value="players" x-model="sortBy" class="accent-blue-500 w-4 h-4 bg-fius-bg "> <span>Spieleranzahl</span></label>
+                    <label class="flex items-center gap-3 text-sm text-gray-200 cursor-pointer hover:text-white transition"><input type="radio" value="rating" x-model="sortBy" class="accent-blue-500 w-4 h-4 bg-fius-bg "> <span>BGG Rating (beste zuerst)</span></label>
                 </div>
             </div>
         </div>
@@ -191,12 +225,12 @@
                         (selectedCategories.length === 0 || selectedCategories.some(cat => `{{ .CategoryNames }}`.includes(cat))) &&
                         (minRatingFilter === 0)
                      "
-                     class="bg-fius-card rounded-xl border border-fius-border shadow-md overflow-hidden flex transition duration-300 hover:border-blue-500 group"
+                     class=" rounded-xl border  shadow-md overflow-hidden flex transition duration-300 hover:border-blue-500 group"
                      :class="viewMode === 'grid' ? 'flex-col h-full' : 'flex-row items-center'">
 
                     <!-- Cover Area -->
                     <div x-show="viewMode !== 'list'" @click="openDetails({{ .ID }})"
-                         class="relative flex items-center justify-center overflow-hidden bg-fius-bg/50 cursor-pointer shrink-0 border-fius-border"
+                         class="relative flex items-center justify-center overflow-hidden bg-fius-bg/50 cursor-pointer shrink-0 "
                          :class="viewMode === 'grid' ? 'w-full h-48 border-b' : 'w-24 h-24 sm:w-32 sm:h-32 border-r'">
                         {{ if .CustomImageUrl.Valid }}<img src="{{ .CustomImageUrl.String }}" class="object-cover h-full w-full group-hover:scale-105 transition duration-500">{{ else if .ImageUrl.Valid }}<img src="{{ .ImageUrl.String }}" class="object-cover h-full w-full group-hover:scale-105 transition duration-500">{{ else }}<svg class="w-12 h-12 text-fius-border/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>{{ end }}
                         <div class="absolute top-3 right-3" x-show="viewMode === 'grid'">
@@ -215,8 +249,7 @@
                         <!-- Title & Stats -->
                         <div class="flex-1 flex min-w-0" :class="viewMode === 'list' ? 'flex-col sm:flex-row sm:items-center gap-2 sm:gap-6' : 'flex-col gap-3'">
                             <h3 @click="openDetails({{ .ID }})" title="{{ .Name }}"
-                                class="text-lg font-bold text-white break-all hover:text-blue-500 transition cursor-pointer"
-                                :class="viewMode === 'list' ? 'sm:flex-1 line-clamp-1' : 'line-clamp-1'">
+                                class="text-lg font-bold text-white hover:text-blue-500 transition cursor-pointer line-clamp-1">
                                 {{ .Name }}
                             </h3>
                             <div class="flex text-sm text-gray-300" :class="viewMode === 'list' ? 'flex-row gap-4 sm:gap-6 shrink-0' : 'flex-col gap-1'">
@@ -233,7 +266,7 @@
 
                         <!-- Actions Area -->
                         <div class="shrink-0" :class="{
-                            'w-full mt-4 pt-4 border-t border-fius-border flex items-center justify-between': viewMode === 'grid' || viewMode === 'list-img',
+                            'w-full mt-4 pt-4 border-t  flex items-center justify-between': viewMode === 'grid' || viewMode === 'list-img',
                             'flex items-center gap-4 mt-3 sm:mt-0': viewMode === 'list'
                         }">
                             <div x-show="viewMode !== 'grid'" class="hidden sm:block shrink-0">
@@ -251,16 +284,76 @@
         </div>
     </div>
 
+    <!-- Leihkorb Sidebar Start -->
+    <div x-show="cartOpen" x-cloak style="display: none;"
+         x-transition:enter="transition-opacity ease-linear duration-300"
+         x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity ease-linear duration-300"
+         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+         @click="cartOpen = false"
+         class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110]">
+    </div>
+
+    <div x-show="cartOpen" x-cloak
+         :class="cartOpen ? 'translate-x-0' : 'translate-x-full'"
+         class="fixed top-0 bottom-0 right-0 w-full sm:w-[400px] bg-fius-overlay border-l  shadow-2xl z-[120] flex flex-col transition-transform duration-300 ease-in-out">
+
+        <div class="px-6 py-5 border-b  flex justify-between items-center bg-[#0B101A]">
+            <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                <svg class="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                Leihkorb
+                <span class="text-sm font-normal text-fius-muted ml-1" x-show="cart.length > 0">(<span x-text="cart.length"></span>)</span>
+            </h2>
+            <button @click="cartOpen = false" class="text-fius-muted hover:text-white p-2 rounded-full hover:bg-[#1E2532] transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 space-y-4 bg-fius-bg">
+            <template x-if="cart.length === 0">
+                <div class="h-full flex flex-col items-center justify-center text-center opacity-60 mt-20">
+                    <svg class="w-16 h-16 text-fius-muted mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                    <p class="text-gray-400 font-medium">Dein Korb ist noch leer.</p>
+                    <p class="text-xs text-fius-muted mt-2">Füge Spiele aus dem Katalog hinzu, um sie auszuleihen.</p>
+                </div>
+            </template>
+
+            <template x-for="item in cartDetails" :key="item.id">
+                <div class="flex gap-4 p-3  border  rounded-xl relative group hover:border-blue-500/50 transition">
+                    <div class="w-16 h-16 shrink-0 bg-[#0B101A] rounded-lg overflow-hidden border  flex items-center justify-center">
+                        <template x-if="item.image"><img :src="item.image" class="w-full h-full object-cover"></template>
+                        <template x-if="!item.image"><svg class="w-6 h-6 text-fius-border/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></template>
+                    </div>
+                    <div class="flex-1 flex flex-col justify-center min-w-0 pr-6">
+                        <h4 class="text-sm font-bold text-white truncate" x-text="item.name"></h4>
+                    </div>
+                    <button @click="cart = cart.filter(id => id !== item.id)" title="Entfernen" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-fius-muted hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </div>
+            </template>
+        </div>
+
+        <div class="p-6 border-t  bg-[#0B101A]" x-show="cart.length > 0">
+            <button @click="cartOpen = false; alert('Weiter zum Checkout Flow!');" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-600/20 transition flex items-center justify-center gap-2">
+                Weiter zur Ausleihe
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </button>
+            <p class="text-[10px] text-fius-muted text-center mt-3 uppercase tracking-wider">Im nächsten Schritt wählst du Zeitraum & Account</p>
+        </div>
+    </div>
+    <!-- Leihkorb Sidebar Ende -->
+
     <!-- Detail-Modal Start -->
-    <div x-show="detailModalOpen" x-cloak style="display: none;" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-6">
-        <div @click.away="detailModalOpen = false" class="bg-fius-card border border-fius-border rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] flex flex-col overflow-hidden relative">
+    <div x-show="detailModalOpen" x-cloak class="fixed top-0 right-0 bottom-0 left-0 z-[100] flex items-start justify-center bg-black/80 backdrop-blur-sm p-0">
+        <div @click.away="detailModalOpen = false" class=" border  rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] flex flex-col mt-4 overflow-hidden relative">
             <button @click="detailModalOpen = false" class="absolute top-4 right-4 z-50 text-white/70 hover:text-white bg-black/60 hover:bg-black/90 rounded-full p-2 backdrop-blur transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
             <div x-show="isLoadingDetails" class="p-12 flex justify-center items-center h-64"><div class="text-fius-muted animate-pulse font-bold tracking-widest uppercase">Spieldaten werden geladen...</div></div>
 
-            <div x-show="!isLoadingDetails && activeItem" class="flex flex-col h-full overflow-y-auto">
-                <div class="w-full bg-[#0B101A] relative h-64 sm:h-80 flex-shrink-0 border-b border-fius-border p-4 flex justify-center items-center">
+            <div x-show="!isLoadingDetails && activeItem" class="flex flex-col h-full overflow-y-auto bg-fius-bg">
+                <div class="w-full bg-[#0B101A] relative h-64 sm:h-80 flex-shrink-0 border-b  p-4 flex justify-center items-center">
                     <template x-if="activeItem?.images?.length > 0"><img :src="activeItem.images[activeImageIndex]" class="w-full h-full object-contain drop-shadow-2xl"></template>
                     <template x-if="activeItem?.images?.length > 1">
                         <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
@@ -295,8 +388,8 @@
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
-                            <div class="bg-fius-bg border border-fius-border p-3 rounded-xl flex items-center gap-3"><div class="p-2 bg-[#1E2532] rounded-lg text-blue-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg></div><div><span class="block text-[10px] uppercase font-bold text-fius-muted">Spieler</span><span class="text-white font-semibold text-sm" x-text="`${activeItem?.min_players} - ${activeItem?.max_players}`"></span></div></div>
-                            <div class="bg-fius-bg border border-fius-border p-3 rounded-xl flex items-center gap-3"><div class="p-2 bg-[#1E2532] rounded-lg text-blue-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div><div><span class="block text-[10px] uppercase font-bold text-fius-muted">Dauer</span><span class="text-white font-semibold text-sm" x-text="`${activeItem?.min_playtime} - ${activeItem?.max_playtime} Min.`"></span></div></div>
+                            <div class="bg-fius-bg border  p-3 rounded-xl flex items-center gap-3"><div class="p-2 bg-[#1E2532] rounded-lg text-blue-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg></div><div><span class="block text-[10px] uppercase font-bold text-fius-muted">Spieler</span><span class="text-white font-semibold text-sm" x-text="`${activeItem?.min_players} - ${activeItem?.max_players}`"></span></div></div>
+                            <div class="bg-fius-bg border  p-3 rounded-xl flex items-center gap-3"><div class="p-2 bg-[#1E2532] rounded-lg text-blue-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div><div><span class="block text-[10px] uppercase font-bold text-fius-muted">Dauer</span><span class="text-white font-semibold text-sm" x-text="`${activeItem?.min_playtime} - ${activeItem?.max_playtime} Min.`"></span></div></div>
                         </div>
 
                         <div class="mt-auto pt-6">
@@ -308,7 +401,7 @@
 
                     <!-- Kalender -->
                     <div class="w-full md:w-72 lg:w-80 flex-shrink-0">
-                        <div class="bg-fius-bg border border-fius-border rounded-xl p-4 h-[340px] flex flex-col">
+                        <div class="bg-fius-bg border  rounded-xl p-4 h-[340px] flex flex-col">
                             <div class="flex justify-between items-center mb-4 shrink-0">
                                 <button @click="if(calendarMonth === 0) { calendarMonth = 11; calendarYear--; } else { calendarMonth--; }" class="text-fius-muted hover:text-white p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
                                 <span class="text-white font-bold text-sm uppercase tracking-wider" x-text="new Date(calendarYear, calendarMonth).toLocaleString('de-DE', { month: 'long', year: 'numeric' })"></span>
@@ -318,31 +411,31 @@
                             <div class="grid grid-cols-7 gap-1 flex-1 content-start">
                                 <template x-for="blank in blankDays"><div class="aspect-square"></div></template>
                                 <template x-for="day in daysInMonth" :key="day">
-                                    <div class="aspect-square flex justify-center items-center rounded text-xs font-semibold transition-colors" :class="{ 'bg-red-900/40 text-red-400 border border-red-500/30 cursor-not-allowed': isBooked(day), 'bg-[#1E2532] text-gray-300 border border-fius-border hover:border-blue-500 cursor-pointer': !isBooked(day), 'opacity-50': new Date(calendarYear, calendarMonth, day) < new Date().setHours(0,0,0,0) && !isBooked(day) }"><span x-text="day"></span></div>
+                                    <div class="aspect-square flex justify-center items-center rounded text-xs font-semibold transition-colors" :class="{ 'bg-red-900/40 text-red-400 border border-red-500/30 cursor-not-allowed': isBooked(day), 'bg-[#1E2532] text-gray-300 border  hover:border-blue-500 cursor-pointer': !isBooked(day), 'opacity-50': new Date(calendarYear, calendarMonth, day) < new Date().setHours(0,0,0,0) && !isBooked(day) }"><span x-text="day"></span></div>
                                 </template>
                             </div>
-                            <div class="mt-auto pt-4 flex gap-4 justify-center text-[10px] font-bold uppercase text-fius-muted shrink-0 border-t border-fius-border"><div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-[#1E2532] border border-fius-border"></div> Verfügbar</div><div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-red-900/40 border border-red-500/30"></div> Verliehen</div></div>
+                            <div class="mt-auto pt-4 flex gap-4 justify-center text-[10px] font-bold uppercase text-fius-muted shrink-0 border-t "><div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-[#1E2532] border "></div> Verfügbar</div><div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-red-900/40 border border-red-500/30"></div> Verliehen</div></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Interner Bereich -->
                 {{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }}
-                <div class="px-6 md:px-8 pb-6 md:pb-8 mt-auto border-t border-fius-border pt-6">
+                <div class="px-6 md:px-8 pb-6 md:pb-8 mt-auto border-t  pt-6">
                     <div class="bg-[#1E2532] border border-blue-500/30 rounded-xl p-5">
-                        <h4 class="text-xs uppercase font-bold text-blue-400 mb-4 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"/></svg> Interne Infos (Nur Personal)</h4>
+                        <h4 class="text-xs uppercase font-bold text-blue-400 mb-4 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"/></svg> Interne Infos</h4>
                         <div class="flex gap-4 mb-5 text-sm text-white">
-                            <div class="bg-fius-bg px-4 py-2.5 rounded-lg border border-fius-border flex-1"><span class="text-[10px] text-fius-muted uppercase block mb-0.5">Raum</span><strong x-text="activeItem?.room || '-'"></strong></div>
-                            <div class="bg-fius-bg px-4 py-2.5 rounded-lg border border-fius-border flex-1"><span class="text-[10px] text-fius-muted uppercase block mb-0.5">Regal / Fach</span><strong x-text="activeItem?.shelf || '-'"></strong></div>
+                            <div class="bg-fius-bg px-4 py-2.5 rounded-lg border  flex-1"><span class="text-[10px] text-fius-muted uppercase block mb-0.5">Raum</span><strong x-text="activeItem?.room || '-'"></strong></div>
+                            <div class="bg-fius-bg px-4 py-2.5 rounded-lg border  flex-1"><span class="text-[10px] text-fius-muted uppercase block mb-0.5">Regal / Fach</span><strong x-text="activeItem?.shelf || '-'"></strong></div>
                         </div>
                         <h4 class="text-[10px] uppercase font-bold text-fius-muted mb-2">Letzte Ausleihen</h4>
                         <div class="max-h-40 overflow-y-auto space-y-1.5 text-xs text-gray-300 pr-2">
                             <template x-if="!itemHistory || itemHistory.length === 0"><div class="text-fius-muted italic">Noch keine Ausleihen erfasst.</div></template>
                             <template x-for="hist in itemHistory" :key="hist.id">
-                                <div class="flex justify-between items-center border-b border-fius-border/50 py-2 last:border-0 hover:bg-white/5 px-2 rounded transition">
+                                <div class="flex justify-between items-center border-b /50 py-2 last:border-0 hover:bg-white/5 px-2 rounded transition">
                                     <span class="font-mono text-[11px] text-fius-muted w-1/3" x-text="hist.start_date + ' - ' + hist.end_date"></span>
                                     <span class="font-semibold w-1/3 text-center" x-text="hist.borrower"></span>
-                                    <div class="w-1/3 text-right"><span class="px-2 py-1 rounded text-[9px] font-bold uppercase bg-fius-bg border border-fius-border" :class="hist.status === 'returned' ? 'text-green-500 border-green-500/30 bg-green-500/10' : 'text-orange-400 border-orange-500/30 bg-orange-500/10'" x-text="hist.status"></span></div>
+                                    <div class="w-1/3 text-right"><span class="px-2 py-1 rounded text-[9px] font-bold uppercase bg-fius-bg border " :class="hist.status === 'returned' ? 'text-green-500 border-green-500/30 bg-green-500/10' : 'text-orange-400 border-orange-500/30 bg-orange-500/10'" x-text="hist.status"></span></div>
                                 </div>
                             </template>
                         </div>
@@ -353,6 +446,7 @@
             </div>
         </div>
     </div>
+    <!-- Detail-Modal Ende -->
 </div>
 
 <style> [x-cloak] { display: none !important; } </style>

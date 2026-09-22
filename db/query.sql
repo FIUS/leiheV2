@@ -18,13 +18,6 @@ UPDATE items SET status = $2 WHERE id = $1;
 -- name: DeleteItem :exec
 DELETE FROM items WHERE id = $1;
 
--- name: CreateBooking :one
-INSERT INTO bookings (
-    item_id, user_id, guest_name, guest_email, start_date, end_date, status
-) VALUES (
-             $1, $2, $3, $4, $5, $6, $7
-         ) RETURNING *;
-
 -- name: UpdateItemCustomImage :exec
 UPDATE items SET custom_image_url = $1 WHERE id = $2;
 
@@ -78,16 +71,46 @@ WHERE id = $1;
 DELETE FROM users WHERE id = $1;
 
 -- name: GetUpcomingBookingsForItem :many
-SELECT start_date, end_date, status
-FROM bookings
-WHERE item_id = $1 AND end_date >= CURRENT_DATE
-ORDER BY start_date ASC;
+SELECT b.start_date, b.end_date, b.status
+FROM bookings b
+         JOIN booking_items bi ON b.id = bi.booking_id
+WHERE bi.item_id = $1 AND b.end_date >= CURRENT_DATE
+ORDER BY b.start_date ASC;
 
 -- name: GetItemHistory :many
 SELECT
     b.id, b.start_date, b.end_date, b.status,
     b.guest_name, u.first_name, u.last_name
 FROM bookings b
+         JOIN booking_items bi ON b.id = bi.booking_id
          LEFT JOIN users u ON b.user_id = u.id
-WHERE b.item_id = $1
+WHERE bi.item_id = $1
 ORDER BY b.start_date DESC;
+
+-- name: CreateBooking :one
+INSERT INTO bookings (
+    public_token, user_id, guest_name, guest_email, start_date, end_date, status
+) VALUES (
+             $1, $2, $3, $4, $5, $6, $7
+         ) RETURNING *;
+
+-- name: AddBookingItem :exec
+INSERT INTO booking_items (
+    booking_id, item_id
+) VALUES (
+             $1, $2
+         );
+
+-- name: GetBookingByToken :one
+SELECT * FROM bookings
+WHERE public_token = $1 LIMIT 1;
+
+-- name: GetItemsForBooking :many
+SELECT i.* FROM items i
+                    JOIN booking_items bi ON i.id = bi.item_id
+WHERE bi.booking_id = $1;
+
+-- name: UpdateBookingStatus :exec
+UPDATE bookings
+SET status = $2
+WHERE id = $1;

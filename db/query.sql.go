@@ -11,27 +11,45 @@ import (
 	"time"
 )
 
+const addBookingItem = `-- name: AddBookingItem :exec
+INSERT INTO booking_items (
+    booking_id, item_id
+) VALUES (
+             $1, $2
+         )
+`
+
+type AddBookingItemParams struct {
+	BookingID int32
+	ItemID    int32
+}
+
+func (q *Queries) AddBookingItem(ctx context.Context, arg AddBookingItemParams) error {
+	_, err := q.db.ExecContext(ctx, addBookingItem, arg.BookingID, arg.ItemID)
+	return err
+}
+
 const createBooking = `-- name: CreateBooking :one
 INSERT INTO bookings (
-    item_id, user_id, guest_name, guest_email, start_date, end_date, status
+    public_token, user_id, guest_name, guest_email, start_date, end_date, status
 ) VALUES (
              $1, $2, $3, $4, $5, $6, $7
-         ) RETURNING id, item_id, user_id, guest_name, guest_email, start_date, end_date, status, created_at
+         ) RETURNING id, public_token, user_id, guest_name, guest_email, start_date, end_date, status, created_at
 `
 
 type CreateBookingParams struct {
-	ItemID     int32
-	UserID     sql.NullInt32
-	GuestName  sql.NullString
-	GuestEmail sql.NullString
-	StartDate  time.Time
-	EndDate    time.Time
-	Status     string
+	PublicToken string
+	UserID      sql.NullInt32
+	GuestName   sql.NullString
+	GuestEmail  sql.NullString
+	StartDate   time.Time
+	EndDate     time.Time
+	Status      BookingStatus
 }
 
 func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (Booking, error) {
 	row := q.db.QueryRowContext(ctx, createBooking,
-		arg.ItemID,
+		arg.PublicToken,
 		arg.UserID,
 		arg.GuestName,
 		arg.GuestEmail,
@@ -42,7 +60,7 @@ func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (B
 	var i Booking
 	err := row.Scan(
 		&i.ID,
-		&i.ItemID,
+		&i.PublicToken,
 		&i.UserID,
 		&i.GuestName,
 		&i.GuestEmail,
@@ -73,7 +91,7 @@ type CreateItemParams struct {
 	MaxPlayers     int32
 	MinPlaytime    int32
 	MaxPlaytime    int32
-	Status         string
+	Status         ItemStatus
 	Room           sql.NullString
 	Shelf          sql.NullString
 }
@@ -168,6 +186,28 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 	return err
 }
 
+const getBookingByToken = `-- name: GetBookingByToken :one
+SELECT id, public_token, user_id, guest_name, guest_email, start_date, end_date, status, created_at FROM bookings
+WHERE public_token = $1 LIMIT 1
+`
+
+func (q *Queries) GetBookingByToken(ctx context.Context, publicToken string) (Booking, error) {
+	row := q.db.QueryRowContext(ctx, getBookingByToken, publicToken)
+	var i Booking
+	err := row.Scan(
+		&i.ID,
+		&i.PublicToken,
+		&i.UserID,
+		&i.GuestName,
+		&i.GuestEmail,
+		&i.StartDate,
+		&i.EndDate,
+		&i.Status,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getItem = `-- name: GetItem :one
 SELECT id, name, isbn, description, image_url, custom_image_url, room, shelf, min_players, max_players, min_playtime, max_playtime, status FROM items WHERE id = $1 LIMIT 1
 `
@@ -198,8 +238,9 @@ SELECT
     b.id, b.start_date, b.end_date, b.status,
     b.guest_name, u.first_name, u.last_name
 FROM bookings b
+         JOIN booking_items bi ON b.id = bi.booking_id
          LEFT JOIN users u ON b.user_id = u.id
-WHERE b.item_id = $1
+WHERE bi.item_id = $1
 ORDER BY b.start_date DESC
 `
 
@@ -207,7 +248,7 @@ type GetItemHistoryRow struct {
 	ID        int32
 	StartDate time.Time
 	EndDate   time.Time
-	Status    string
+	Status    BookingStatus
 	GuestName sql.NullString
 	FirstName sql.NullString
 	LastName  sql.NullString
@@ -244,17 +285,61 @@ func (q *Queries) GetItemHistory(ctx context.Context, itemID int32) ([]GetItemHi
 	return items, nil
 }
 
+const getItemsForBooking = `-- name: GetItemsForBooking :many
+SELECT i.id, i.name, i.isbn, i.description, i.image_url, i.custom_image_url, i.room, i.shelf, i.min_players, i.max_players, i.min_playtime, i.max_playtime, i.status FROM items i
+                    JOIN booking_items bi ON i.id = bi.item_id
+WHERE bi.booking_id = $1
+`
+
+func (q *Queries) GetItemsForBooking(ctx context.Context, bookingID int32) ([]Item, error) {
+	rows, err := q.db.QueryContext(ctx, getItemsForBooking, bookingID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Item
+	for rows.Next() {
+		var i Item
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Isbn,
+			&i.Description,
+			&i.ImageUrl,
+			&i.CustomImageUrl,
+			&i.Room,
+			&i.Shelf,
+			&i.MinPlayers,
+			&i.MaxPlayers,
+			&i.MinPlaytime,
+			&i.MaxPlaytime,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUpcomingBookingsForItem = `-- name: GetUpcomingBookingsForItem :many
-SELECT start_date, end_date, status
-FROM bookings
-WHERE item_id = $1 AND end_date >= CURRENT_DATE
-ORDER BY start_date ASC
+SELECT b.start_date, b.end_date, b.status
+FROM bookings b
+         JOIN booking_items bi ON b.id = bi.booking_id
+WHERE bi.item_id = $1 AND b.end_date >= CURRENT_DATE
+ORDER BY b.start_date ASC
 `
 
 type GetUpcomingBookingsForItemRow struct {
 	StartDate time.Time
 	EndDate   time.Time
-	Status    string
+	Status    BookingStatus
 }
 
 func (q *Queries) GetUpcomingBookingsForItem(ctx context.Context, itemID int32) ([]GetUpcomingBookingsForItemRow, error) {
@@ -390,7 +475,7 @@ type ListItemsWithCategoriesRow struct {
 	MaxPlayers     int32
 	MinPlaytime    int32
 	MaxPlaytime    int32
-	Status         string
+	Status         ItemStatus
 	CategoryNames  string
 }
 
@@ -468,6 +553,22 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
+const updateBookingStatus = `-- name: UpdateBookingStatus :exec
+UPDATE bookings
+SET status = $2
+WHERE id = $1
+`
+
+type UpdateBookingStatusParams struct {
+	ID     int32
+	Status BookingStatus
+}
+
+func (q *Queries) UpdateBookingStatus(ctx context.Context, arg UpdateBookingStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateBookingStatus, arg.ID, arg.Status)
+	return err
+}
+
 const updateItem = `-- name: UpdateItem :exec
 UPDATE items
 SET name = $2, min_players = $3, max_players = $4, min_playtime = $5, max_playtime = $6, room = $7, shelf = $8
@@ -519,7 +620,7 @@ UPDATE items SET status = $2 WHERE id = $1
 
 type UpdateItemStatusParams struct {
 	ID     int32
-	Status string
+	Status ItemStatus
 }
 
 func (q *Queries) UpdateItemStatus(ctx context.Context, arg UpdateItemStatusParams) error {
