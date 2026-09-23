@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
+	"net/http"
 	"os"
+	"strings"
 
 	"leiheV2/db"
 	"leiheV2/handlers"
@@ -29,9 +32,23 @@ func main() {
 	// Initialisiere die generierten sqlc Queries und übergebe sie an die Handler
 	queries := db.New(database)
 	handlers.InitQueries(queries)
+	if err := handlers.InitAuth(context.Background()); err != nil {
+		log.Fatal("Konnte OIDC nicht initialisieren:", err)
+	}
 
 	r := gin.Default()
-	store := cookie.NewStore([]byte("geheimes-fius-session-secret"))
+	sessionSecret := os.Getenv("SESSION_SECRET")
+	if sessionSecret == "" {
+		log.Fatal("SESSION_SECRET muss gesetzt sein")
+	}
+	store := cookie.NewStore([]byte(sessionSecret))
+	store.Options(sessions.Options{
+		Path:     "/",
+		MaxAge:   30 * 24 * 60 * 60,
+		Secure:   envBool("SESSION_COOKIE_SECURE", false),
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
 	r.Use(sessions.Sessions("fius_session", store))
 
 	r.Static("/static", "./static")
@@ -42,4 +59,12 @@ func main() {
 
 	log.Println("🚀 FIUS Verleih-Backend startet auf http://localhost:8080")
 	r.Run(":8080")
+}
+
+func envBool(key string, fallback bool) bool {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	if value == "" {
+		return fallback
+	}
+	return value == "1" || value == "true" || value == "yes"
 }

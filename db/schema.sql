@@ -10,6 +10,8 @@ CREATE TABLE users (
                        first_name VARCHAR(255) NOT NULL,
                        last_name VARCHAR(255) NOT NULL,
                        oidc_sub VARCHAR(255) UNIQUE NOT NULL,
+                       password_hash TEXT,
+                       email_verified BOOLEAN NOT NULL DEFAULT FALSE,
                        role user_role DEFAULT 'user' NOT NULL,
                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                        last_login TIMESTAMP

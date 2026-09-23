@@ -31,6 +31,22 @@ func (q *Queries) AddBookingItem(ctx context.Context, arg AddBookingItemParams) 
 	return err
 }
 
+const addItemCategory = `-- name: AddItemCategory :exec
+INSERT INTO item_categories (item_id, category_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING
+`
+
+type AddItemCategoryParams struct {
+	ItemID     int32
+	CategoryID int32
+}
+
+func (q *Queries) AddItemCategory(ctx context.Context, arg AddItemCategoryParams) error {
+	_, err := q.db.ExecContext(ctx, addItemCategory, arg.ItemID, arg.CategoryID)
+	return err
+}
+
 const checkItemCollisions = `-- name: CheckItemCollisions :many
 SELECT bi.item_id, i.name
 FROM booking_items bi
@@ -74,6 +90,15 @@ func (q *Queries) CheckItemCollisions(ctx context.Context, arg CheckItemCollisio
 		return nil, err
 	}
 	return items, nil
+}
+
+const clearItemCategories = `-- name: ClearItemCategories :exec
+DELETE FROM item_categories WHERE item_id = $1
+`
+
+func (q *Queries) ClearItemCategories(ctx context.Context, itemID int32) error {
+	_, err := q.db.ExecContext(ctx, clearItemCategories, itemID)
+	return err
 }
 
 const createBooking = `-- name: CreateBooking :one
@@ -177,12 +202,54 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 	return i, err
 }
 
+const createLocalUser = `-- name: CreateLocalUser :one
+INSERT INTO users (
+    email, first_name, last_name, oidc_sub, password_hash, email_verified, role
+) VALUES (
+    $1, $2, $3, $4, $5, $6, 'user'
+) RETURNING id, email, first_name, last_name, oidc_sub, password_hash, email_verified, role, created_at, last_login
+`
+
+type CreateLocalUserParams struct {
+	Email         string
+	FirstName     string
+	LastName      string
+	OidcSub       string
+	PasswordHash  sql.NullString
+	EmailVerified bool
+}
+
+func (q *Queries) CreateLocalUser(ctx context.Context, arg CreateLocalUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, createLocalUser,
+		arg.Email,
+		arg.FirstName,
+		arg.LastName,
+		arg.OidcSub,
+		arg.PasswordHash,
+		arg.EmailVerified,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.FirstName,
+		&i.LastName,
+		&i.OidcSub,
+		&i.PasswordHash,
+		&i.EmailVerified,
+		&i.Role,
+		&i.CreatedAt,
+		&i.LastLogin,
+	)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     first_name, last_name, email, oidc_sub, role
 ) VALUES (
              $1, $2, $3, $4, $5
-         ) RETURNING id, email, first_name, last_name, oidc_sub, role, created_at, last_login
+         ) RETURNING id, email, first_name, last_name, oidc_sub, password_hash, email_verified, role, created_at, last_login
 `
 
 type CreateUserParams struct {
@@ -208,11 +275,22 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.FirstName,
 		&i.LastName,
 		&i.OidcSub,
+		&i.PasswordHash,
+		&i.EmailVerified,
 		&i.Role,
 		&i.CreatedAt,
 		&i.LastLogin,
 	)
 	return i, err
+}
+
+const deleteCategory = `-- name: DeleteCategory :exec
+DELETE FROM categories WHERE id = $1
+`
+
+func (q *Queries) DeleteCategory(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteCategory, id)
+	return err
 }
 
 const deleteItem = `-- name: DeleteItem :exec
@@ -375,6 +453,20 @@ func (q *Queries) GetItemsForBooking(ctx context.Context, bookingID int32) ([]It
 	return items, nil
 }
 
+const getOrCreateCategory = `-- name: GetOrCreateCategory :one
+INSERT INTO categories (name)
+VALUES ($1)
+ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+RETURNING id, name
+`
+
+func (q *Queries) GetOrCreateCategory(ctx context.Context, name string) (Category, error) {
+	row := q.db.QueryRowContext(ctx, getOrCreateCategory, name)
+	var i Category
+	err := row.Scan(&i.ID, &i.Name)
+	return i, err
+}
+
 const getUpcomingBookingsForItem = `-- name: GetUpcomingBookingsForItem :many
 SELECT b.start_date, b.end_date, b.status
 FROM bookings b
@@ -413,7 +505,7 @@ func (q *Queries) GetUpcomingBookingsForItem(ctx context.Context, itemID int32) 
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, first_name, last_name, oidc_sub, role, created_at, last_login FROM users WHERE id = $1 LIMIT 1
+SELECT id, email, first_name, last_name, oidc_sub, password_hash, email_verified, role, created_at, last_login FROM users WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
@@ -425,6 +517,30 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 		&i.FirstName,
 		&i.LastName,
 		&i.OidcSub,
+		&i.PasswordHash,
+		&i.EmailVerified,
+		&i.Role,
+		&i.CreatedAt,
+		&i.LastLogin,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, email, first_name, last_name, oidc_sub, password_hash, email_verified, role, created_at, last_login FROM users WHERE email = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.FirstName,
+		&i.LastName,
+		&i.OidcSub,
+		&i.PasswordHash,
+		&i.EmailVerified,
 		&i.Role,
 		&i.CreatedAt,
 		&i.LastLogin,
@@ -457,54 +573,6 @@ func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
 		return nil, err
 	}
 	return items, nil
-}
-
-const getOrCreateCategory = `-- name: GetOrCreateCategory :one
-INSERT INTO categories (name)
-VALUES ($1)
-ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
-RETURNING id, name
-`
-
-func (q *Queries) GetOrCreateCategory(ctx context.Context, name string) (Category, error) {
-	row := q.db.QueryRowContext(ctx, getOrCreateCategory, name)
-	var category Category
-	err := row.Scan(&category.ID, &category.Name)
-	return category, err
-}
-
-const addItemCategory = `-- name: AddItemCategory :exec
-INSERT INTO item_categories (item_id, category_id)
-VALUES ($1, $2)
-ON CONFLICT DO NOTHING
-`
-
-type AddItemCategoryParams struct {
-	ItemID     int32
-	CategoryID int32
-}
-
-func (q *Queries) AddItemCategory(ctx context.Context, arg AddItemCategoryParams) error {
-	_, err := q.db.ExecContext(ctx, addItemCategory, arg.ItemID, arg.CategoryID)
-	return err
-}
-
-const clearItemCategories = `-- name: ClearItemCategories :exec
-DELETE FROM item_categories WHERE item_id = $1
-`
-
-func (q *Queries) ClearItemCategories(ctx context.Context, itemID int32) error {
-	_, err := q.db.ExecContext(ctx, clearItemCategories, itemID)
-	return err
-}
-
-const deleteCategory = `-- name: DeleteCategory :exec
-DELETE FROM categories WHERE id = $1
-`
-
-func (q *Queries) DeleteCategory(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteCategory, id)
-	return err
 }
 
 const listItems = `-- name: ListItems :many
@@ -613,7 +681,7 @@ func (q *Queries) ListItemsWithCategories(ctx context.Context) ([]ListItemsWithC
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, email, first_name, last_name, oidc_sub, role, created_at, last_login FROM users ORDER BY last_name ASC, first_name ASC
+SELECT id, email, first_name, last_name, oidc_sub, password_hash, email_verified, role, created_at, last_login FROM users ORDER BY last_name ASC, first_name ASC
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -631,6 +699,8 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.FirstName,
 			&i.LastName,
 			&i.OidcSub,
+			&i.PasswordHash,
+			&i.EmailVerified,
 			&i.Role,
 			&i.CreatedAt,
 			&i.LastLogin,
@@ -768,9 +838,9 @@ DO UPDATE SET
     email = EXCLUDED.email,
            first_name = EXCLUDED.first_name,
            last_name = EXCLUDED.last_name,
-           -- WICHTIG: role wird hier nicht überschrieben, damit Admins ihre Rechte behalten!
+           role = EXCLUDED.role,
            last_login = NOW()
-           RETURNING id, email, first_name, last_name, oidc_sub, role, created_at, last_login
+           RETURNING id, email, first_name, last_name, oidc_sub, password_hash, email_verified, role, created_at, last_login
 `
 
 type UpsertUserParams struct {
@@ -796,6 +866,8 @@ func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (User, e
 		&i.FirstName,
 		&i.LastName,
 		&i.OidcSub,
+		&i.PasswordHash,
+		&i.EmailVerified,
 		&i.Role,
 		&i.CreatedAt,
 		&i.LastLogin,

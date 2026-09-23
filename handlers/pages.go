@@ -119,10 +119,10 @@ func RenderAdminGames(c *gin.Context) {
 	session := sessions.Default(c)
 
 	c.HTML(http.StatusOK, "admin_games.html", gin.H{
-		"ActiveTab": "games",
-		"Games":     items,
+		"ActiveTab":  "games",
+		"Games":      items,
 		"Categories": categories,
-		"UserRole":  session.Get("user_role"),
+		"UserRole":   session.Get("user_role"),
 	})
 }
 
@@ -163,8 +163,29 @@ func RenderCheckoutPage(c *gin.Context) {
 	if userRole == nil {
 		userRole = "guest"
 	}
+
 	c.HTML(http.StatusOK, "checkout.html", gin.H{
 		"UserRole": userRole,
+	})
+}
+
+func RenderLoginPage(c *gin.Context) {
+	renderAuthPage(c, http.StatusOK, "")
+}
+
+func RenderRegisterPage(c *gin.Context) {
+	if !auth.LocalAuth {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+	renderAuthPage(c, http.StatusOK, "")
+}
+
+func renderAuthPage(c *gin.Context, status int, errorMessage string) {
+	c.HTML(status, "auth.html", gin.H{
+		"Error":     errorMessage,
+		"LocalAuth": auth.LocalAuth,
+		"Register":  c.Request.URL.Path == "/register",
 	})
 }
 

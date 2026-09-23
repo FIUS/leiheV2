@@ -62,9 +62,19 @@ DO UPDATE SET
     email = EXCLUDED.email,
            first_name = EXCLUDED.first_name,
            last_name = EXCLUDED.last_name,
-           -- WICHTIG: role wird hier nicht überschrieben, damit Admins ihre Rechte behalten!
+           role = EXCLUDED.role,
            last_login = NOW()
            RETURNING *;
+
+-- name: GetUserByEmail :one
+SELECT * FROM users WHERE email = $1 LIMIT 1;
+
+-- name: CreateLocalUser :one
+INSERT INTO users (
+    email, first_name, last_name, oidc_sub, password_hash, email_verified, role
+) VALUES (
+    $1, $2, $3, $4, $5, $6, 'user'
+) RETURNING *;
 
 -- name: ListUsers :many
 SELECT * FROM users ORDER BY last_name ASC, first_name ASC;

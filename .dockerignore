@@ -1,0 +1,7 @@
+.git
+.env
+.idea
+*.test
+coverage.*
+profile.cov
+postgres_data

@@ -8,8 +8,13 @@ import (
 )
 
 func SetupRoutes(r *gin.Engine) {
-	// Auth & Dev
-	r.GET("/dev-login", handlers.DevLogin)
+	// Authentication
+	r.GET("/login", handlers.RenderLoginPage)
+	r.GET("/register", handlers.RenderRegisterPage)
+	r.GET("/auth/stuvus/login", handlers.OIDCLogin)
+	r.GET("/auth/stuvus/callback", handlers.OIDCCallback)
+	r.POST("/auth/local/login", handlers.LocalLogin)
+	r.POST("/auth/local/register", handlers.RegisterLocal)
 	r.GET("/logout", handlers.Logout)
 
 	// HTML Pages

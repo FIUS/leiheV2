@@ -186,12 +186,14 @@ type ItemCategory struct {
 }
 
 type User struct {
-	ID        int32
-	Email     string
-	FirstName string
-	LastName  string
-	OidcSub   string
-	Role      UserRole
-	CreatedAt time.Time
-	LastLogin sql.NullTime
+	ID            int32
+	Email         string
+	FirstName     string
+	LastName      string
+	OidcSub       string
+	PasswordHash  sql.NullString
+	EmailVerified bool
+	Role          UserRole
+	CreatedAt     time.Time
+	LastLogin     sql.NullTime
 }

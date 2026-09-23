@@ -12,6 +12,37 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql
+      - ./db/migrations/001_auth.sql:/docker-entrypoint-initdb.d/2_auth.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fius -d verleih"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:8080"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DB_URL: ${DB_URL:-host=db port=5432 user=fius password=pleasechangeme dbname=verleih sslmode=disable}
+      SESSION_SECRET: ${SESSION_SECRET:-replace-with-a-long-random-value}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_ISSUER: ${OIDC_ISSUER:-https://auth.stuvus.uni-stuttgart.de}
+      OIDC_REDIRECT_URL: ${OIDC_REDIRECT_URL:-http://localhost/auth/stuvus/callback}
+      OIDC_ADMIN_ROLE: ${OIDC_ADMIN_ROLE:-admin}
+      OIDC_MAINTAINER_ROLE: ${OIDC_MAINTAINER_ROLE:-maintainer}
+      ENABLE_LOCAL_AUTH: ${ENABLE_LOCAL_AUTH:-false}
+      LOCAL_AUTH_REQUIRE_EMAIL_VERIFICATION: ${LOCAL_AUTH_REQUIRE_EMAIL_VERIFICATION:-false}
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:
