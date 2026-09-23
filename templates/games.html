@@ -5,11 +5,11 @@
      data-user-role="{{ .UserRole }}"
      data-games='{{ printf "%s" .GamesJSON }}'
      x-data="gamesCatalog">
-    <div class=" p-4 rounded-xl shadow-sm border  flex flex-col lg:flex-row justify-between items-center gap-4 mt-4">
+    <div class=" p-4 rounded-xl shadow-sm border flex flex-col lg:flex-row justify-between items-center gap-4 mt-4">
 
         <!-- Suche -->
         <div class="w-full lg:flex-1 max-w-md relative">
-            <input type="text" x-model="search" placeholder="Durchsuchen..." class="w-full pl-10 pr-4 py-2 bg-fius-bg border  rounded-md text-gray-100 text-sm focus:outline-none focus:border-blue-500">
+            <input type="text" x-model="search" placeholder="Durchsuchen..." class="w-full pl-10 pr-4 py-2 bg-fius-bg border rounded-md text-gray-100 text-sm focus:outline-none focus:border-blue-500">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center text-fius-muted">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
@@ -18,14 +18,14 @@
         <!-- View Modes & Leihkorb -->
         <div class="flex items-center gap-4 w-full justify-between lg:w-auto lg:justify-end">
             <!-- View Modes -->
-            <div class="inline-flex rounded-md shadow-sm border  p-0.5 bg-fius-bg">
+            <div class="inline-flex rounded-md shadow-sm border p-0.5 bg-fius-bg">
                 <button @click="viewMode = 'grid'" title="Kacheln" :class="viewMode === 'grid' ? 'text-blue-500 shadow-sm' : 'text-fius-muted'" class="p-1.5 rounded transition-colors"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg></button>
                 <button @click="viewMode = 'list-img'" title="Liste mit Bild" :class="viewMode === 'list-img' ?  'text-blue-500 shadow-sm' : 'text-fius-muted'" class="p-1.5 rounded transition-colors"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16M4 6v4h4V6H4z"></path></svg></button>
                 <button @click="viewMode = 'list'" title="Liste pur" :class="viewMode === 'list' ? 'text-blue-500 shadow-sm' : 'text-fius-muted'" class="p-1.5 rounded transition-colors"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
             </div>
 
             <!-- Leihkorb Icon mit Zähler-Badge -->
-            <button @click="cartOpen = true" class="relative inline-flex items-center p-2 text-sm text-gray-100 bg-fius-bg border  rounded-lg transition hover:border-blue-500 cursor-pointer shadow-sm">
+            <button @click="cartOpen = true" class="relative inline-flex items-center p-2 text-sm text-gray-100 bg-fius-bg border rounded-lg transition hover:border-blue-500 cursor-pointer shadow-sm">
                 <svg class="w-6 h-6 text-fius-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                 <span x-show="cart.length > 0" x-text="cart.length" style="display: none;" class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow"></span>
             </button>
@@ -36,8 +36,8 @@
     <div class="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-6 mt-4">
 
         <!-- Sidebar (Filter) -->
-        <div class="lg:col-span-1  p-5 rounded-xl border  shadow-sm h-fit space-y-6">
-            <div class="flex justify-between items-center border-b  pb-3">
+        <div class="lg:col-span-1 p-5 rounded-xl border shadow-sm h-fit space-y-6">
+            <div class="flex justify-between items-center border-b pb-3">
                 <h3 class="font-bold text-gray-100 text-xs uppercase">Filter</h3>
                 <button @click="resetFilters()" type="button" class="text-xs text-blue-500 hover:underline">Zurücksetzen</button>
             </div>
@@ -119,7 +119,7 @@
                         (selectedCategories.length === 0 || selectedCategories.some(cat => `{{ .CategoryNames }}`.includes(cat))) &&
                         (minRatingFilter === 0)
                      "
-                     class=" rounded-xl border  shadow-md overflow-hidden flex transition duration-300 hover:border-blue-500 group"
+                     class=" rounded-xl border shadow-md overflow-hidden flex transition duration-300 hover:border-blue-500 group"
                      :class="viewMode === 'grid' ? 'flex-col h-full' : 'flex-row items-center'">
 
                     <!-- Cover Area -->
@@ -160,15 +160,15 @@
 
                         <!-- Actions Area -->
                         <div class="shrink-0" :class="{
-                            'w-full mt-4 pt-4 border-t  flex items-center justify-between': viewMode === 'grid' || viewMode === 'list-img',
+                            'w-full mt-4 pt-4 border-t flex items-center justify-between': viewMode === 'grid' || viewMode === 'list-img',
                             'flex items-center gap-4 mt-3 sm:mt-0': viewMode === 'list'
                         }">
                             <div x-show="viewMode !== 'grid'" class="hidden sm:block shrink-0">
                                 {{ if eq .Status "available" }}<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-500/20 text-green-500 border border-green-500/30">Verfügbar</span>{{ else }}<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-500/20 text-red-500 border border-red-500/30">Ausgeliehen</span>{{ end }}
                             </div>
                             <div :class="{ 'w-full': viewMode === 'grid', 'w-full sm:w-48': viewMode === 'list-img', 'w-full sm:w-36': viewMode === 'list' }">
-                                <button x-show="cart.includes({{ .ID }})" style="display: none;" @click="cart = cart.filter(i => i !== {{ .ID }})" class="w-full text-center text-xs bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 font-semibold py-2.5 px-3 rounded-lg border border-orange-500/30 transition duration-300">Entfernen</button>
-                                <button x-show="!cart.includes({{ .ID }})" @click='addToCart({{ .ID }}, {{ .Name | printf "%q" }}, {{ if .CustomImageUrl.Valid }}{{ .CustomImageUrl.String | printf "%q" }}{{ else if .ImageUrl.Valid }}{{ .ImageUrl.String | printf "%q" }}{{ else }}""{{ end }})' class="w-full text-center text-xs bg-[#5B83C2]/10 hover:bg-blue-600 text-[#5B83C2] hover:text-white font-bold py-2.5 px-3 rounded-lg border border-[#5B83C2]/30 transition duration-300">In den Leihkorb</button>
+                                <button x-show="isInCart({{ .ID }})" style="display: none;" @click="removeFromCart({{ .ID }})" class="w-full text-center text-xs bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 font-semibold py-2.5 px-3 rounded-lg border border-orange-500/30 transition duration-300">Entfernen</button>
+                                <button x-show="!isInCart({{ .ID }})" @click='addToCart({{ .ID }}, {{ .Name | printf "%q" }}, {{ if .CustomImageUrl.Valid }}{{ .CustomImageUrl.String | printf "%q" }}{{ else if .ImageUrl.Valid }}{{ .ImageUrl.String | printf "%q" }}{{ else }}""{{ end }})' class="w-full text-center text-xs bg-[#5B83C2]/10 hover:bg-blue-600 text-[#5B83C2] hover:text-white font-bold py-2.5 px-3 rounded-lg border border-[#5B83C2]/30 transition duration-300">In den Leihkorb</button>
                             </div>
                         </div>
                     </div>
@@ -190,9 +190,9 @@
 
     <div x-show="cartOpen" x-cloak
          :class="cartOpen ? 'translate-x-0' : 'translate-x-full'"
-         class="fixed top-0 bottom-0 right-0 w-full sm:w-[400px] bg-fius-overlay border-l  shadow-2xl z-[120] flex flex-col transition-transform duration-300 ease-in-out">
+         class="fixed top-0 bottom-0 right-0 w-full sm:w-[400px] bg-fius-overlay border-l shadow-2xl z-[120] flex flex-col transition-transform duration-300 ease-in-out">
 
-        <div class="px-6 py-5 border-b  flex justify-between items-center bg-[#0B101A]">
+        <div class="px-6 py-5 border-b flex justify-between items-center bg-[#0B101A]">
             <h2 class="text-xl font-bold text-white flex items-center gap-3">
                 <svg class="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                 Leihkorb
@@ -212,23 +212,23 @@
                 </div>
             </template>
 
-            <template x-for="item in cartDetails" :key="item.id">
-                <div class="flex gap-4 p-3  border  rounded-xl relative group hover:border-blue-500/50 transition">
-                    <div class="w-16 h-16 shrink-0 bg-[#0B101A] rounded-lg overflow-hidden border  flex items-center justify-center">
+            <template x-for="item in cart" :key="item.id">
+                <div class="flex gap-4 p-3 border rounded-xl relative group hover:border-blue-500/50 transition">
+                    <div class="w-16 h-16 shrink-0 bg-[#0B101A] rounded-lg overflow-hidden border flex items-center justify-center">
                         <template x-if="item.image"><img :src="item.image" class="w-full h-full object-cover"></template>
                         <template x-if="!item.image"><svg class="w-6 h-6 text-fius-border/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></template>
                     </div>
                     <div class="flex-1 flex flex-col justify-center min-w-0 pr-6">
                         <h4 class="text-sm font-bold text-white truncate" x-text="item.name"></h4>
                     </div>
-                    <button @click="cart = cart.filter(id => id !== item.id)" title="Entfernen" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-fius-muted hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
+                    <button @click="removeFromCart(item.id)" title="Entfernen" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-fius-muted hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
                 </div>
             </template>
         </div>
 
-        <div class="p-6 border-t  bg-[#0B101A]" x-show="cart.length > 0">
+        <div class="p-6 border-t bg-[#0B101A]" x-show="cart.length > 0">
             <button @click="proceedToCheckout()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-600/20 transition flex items-center justify-center gap-2">
                 Weiter zur Ausleihe
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
@@ -240,14 +240,14 @@
 
     <!-- Detail-Modal Start -->
     <div x-show="detailModalOpen" x-cloak class="fixed top-0 right-0 bottom-0 left-0 z-[100] flex items-start justify-center bg-black/80 backdrop-blur-sm p-0">
-        <div @click.away="detailModalOpen = false" class=" border  rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] flex flex-col mt-4 overflow-hidden relative">
+        <div @click.away="detailModalOpen = false" class=" border rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] flex flex-col mt-4 overflow-hidden relative">
             <button @click="detailModalOpen = false" class="absolute top-4 right-4 z-50 text-white/70 hover:text-white bg-black/60 hover:bg-black/90 rounded-full p-2 backdrop-blur transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
             <div x-show="isLoadingDetails" class="p-12 flex justify-center items-center h-64"><div class="text-fius-muted animate-pulse font-bold tracking-widest uppercase">Spieldaten werden geladen...</div></div>
 
             <div x-show="!isLoadingDetails && activeItem" class="flex flex-col h-full overflow-y-auto bg-fius-bg">
-                <div class="w-full bg-[#0B101A] relative h-64 sm:h-80 flex-shrink-0 border-b  p-4 flex justify-center items-center">
+                <div class="w-full bg-[#0B101A] relative h-64 sm:h-80 flex-shrink-0 border-b p-4 flex justify-center items-center">
                     <template x-if="activeItem?.images?.length > 0"><img :src="activeItem.images[activeImageIndex]" class="w-full h-full object-contain drop-shadow-2xl"></template>
                     <template x-if="activeItem?.images?.length > 1">
                         <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
@@ -282,20 +282,20 @@
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
-                            <div class="bg-fius-bg border  p-3 rounded-xl flex items-center gap-3"><div class="p-2 bg-[#1E2532] rounded-lg text-blue-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg></div><div><span class="block text-[10px] uppercase font-bold text-fius-muted">Spieler</span><span class="text-white font-semibold text-sm" x-text="`${activeItem?.min_players} - ${activeItem?.max_players}`"></span></div></div>
-                            <div class="bg-fius-bg border  p-3 rounded-xl flex items-center gap-3"><div class="p-2 bg-[#1E2532] rounded-lg text-blue-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div><div><span class="block text-[10px] uppercase font-bold text-fius-muted">Dauer</span><span class="text-white font-semibold text-sm" x-text="`${activeItem?.min_playtime} - ${activeItem?.max_playtime} Min.`"></span></div></div>
+                            <div class="bg-fius-bg border p-3 rounded-xl flex items-center gap-3"><div class="p-2 bg-[#1E2532] rounded-lg text-blue-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg></div><div><span class="block text-[10px] uppercase font-bold text-fius-muted">Spieler</span><span class="text-white font-semibold text-sm" x-text="`${activeItem?.min_players} - ${activeItem?.max_players}`"></span></div></div>
+                            <div class="bg-fius-bg border p-3 rounded-xl flex items-center gap-3"><div class="p-2 bg-[#1E2532] rounded-lg text-blue-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div><div><span class="block text-[10px] uppercase font-bold text-fius-muted">Dauer</span><span class="text-white font-semibold text-sm" x-text="`${activeItem?.min_playtime} - ${activeItem?.max_playtime} Min.`"></span></div></div>
                         </div>
 
                         <div class="mt-auto pt-6">
                             <template x-if="activeItem?.status === 'rented'"><div class="text-xs text-orange-400 mb-3 text-center bg-orange-500/10 border border-orange-500/20 py-2.5 px-3 rounded-xl flex items-center justify-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>Aktuell verliehen. Vormerken möglich.</span></div></template>
-                            <template x-if="cart.includes(activeItem?.id)"><button @click="cart = cart.filter(i => i !== activeItem.id)" type="button" class="w-full text-center text-sm bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 font-bold py-3.5 px-4 rounded-xl border border-orange-500/30 transition duration-300 flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Aus Leihkorb entfernen</button></template>
-                            <template x-if="!cart.includes(activeItem?.id)"><button @click="addToCart(activeItem.id, activeItem.name, activeItem.images?.[0] || '')" type="button" class="w-full text-center text-sm bg-[#5B83C2]/10 hover:bg-blue-600 text-[#5B83C2] hover:text-white font-bold py-3.5 px-4 rounded-xl border border-[#5B83C2]/30 transition duration-300 flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg> In den Leihkorb</button></template>
+                            <template x-if="isInCart(activeItem?.id)"><button @click="removeFromCart(activeItem.id)" type="button" class="w-full text-center text-sm bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 font-bold py-3.5 px-4 rounded-xl border border-orange-500/30 transition duration-300 flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Aus Leihkorb entfernen</button></template>
+                            <template x-if="!isInCart(activeItem?.id)"><button @click="addToCart(activeItem.id, activeItem.name, activeItem.images?.[0] || '')" type="button" class="w-full text-center text-sm bg-[#5B83C2]/10 hover:bg-blue-600 text-[#5B83C2] hover:text-white font-bold py-3.5 px-4 rounded-xl border border-[#5B83C2]/30 transition duration-300 flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg> In den Leihkorb</button></template>
                         </div>
                     </div>
 
                     <!-- Kalender -->
                     <div class="w-full md:w-72 lg:w-80 flex-shrink-0">
-                        <div class="bg-fius-bg border  rounded-xl p-4 h-[340px] flex flex-col">
+                        <div class="bg-fius-bg border rounded-xl p-4 h-[340px] flex flex-col">
                             <div class="flex justify-between items-center mb-4 shrink-0">
                                 <button @click="if(calendarMonth === 0) { calendarMonth = 11; calendarYear--; } else { calendarMonth--; }" class="text-fius-muted hover:text-white p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
                                 <span class="text-white font-bold text-sm uppercase tracking-wider" x-text="new Date(calendarYear, calendarMonth).toLocaleString('de-DE', { month: 'long', year: 'numeric' })"></span>
@@ -305,7 +305,7 @@
                             <div class="grid grid-cols-7 gap-1 flex-1 content-start">
                                 <template x-for="blank in blankDays"><div class="aspect-square"></div></template>
                                 <template x-for="day in daysInMonth" :key="day">
-                                    <div class="aspect-square flex justify-center items-center rounded text-xs font-semibold transition-colors" :class="{ 'bg-red-900/40 text-red-400 border border-red-500/30 cursor-not-allowed': isBooked(day), 'bg-[#1E2532] text-gray-300 border  hover:border-blue-500 cursor-pointer': !isBooked(day), 'opacity-50': new Date(calendarYear, calendarMonth, day) < new Date().setHours(0,0,0,0) && !isBooked(day) }"><span x-text="day"></span></div>
+                                    <div class="aspect-square flex justify-center items-center rounded text-xs font-semibold transition-colors" :class="{ 'bg-red-900/40 text-red-400 border border-red-500/30 cursor-not-allowed': isBooked(day), 'bg-[#1E2532] text-gray-300 border hover:border-blue-500 cursor-pointer': !isBooked(day), 'opacity-50': new Date(calendarYear, calendarMonth, day) < new Date().setHours(0,0,0,0) && !isBooked(day) }"><span x-text="day"></span></div>
                                 </template>
                             </div>
                             <div class="mt-auto pt-4 flex gap-4 justify-center text-[10px] font-bold uppercase text-fius-muted shrink-0 border-t "><div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-[#1E2532] border "></div> Verfügbar</div><div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-red-900/40 border border-red-500/30"></div> Verliehen</div></div>
@@ -315,12 +315,12 @@
 
                 <!-- Interner Bereich -->
                 {{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }}
-                <div class="px-6 md:px-8 pb-6 md:pb-8 mt-auto border-t  pt-6">
+                <div class="px-6 md:px-8 pb-6 md:pb-8 mt-auto border-t pt-6">
                     <div class="bg-[#1E2532] border border-blue-500/30 rounded-xl p-5">
                         <h4 class="text-xs uppercase font-bold text-blue-400 mb-4 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"/></svg> Interne Infos</h4>
                         <div class="flex gap-4 mb-5 text-sm text-white">
-                            <div class="bg-fius-bg px-4 py-2.5 rounded-lg border  flex-1"><span class="text-[10px] text-fius-muted uppercase block mb-0.5">Raum</span><strong x-text="activeItem?.room || '-'"></strong></div>
-                            <div class="bg-fius-bg px-4 py-2.5 rounded-lg border  flex-1"><span class="text-[10px] text-fius-muted uppercase block mb-0.5">Regal / Fach</span><strong x-text="activeItem?.shelf || '-'"></strong></div>
+                            <div class="bg-fius-bg px-4 py-2.5 rounded-lg border flex-1"><span class="text-[10px] text-fius-muted uppercase block mb-0.5">Raum</span><strong x-text="activeItem?.room || '-'"></strong></div>
+                            <div class="bg-fius-bg px-4 py-2.5 rounded-lg border flex-1"><span class="text-[10px] text-fius-muted uppercase block mb-0.5">Regal / Fach</span><strong x-text="activeItem?.shelf || '-'"></strong></div>
                         </div>
                         <h4 class="text-[10px] uppercase font-bold text-fius-muted mb-2">Letzte Ausleihen</h4>
                         <div class="max-h-40 overflow-y-auto space-y-1.5 text-xs text-gray-300 pr-2">

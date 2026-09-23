@@ -162,10 +162,10 @@
                         </div>
 
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Spieler</label><input type="number" name="min_players" value="1" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Spieler</label><input type="number" name="max_players" value="4" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Dauer (m)</label><input type="number" name="min_playtime" value="15" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Dauer (m)</label><input type="number" name="max_playtime" value="45" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Spieler</label><input type="number" min="0" name="min_players" value="1" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Spieler</label><input type="number" min="0" name="max_players" value="4" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Dauer (m)</label><input type="number" min="0" name="min_playtime" value="15" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Dauer (m)</label><input type="number" min="0" name="max_playtime" value="45" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
                             <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Raum</label><input type="text" name="room" placeholder="z.B. V38.008" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
                             <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Regal</label><input type="text" name="shelf" placeholder="z.B. A1" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
                         </div>
@@ -306,10 +306,10 @@
                         </div>
 
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Spieler</label><input type="number" name="min_players" :value="editGame.min_players" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-blue-500"></div>
-                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Spieler</label><input type="number" name="max_players" :value="editGame.max_players" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-blue-500"></div>
-                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Dauer</label><input type="number" name="min_playtime" :value="editGame.min_playtime" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-blue-500"></div>
-                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Dauer</label><input type="number" name="max_playtime" :value="editGame.max_playtime" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-blue-500"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Spieler</label><input type="number" min="0" name="min_players" :value="editGame.min_players" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-blue-500"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Spieler</label><input type="number" min="0" name="max_players" :value="editGame.max_players" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-blue-500"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Dauer</label><input type="number" min="0" name="min_playtime" :value="editGame.min_playtime" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-blue-500"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Dauer</label><input type="number" min="0" name="max_playtime" :value="editGame.max_playtime" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-blue-500"></div>
                         </div>
 
                         <div class="pt-6 flex justify-end gap-3">

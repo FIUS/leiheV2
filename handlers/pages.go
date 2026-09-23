@@ -106,7 +106,12 @@ func RenderAdminDashboard(c *gin.Context) {
 }
 
 func RenderAdminGames(c *gin.Context) {
-	items, err := queries.ListItems(context.Background())
+	items, err := queries.ListItemsWithCategories(context.Background())
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Datenbankfehler")
+		return
+	}
+	categories, err := queries.ListCategories(context.Background())
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Datenbankfehler")
 		return
@@ -116,6 +121,7 @@ func RenderAdminGames(c *gin.Context) {
 	c.HTML(http.StatusOK, "admin_games.html", gin.H{
 		"ActiveTab": "games",
 		"Games":     items,
+		"Categories": categories,
 		"UserRole":  session.Get("user_role"),
 	})
 }

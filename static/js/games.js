@@ -9,58 +9,69 @@ document.addEventListener('alpine:init', () => {
         selectedCategories: [],
         minRatingFilter: 0,
 
-        cart: [],
+        cart: [], // Speichert jetzt ausschließlich Objekte: {id, name, image}
         cartOpen: false,
-        gamesList: [],
         userRole: "guest",
         itemHistory: [],
 
         init() {
-            // Read the cart metadata from the rendered game cards so it stays
-            // available even when the page serializes other data attributes.
             const root = document.getElementById('games-root');
             if (root) {
                 this.userRole = root.dataset.userRole || 'guest';
             }
-            this.gamesList = Array.from(document.querySelectorAll('[data-game-id]')).map(game => ({
-                id: Number(game.dataset.gameId),
-                name: game.dataset.gameName || '',
-                image: game.dataset.gameImage || ''
-            }));
-            if (this.gamesList.length === 0 && root) {
+
+            // Korb aus dem LocalStorage laden & alte kaputte Daten rausfiltern
+            const saved = localStorage.getItem('fius_cart');
+            if (saved) {
                 try {
-                    this.gamesList = JSON.parse(root.dataset.games || '[]');
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed)) {
+                        this.cart = parsed.map(item => {
+                            // Nur gültige Objekte übernehmen
+                            if (typeof item === 'object' && item !== null && item.id) return item;
+                            return null;
+                        }).filter(Boolean);
+                    }
                 } catch (e) {
-                    this.gamesList = [];
+                    this.cart = [];
                 }
             }
 
-            // 2. Event-Listener für Sortierung & Initialisierung
             this.$watch('sortBy', () => this.sortItems());
             this.sortItems();
         },
 
-        get cartDetails() {
-            return this.cart
-                .map(id => this.gamesList.find(g => Number(g.id) === Number(id)))
-                .filter(Boolean);
+        // --- Korb-Logik ---
+
+        isInCart(id) {
+            return this.cart.some(item => item.id === id);
         },
 
         addToCart(id, name, image) {
-            const numericID = Number(id);
-            if (!this.gamesList.some(game => Number(game.id) === numericID)) {
-                this.gamesList.push({ id: numericID, name, image });
-            }
-            if (!this.cart.includes(numericID)) {
-                this.cart.push(numericID);
+            if (!this.isInCart(id)) {
+                this.cart.push({ id: id, name: name, image: image || '' });
+                localStorage.setItem('fius_cart', JSON.stringify(this.cart));
             }
         },
+
+        removeFromCart(id) {
+            this.cart = this.cart.filter(item => item.id !== id);
+            localStorage.setItem('fius_cart', JSON.stringify(this.cart));
+        },
+
+        proceedToCheckout() {
+            localStorage.setItem('fius_cart', JSON.stringify(this.cart));
+            window.location.href = '/checkout';
+        },
+
+        // --- Filter & Ansichten ---
 
         validateMinDuration() {
             if (parseInt(this.minDurationFilter) > parseInt(this.maxDurationFilter)) {
                 this.maxDurationFilter = this.minDurationFilter;
             }
         },
+
         validateMaxDuration() {
             if (parseInt(this.maxDurationFilter) < parseInt(this.minDurationFilter)) {
                 this.minDurationFilter = this.maxDurationFilter;
@@ -92,6 +103,8 @@ document.addEventListener('alpine:init', () => {
                 items.forEach(i => container.appendChild(i));
             });
         },
+
+        // --- Detail-Modal & Kalender ---
 
         detailModalOpen: false,
         activeItem: null,
@@ -125,11 +138,25 @@ document.addEventListener('alpine:init', () => {
 
         isBooked(day) {
             if (!this.activeItem || !this.activeItem.bookings) return false;
-            const checkDate = new Date(this.calendarYear, this.calendarMonth, day).setHours(0,0,0,0);
+            const mStr = String(this.calendarMonth + 1).padStart(2, '0');
+            const dStr = String(day).padStart(2, '0');
+            const checkStr = `${this.calendarYear}-${mStr}-${dStr}`;
+
             for (let b of this.activeItem.bookings) {
-                let start = new Date(b.start_date).setHours(0,0,0,0);
-                let end = new Date(b.end_date).setHours(0,0,0,0);
-                if (checkDate >= start && checkDate <= end) return true;
+                // Berücksichtigt StartDate / EndDate (PascalCase aus Go) und start_date / end_date
+                const rawStart = b.StartDate || b.start_date;
+                const rawEnd = b.EndDate || b.end_date;
+                const status = (b.Status || b.status || '').toLowerCase();
+
+                if (status === 'returned' || status === 'cancelled') continue;
+
+                if (rawStart && rawEnd) {
+                    const startStr = rawStart.substring(0, 10);
+                    const endStr = rawEnd.substring(0, 10);
+                    if (checkStr >= startStr && checkStr <= endStr) {
+                        return true;
+                    }
+                }
             }
             return false;
         },
@@ -141,11 +168,6 @@ document.addEventListener('alpine:init', () => {
 
         get daysInMonth() {
             return new Date(this.calendarYear, this.calendarMonth + 1, 0).getDate();
-        },
-
-        proceedToCheckout() {
-            localStorage.setItem('fius_cart', JSON.stringify(this.cart));
-            window.location.href = '/checkout';
         }
     }));
 });

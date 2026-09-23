@@ -1,14 +1,19 @@
-{{ define "admin_content" }}
-<h1 class="text-3xl font-bold text-white mb-6">Dashboard</h1>
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="bg-fius-card p-6 rounded-xl border border-fius-border shadow-sm">
-        <p class="text-fius-muted text-xs uppercase font-bold tracking-wider">Spiele gesamt</p>
-        <p class="text-4xl font-bold text-white mt-2">{{ len .Games }}</p>
-    </div>
-    <div class="bg-fius-card p-6 rounded-xl border border-fius-border shadow-sm">
-        <p class="text-fius-muted text-xs uppercase font-bold tracking-wider">Nutzer gesamt</p>
-        <p class="text-4xl font-bold text-white mt-2">{{ len .Users }}</p>
-    </div>
+{{ template "header" . }}
+<div class="flex flex-col min-h-[85vh] bg-fius-bg text-gray-100 border border-fius-border rounded-xl shadow-lg mt-4 overflow-hidden">
+    {{ template "admin_nav" . }}
+    <main class="flex-1 p-4 md:p-8 bg-[#0B101A] overflow-y-auto">
+        <h1 class="text-3xl font-bold text-white mb-6">Dashboard</h1>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-fius-card p-6 rounded-xl border border-fius-border shadow-sm">
+                <p class="text-fius-muted text-xs uppercase font-bold tracking-wider">Spiele gesamt</p>
+                <p class="text-4xl font-bold text-white mt-2">{{ len .Games }}</p>
+            </div>
+            <div class="bg-fius-card p-6 rounded-xl border border-fius-border shadow-sm">
+                <p class="text-fius-muted text-xs uppercase font-bold tracking-wider">Nutzer gesamt</p>
+                <p class="text-4xl font-bold text-white mt-2">{{ len .Users }}</p>
+            </div>
+        </div>
+    </main>
 </div>
-{{ end }}
-{{ template "admin_layout" . }}
+<style> [x-cloak] { display: none !important; } </style>
+{{ template "footer" . }}

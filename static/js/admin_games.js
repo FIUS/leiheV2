@@ -3,6 +3,10 @@ document.addEventListener('alpine:init', () => {
         showAddForm: false,
         editModalOpen: false,
         editGame: {},
+        addCategories: [],
+        categorySearch: '',
+        editCategorySearch: '',
+        categoryPicker: '',
         bggModalOpen: false,
         bggQuery: '',
         bggResults: [],
@@ -17,9 +21,44 @@ document.addEventListener('alpine:init', () => {
                 min_playtime: dataset.minPlaytime,
                 max_playtime: dataset.maxPlaytime,
                 room: dataset.room,
-                shelf: dataset.shelf
+                shelf: dataset.shelf,
+                categories: dataset.categories ? dataset.categories.split(',').map(value => value.trim()).filter(Boolean) : []
             };
             this.editModalOpen = true;
+        },
+
+        categoryMatches(query, selected) {
+            const normalizedQuery = (query || '').trim().toLowerCase();
+            const categories = Array.from(document.querySelectorAll('#category-options option'))
+                .map(option => option.value);
+            return categories.filter(category => {
+                return (!normalizedQuery || category.toLowerCase().includes(normalizedQuery))
+                    && !(selected || []).some(value => value.toLowerCase() === category.toLowerCase());
+            }).map(name => ({name}));
+        },
+
+        addCategory(target, value) {
+            const name = (value || '').trim();
+            if (!name) return;
+            const categories = target === 'edit' ? this.editGame.categories : this.addCategories;
+            if (!categories.some(category => category.toLowerCase() === name.toLowerCase())) {
+                categories.push(name);
+            }
+            if (target === 'edit') this.editGame.categories = categories;
+            if (target === 'edit') {
+                this.editCategorySearch = '';
+            } else {
+                this.categorySearch = '';
+            }
+            this.categoryPicker = target;
+        },
+
+        removeCategory(target, value) {
+            if (target === 'edit') {
+                this.editGame.categories = this.editGame.categories.filter(category => category !== value);
+            } else {
+                this.addCategories = this.addCategories.filter(category => category !== value);
+            }
         },
 
         openBGGModal(name) {

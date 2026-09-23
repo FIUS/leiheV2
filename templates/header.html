@@ -38,9 +38,9 @@
 
         <div class="flex items-center gap-4 relative" x-data="{ open: false }" @click.outside="open = false">
 
-            {{ if .UserRole }}
+            {{ if and .UserRole (ne .UserRole "guest") }}
             <!-- EINGELOGGT -->
-            <button @click="open = !open" class="flex items-center gap-2 px-3 py-2  border  rounded-lg hover:border-blue-500 transition cursor-pointer">
+            <button @click="open = !open" class="flex items-center gap-2 px-3 py-2 border rounded-lg hover:border-blue-500 transition cursor-pointer">
                 <div class="w-7 h-7 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center font-bold text-xs uppercase">
                     {{ slice .UserRole 0 1 }}
                 </div>
@@ -49,21 +49,20 @@
             </button>
 
             <!-- Dropdown Menü -->
-            <div x-show="open" class="absolute top-12 right-0 w-48  border  rounded-xl shadow-lg py-2 z-50 bg-fius-bg" style="display: none;">
-
+            <div x-show="open" class="absolute top-12 right-0 w-48 border rounded-xl shadow-lg py-2 z-50 bg-fius-bg" style="display: none;">
                 {{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }}
                 <a href="/admin" class="block px-4 py-2 text-sm text-gray-200 hover:bg-fius-bg hover:text-blue-500 transition">Admin Panel</a>
-                <div class="border-t  my-1"></div>
+                <div class="border-t my-1"></div>
                 {{ end }}
 
                 <a href="/logout" class="block px-4 py-2 text-sm text-red-400 hover:bg-fius-bg hover:text-red-300 transition">Logout</a>
             </div>
             {{ else }}
-            <!-- AUSGELOGGT -->
+            <!-- AUSGELOGGT / GAST -->
             <div class="flex items-center gap-2">
                 <span class="text-xs text-fius-muted mr-2">Test-Logins:</span>
-                <a href="/dev-login?role=user" class="px-3 py-1.5 text-xs font-semibold  border  text-gray-200 rounded-lg hover:border-blue-500 transition">User</a>
-                <a href="/dev-login?role=maintainer" class="px-3 py-1.5 text-xs font-semibold  border  text-gray-200 rounded-lg hover:border-blue-500 transition">FSler</a>
+                <a href="/dev-login?role=user" class="px-3 py-1.5 text-xs font-semibold border text-gray-200 rounded-lg hover:border-blue-500 transition">User</a>
+                <a href="/dev-login?role=maintainer" class="px-3 py-1.5 text-xs font-semibold border text-gray-200 rounded-lg hover:border-blue-500 transition">FSler</a>
                 <a href="/dev-login?role=admin" class="px-3 py-1.5 text-xs font-semibold bg-blue-500/10 border border-blue-500/30 text-blue-500 rounded-lg hover:bg-blue-500 hover:text-white transition">Admin</a>
             </div>
             {{ end }}

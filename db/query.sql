@@ -29,6 +29,23 @@ WHERE id = $1;
 -- name: ListCategories :many
 SELECT * FROM categories ORDER BY name;
 
+-- name: GetOrCreateCategory :one
+INSERT INTO categories (name)
+VALUES ($1)
+ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+RETURNING *;
+
+-- name: AddItemCategory :exec
+INSERT INTO item_categories (item_id, category_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING;
+
+-- name: ClearItemCategories :exec
+DELETE FROM item_categories WHERE item_id = $1;
+
+-- name: DeleteCategory :exec
+DELETE FROM categories WHERE id = $1;
+
 -- name: ListItemsWithCategories :many
 SELECT items.*, COALESCE(string_agg(categories.name, ','), '')::text AS category_names
 FROM items
@@ -114,3 +131,17 @@ WHERE bi.booking_id = $1;
 UPDATE bookings
 SET status = $2
 WHERE id = $1;
+
+-- name: CheckItemCollisions :many
+SELECT bi.item_id, i.name
+FROM booking_items bi
+         JOIN bookings b ON b.id = bi.booking_id
+         JOIN items i ON i.id = bi.item_id
+WHERE bi.item_id = ANY($1::int[])
+  AND b.status IN ('pending', 'active')
+  AND b.start_date <= $2
+  AND b.end_date >= $3;
+
+-- name: LockItemsForBooking :exec
+SELECT pg_advisory_xact_lock(item_id::bigint)
+FROM unnest($1::int[]) AS item_id;

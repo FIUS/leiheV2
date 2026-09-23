@@ -1,148 +1,231 @@
-{{ define "admin_content" }}
+{{ template "header" . }}
+<div class="flex flex-col min-h-[85vh] bg-fius-bg text-gray-100 border border-fius-border rounded-xl shadow-lg mt-4 overflow-hidden">
+    {{ template "admin_nav" . }}
+    <main class="flex-1 p-4 md:p-8 bg-[#0B101A] overflow-y-auto">
 <div x-data="adminGamesManagement">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold text-white">Spieleverwaltung</h1>
-    </div>
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-white">Spieleverwaltung</h1>
+            </div>
 
-    <!-- Akkordeon: Spiel anlegen -->
-    <div class="mb-8">
-        <button @click="showAddForm = !showAddForm" class="w-full bg-fius-card hover:bg-[#1E2532] border border-fius-border p-4 rounded-xl flex justify-between items-center transition">
-            <span class="font-bold text-lg text-white" x-text="showAddForm ? 'Formular schließen' : '+ Neues Spiel eintragen'"></span>
-            <svg class="w-6 h-6 text-fius-muted transform transition-transform" :class="showAddForm ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-
-        <div x-show="showAddForm" x-cloak class="bg-fius-card border-x border-b border-fius-border p-6 rounded-b-xl shadow-md mt-[-8px] pt-8">
-            <form method="POST" action="/api/items" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-fius-muted uppercase mb-1">Spielname *</label>
-                    <input type="text" name="name" required class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded focus:border-blue-500 outline-none">
-                </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Spieler</label><input type="number" name="min_players" value="1" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Spieler</label><input type="number" name="max_players" value="4" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Dauer (m)</label><input type="number" name="min_playtime" value="15" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Dauer (m)</label><input type="number" name="max_playtime" value="45" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Raum</label><input type="text" name="room" placeholder="z.B. V38.008" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Regal</label><input type="text" name="shelf" placeholder="z.B. A1" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                </div>
-                <div class="pt-4 flex justify-end">
-                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-6 rounded-lg shadow">Spiel speichern</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Spiele Tabelle -->
-    <div class="bg-fius-card border border-fius-border rounded-xl shadow-sm overflow-hidden">
-        <table class="min-w-full divide-y divide-fius-border text-sm">
-            <thead class="bg-fius-bg text-fius-muted text-left font-semibold uppercase tracking-wider text-[10px]">
-            <tr>
-                <th class="py-3 px-5">Spielname</th>
-                <th class="py-3 px-5">Spieler</th>
-                <th class="py-3 px-5">Dauer</th>
-                <th class="py-3 px-5">Status</th>
-                <th class="py-3 px-5 text-right">Aktion</th>
-            </tr>
-            </thead>
-            <tbody class="divide-y divide-fius-border text-gray-200">
-            {{ range .Games }}
-            <tr class="hover:bg-[#1E2532] transition-colors">
-                <td class="py-3 px-5 font-bold">{{ .Name }}</td>
-                <td class="py-3 px-5 text-fius-muted">{{ .MinPlayers }} - {{ .MaxPlayers }}</td>
-                <td class="py-3 px-5 text-fius-muted">{{ .MinPlaytime }} - {{ .MaxPlaytime }} Min.</td>
-                <td class="py-3 px-5">
-                    <span class="px-2 py-1 rounded text-xs {{ if eq .Status "available" }}bg-green-900/30 text-green-500{{ else }}bg-red-900/30 text-red-500{{ end }}">
-                    {{ if eq .Status "available" }}Verfügbar{{ else }}Ausgeliehen{{ end }}
-                    </span>
-                </td>
-                <td class="py-3 px-5 text-right flex justify-end items-center gap-4" x-data="{ menuOpen: false, deleteModalOpen: false, typedName: '', targetName: '{{ .Name }}' }">
-                    <button @click="openBGGModal('{{ .Name }}')" class="text-orange-400 hover:underline text-xs font-bold flex items-center gap-1">BGG Sync</button>
-
-                    <div class="relative" @click.outside="menuOpen = false">
-                        <button @click="menuOpen = !menuOpen" class="bg-[#1E2532] border border-fius-border text-gray-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1">
-                            <span>Aktionen</span>
-                        </button>
-                        <div x-show="menuOpen" x-cloak class="absolute right-0 mt-2 w-40 bg-fius-card border border-fius-border rounded-xl shadow-lg py-1 z-50 text-left">
-                            <button @click="openEditGame($el.dataset); menuOpen = false"
-                                    data-id="{{ .ID }}" data-name="{{ .Name }}" data-min-players="{{ .MinPlayers }}"
-                                    data-max-players="{{ .MaxPlayers }}" data-min-playtime="{{ .MinPlaytime }}"
-                                    data-max-playtime="{{ .MaxPlaytime }}" data-room="{{ .Room.String }}" data-shelf="{{ .Shelf.String }}"
-                                    class="w-full text-left px-4 py-2 text-xs text-gray-200 hover:bg-fius-bg hover:text-blue-500">Bearbeiten</button>
-                            <div class="border-t border-fius-border my-1"></div>
-                            <button @click="deleteModalOpen = true; menuOpen = false" class="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-fius-bg hover:text-red-300">Löschen</button>
-                        </div>
-                    </div>
-
-                    <!-- Delete Modal -->
-                    <div x-show="deleteModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm text-left">
-                        <div @click.away="deleteModalOpen = false" class="bg-fius-card border border-fius-border p-6 rounded-xl shadow-2xl w-full max-w-md">
-                            <h3 class="text-lg font-bold text-white mb-2">Spiel unwiderruflich löschen?</h3>
-                            <p class="text-sm text-fius-muted mb-4">Tippe <strong class="text-white">{{ .Name }}</strong> zur Bestätigung:</p>
-                            <form action="/api/items/delete" method="POST" class="space-y-4">
-                                <input type="hidden" name="id" value="{{ .ID }}">
-                                <input type="hidden" name="real_name" value="{{ .Name }}">
-                                <input type="text" x-model="typedName" name="confirm_name" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-red-500">
-                                <div class="flex justify-end gap-2">
-                                    <button type="button" @click="deleteModalOpen = false" class="bg-fius-bg border border-fius-border text-white text-xs font-bold py-2 px-4 rounded-lg">Abbrechen</button>
-                                    <button type="submit" :disabled="typedName !== targetName" :class="typedName === targetName ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-600/30 text-gray-400 cursor-not-allowed'" class="text-xs font-bold py-2 px-4 rounded-lg transition">Löschen</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </td>
-            </tr>
+            {{ if .Error }}
+            <div class="mb-6 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300" role="alert">
+                <svg class="mt-0.5 h-5 w-5 shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <span>{{ .Error }}</span>
+            </div>
             {{ end }}
-            </tbody>
-        </table>
-    </div>
 
-    <!-- Edit Game Modal -->
-    <div x-show="editModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div @click.away="editModalOpen = false" class="bg-fius-card border border-fius-border p-6 rounded-xl shadow-2xl w-full max-w-2xl">
-            <h3 class="text-xl font-bold text-white mb-4 border-b border-fius-border pb-3">Spiel bearbeiten</h3>
-            <form method="POST" action="/api/items/update" class="space-y-4">
-                <input type="hidden" name="id" :value="editGame.id">
-                <div>
-                    <label class="block text-xs font-bold text-fius-muted uppercase mb-1">Spielname *</label>
-                    <input type="text" name="name" :value="editGame.name" required class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-blue-500">
-                </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Spieler</label><input type="number" name="min_players" :value="editGame.min_players" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Spieler</label><input type="number" name="max_players" :value="editGame.max_players" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Dauer</label><input type="number" name="min_playtime" :value="editGame.min_playtime" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Dauer</label><input type="number" name="max_playtime" :value="editGame.max_playtime" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                </div>
-                <div class="pt-6 flex justify-end gap-3">
-                    <button type="button" @click="editModalOpen = false" class="bg-fius-bg border border-fius-border text-white font-bold py-2.5 px-6 rounded-lg">Abbrechen</button>
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition">Speichern</button>
-                </div>
-            </form>
-        </div>
-    </div>
+            <!-- Akkordeon: Spiel anlegen -->
+            <div class="mb-8">
+                <button @click="showAddForm = !showAddForm" class="w-full bg-fius-card hover:bg-[#1E2532] border border-fius-border p-4 rounded-xl flex justify-between items-center transition">
+                    <span class="font-bold text-lg text-white" x-text="showAddForm ? 'Formular schließen' : '+ Neues Spiel eintragen'"></span>
+                    <svg class="w-6 h-6 text-fius-muted transform transition-transform" :class="showAddForm ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
 
-    <!-- BGG Modal -->
-    <div x-show="bggModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div @click.away="bggModalOpen = false" class="bg-fius-card border border-fius-border p-6 rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
-            <h3 class="text-xl font-bold text-white mb-4 border-b border-fius-border pb-3">BoardGameGeek Suche</h3>
-            <div class="flex gap-2 mb-4">
-                <input type="text" x-model="bggQuery" @keyup.enter="searchBGG()" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none" placeholder="Spielname...">
-                <button @click="searchBGG()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 rounded">Suchen</button>
-            </div>
-            <div x-show="isSearching" class="text-center py-8 text-fius-muted">Lade Treffer...</div>
-            <div class="overflow-y-auto flex-1 space-y-2 pr-2" x-show="!isSearching">
-                <template x-for="result in bggResults" :key="result.ID">
-                    <div class="flex justify-between items-center bg-[#1E2532] border border-fius-border p-3 rounded-lg">
+                <div x-show="showAddForm" x-cloak class="bg-fius-card border-x border-b border-fius-border p-6 rounded-b-xl shadow-md mt-[-8px] pt-8">
+                    <form method="POST" action="/api/items" class="space-y-4" @submit="addCategory('add', categorySearch)">
+                        <template x-for="category in addCategories" :key="category">
+                            <input type="hidden" name="categories" :value="category">
+                        </template>
                         <div>
-                            <p class="font-bold text-white" x-text="result.Name.Value"></p>
-                            <p class="text-xs text-fius-muted">BGG ID: <span x-text="result.ID"></span></p>
+                            <label class="block text-xs font-bold text-fius-muted uppercase mb-1">Spielname *</label>
+                            <input type="text" name="name" required class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded focus:border-blue-500 outline-none">
                         </div>
-                        <button @click="fetchBGGDetails(result.ID)" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1.5 px-3 rounded">Übernehmen</button>
-                    </div>
-                </template>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Spieler</label><input type="number" min="0" name="min_players" value="1" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Spieler</label><input type="number" min="0" name="max_players" value="4" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Dauer (m)</label><input type="number" min="0" name="min_playtime" value="15" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Dauer (m)</label><input type="number" min="0" name="max_playtime" value="45" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Raum</label><input type="text" name="room" placeholder="z.B. V38.008" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Regal</label><input type="text" name="shelf" placeholder="z.B. A1" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                        </div>
+                        <div @click.outside="categoryPicker = ''">
+                            <label class="block text-xs font-bold text-fius-muted uppercase mb-1">Kategorien</label>
+                            <div class="flex flex-wrap gap-2 mb-2">
+                                <template x-for="category in addCategories" :key="category">
+                                    <span class="inline-flex items-center gap-1 rounded-lg bg-blue-500/10 border border-blue-500/30 px-2.5 py-1 text-xs text-blue-300">
+                                        <span x-text="category"></span>
+                                        <button type="button" @click="removeCategory('add', category)" class="text-blue-300 hover:text-white">×</button>
+                                    </span>
+                                </template>
+                            </div>
+                            <input type="text" x-model="categorySearch" @focus="categoryPicker = 'add'" @keydown.enter.prevent="addCategory('add', categorySearch)" list="category-options" placeholder="Kategorie suchen oder neu eingeben" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded">
+                            <div x-show="categoryPicker === 'add'" x-cloak class="mt-1 max-h-32 overflow-y-auto rounded-lg border border-fius-border bg-fius-card">
+                                <template x-for="category in categoryMatches(categorySearch, addCategories)" :key="category.name">
+                                    <button type="button" @click.stop="addCategory('add', category.name)" class="block w-full px-3 py-2 text-left text-sm text-gray-200 hover:bg-fius-bg" x-text="category.name"></button>
+                                </template>
+                            </div>
+                        </div>
+                        <div class="pt-4 flex justify-end">
+                            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-6 rounded-lg shadow">Spiel speichern</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </div>
-    </div>
+
+            <!-- Spiele Tabelle -->
+            <div class="bg-fius-card border border-fius-border rounded-xl shadow-sm overflow-visible">
+                <table class="min-w-full divide-y divide-fius-border text-sm">
+                    <thead class="bg-fius-bg text-fius-muted text-left font-semibold uppercase tracking-wider text-[10px]">
+                    <tr>
+                        <th class="py-3 px-5">Spielname</th>
+                        <th class="py-3 px-5">Spieler</th>
+                        <th class="py-3 px-5">Dauer</th>
+                        <th class="py-3 px-5">Status</th>
+                        <th class="py-3 px-5 text-right">Aktion</th>
+                    </tr>
+                    </thead>
+                    <tbody class="divide-y divide-fius-border text-gray-200">
+                    {{ range .Games }}
+                    <tr class="hover:bg-[#1E2532] transition-colors">
+                        <td class="py-3 px-5 font-bold">{{ .Name }}</td>
+                        <td class="py-3 px-5 text-fius-muted">{{ .MinPlayers }} - {{ .MaxPlayers }}</td>
+                        <td class="py-3 px-5 text-fius-muted">{{ .MinPlaytime }} - {{ .MaxPlaytime }} Min.</td>
+                        <td class="py-3 px-5">
+                            <span class="px-2 py-1 rounded text-xs {{ if eq .Status "available" }}bg-green-900/30 text-green-500{{ else }}bg-red-900/30 text-red-500{{ end }}">
+                            {{ if eq .Status "available" }}Verfügbar{{ else }}Ausgeliehen{{ end }}
+                            </span>
+                        </td>
+                        <td class="relative py-3 px-5 text-right flex justify-end items-center gap-4" x-data="{ menuOpen: false, deleteModalOpen: false, typedName: '', targetName: '{{ .Name }}' }">
+                            <button @click="openBGGModal('{{ .Name }}')" class="text-orange-400 hover:underline text-xs font-bold flex items-center gap-1">BGG Sync</button>
+
+                            <div class="relative" @click.outside="menuOpen = false">
+                                <button @click="menuOpen = !menuOpen" class="bg-[#1E2532] border border-fius-border text-gray-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1">
+                                    <span>Aktionen</span>
+                                </button>
+                                <div x-show="menuOpen" x-cloak class="absolute right-0 top-full mt-2 w-40 bg-fius-card border border-fius-border rounded-xl shadow-lg py-1 z-[60] text-left">
+                                    <button @click="openEditGame($el.dataset); menuOpen = false"
+                                            data-id="{{ .ID }}" data-name="{{ .Name }}" data-min-players="{{ .MinPlayers }}"
+                                            data-max-players="{{ .MaxPlayers }}" data-min-playtime="{{ .MinPlaytime }}"
+                                            data-max-playtime="{{ .MaxPlaytime }}" data-room="{{ .Room.String }}" data-shelf="{{ .Shelf.String }}"
+                                            data-categories="{{ .CategoryNames }}"
+                                            class="w-full text-left px-4 py-2 text-xs text-gray-200 hover:bg-fius-bg hover:text-blue-500">Bearbeiten</button>
+                                    <div class="border-t border-fius-border my-1"></div>
+                                    <button @click="deleteModalOpen = true; menuOpen = false" class="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-fius-bg hover:text-red-300">Löschen</button>
+                                </div>
+                            </div>
+
+                            <!-- Delete Modal -->
+                            <div x-show="deleteModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm text-left">
+                                <div @click.away="deleteModalOpen = false" class="bg-fius-card border border-fius-border p-6 rounded-xl shadow-2xl w-full max-w-md">
+                                    <h3 class="text-lg font-bold text-white mb-2">Spiel unwiderruflich löschen?</h3>
+                                    <p class="text-sm text-fius-muted mb-4">Tippe <strong class="text-white">{{ .Name }}</strong> zur Bestätigung:</p>
+                                    <form action="/api/items/delete" method="POST" class="space-y-4">
+                                        <input type="hidden" name="id" value="{{ .ID }}">
+                                        <input type="hidden" name="real_name" value="{{ .Name }}">
+                                        <input type="text" x-model="typedName" name="confirm_name" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-red-500">
+                                        <div class="flex justify-end gap-2">
+                                            <button type="button" @click="deleteModalOpen = false" class="bg-fius-bg border border-fius-border text-white text-xs font-bold py-2 px-4 rounded-lg">Abbrechen</button>
+                                            <button type="submit" :disabled="typedName !== targetName" :class="typedName === targetName ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-600/30 text-gray-400 cursor-not-allowed'" class="text-xs font-bold py-2 px-4 rounded-lg transition">Löschen</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {{ end }}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Edit Game Modal -->
+            <div x-show="editModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                <div @click.away="editModalOpen = false" class="bg-fius-card border border-fius-border p-6 rounded-xl shadow-2xl w-full max-w-2xl">
+                    <h3 class="text-xl font-bold text-white mb-4 border-b border-fius-border pb-3">Spiel bearbeiten</h3>
+                    <form method="POST" action="/api/items/update" class="space-y-4" @submit="addCategory('edit', editCategorySearch)">
+                        <input type="hidden" name="id" :value="editGame.id">
+                        <template x-for="category in editGame.categories || []" :key="category">
+                            <input type="hidden" name="categories" :value="category">
+                        </template>
+                        <div>
+                            <label class="block text-xs font-bold text-fius-muted uppercase mb-1">Spielname *</label>
+                            <input type="text" name="name" :value="editGame.name" required class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-blue-500">
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Spieler</label><input type="number" min="0" name="min_players" :value="editGame.min_players" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Spieler</label><input type="number" min="0" name="max_players" :value="editGame.max_players" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Dauer</label><input type="number" min="0" name="min_playtime" :value="editGame.min_playtime" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Dauer</label><input type="number" min="0" name="max_playtime" :value="editGame.max_playtime" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                        </div>
+                        <div @click.outside="categoryPicker = ''">
+                            <label class="block text-xs font-bold text-fius-muted uppercase mb-1">Kategorien</label>
+                            <div class="flex flex-wrap gap-2 mb-2">
+                                <template x-for="category in editGame.categories || []" :key="category">
+                                    <span class="inline-flex items-center gap-1 rounded-lg bg-blue-500/10 border border-blue-500/30 px-2.5 py-1 text-xs text-blue-300">
+                                        <span x-text="category"></span>
+                                        <button type="button" @click="removeCategory('edit', category)" class="text-blue-300 hover:text-white">×</button>
+                                    </span>
+                                </template>
+                            </div>
+                            <input type="text" x-model="editCategorySearch" @focus="categoryPicker = 'edit'" @keydown.enter.prevent="addCategory('edit', editCategorySearch)" list="category-options" placeholder="Kategorie suchen oder neu eingeben" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded">
+                            <div x-show="categoryPicker === 'edit'" x-cloak class="mt-1 max-h-32 overflow-y-auto rounded-lg border border-fius-border bg-fius-card">
+                                <template x-for="category in categoryMatches(editCategorySearch, editGame.categories || [])" :key="category.name">
+                                    <button type="button" @click.stop="addCategory('edit', category.name)" class="block w-full px-3 py-2 text-left text-sm text-gray-200 hover:bg-fius-bg" x-text="category.name"></button>
+                                </template>
+                            </div>
+                        </div>
+                        <div class="pt-6 flex justify-end gap-3">
+                            <button type="button" @click="editModalOpen = false" class="bg-fius-bg border border-fius-border text-white font-bold py-2.5 px-6 rounded-lg">Abbrechen</button>
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition">Speichern</button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+            <datalist id="category-options">
+                {{ range .Categories }}<option value="{{ .Name }}"></option>{{ end }}
+            </datalist>
+
+            <section class="mt-8 bg-fius-card border border-fius-border rounded-xl shadow-sm p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-white">Kategorien</h2>
+                    <span class="text-xs text-fius-muted">{{ len .Categories }} insgesamt</span>
+                </div>
+                <form method="POST" action="/api/categories" class="flex gap-2 mb-4">
+                    <input type="text" name="name" required placeholder="Neue Kategorie" class="flex-1 bg-fius-bg border border-fius-border text-white p-2.5 rounded">
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 rounded-lg">Hinzufügen</button>
+                </form>
+                <div class="divide-y divide-fius-border">
+                    {{ range .Categories }}
+                    <div class="flex items-center justify-between py-2">
+                        <span class="text-sm text-gray-200">{{ .Name }}</span>
+                        <form method="POST" action="/api/categories/delete" onsubmit="return confirm('Kategorie wirklich löschen?')">
+                            <input type="hidden" name="id" value="{{ .ID }}">
+                            <button type="submit" class="text-xs text-red-400 hover:text-red-300">Entfernen</button>
+                        </form>
+                    </div>
+                    {{ end }}
+                </div>
+            </section>
+
+            <!-- BGG Modal -->
+            <div x-show="bggModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                <div @click.away="bggModalOpen = false" class="bg-fius-card border border-fius-border p-6 rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+                    <h3 class="text-xl font-bold text-white mb-4 border-b border-fius-border pb-3">BoardGameGeek Suche</h3>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" x-model="bggQuery" @keyup.enter="searchBGG()" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none" placeholder="Spielname...">
+                        <button @click="searchBGG()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 rounded">Suchen</button>
+                    </div>
+                    <div x-show="isSearching" class="text-center py-8 text-fius-muted">Lade Treffer...</div>
+                    <div class="overflow-y-auto flex-1 space-y-2 pr-2" x-show="!isSearching">
+                        <template x-for="result in bggResults" :key="result.ID">
+                            <div class="flex justify-between items-center bg-[#1E2532] border border-fius-border p-3 rounded-lg">
+                                <div>
+                                    <p class="font-bold text-white" x-text="result.Name.Value"></p>
+                                    <p class="text-xs text-fius-muted">BGG ID: <span x-text="result.ID"></span></p>
+                                </div>
+                                <button @click="fetchBGGDetails(result.ID)" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1.5 px-3 rounded">Übernehmen</button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
 </div>
+
 <script src="/static/js/admin_games.js"></script>
-{{ end }}
-{{ template "admin_layout" . }}
+    </main>
+</div>
+<style> [x-cloak] { display: none !important; } </style>
+{{ template "footer" . }}

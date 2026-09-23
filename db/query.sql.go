@@ -9,6 +9,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 const addBookingItem = `-- name: AddBookingItem :exec
@@ -27,6 +29,51 @@ type AddBookingItemParams struct {
 func (q *Queries) AddBookingItem(ctx context.Context, arg AddBookingItemParams) error {
 	_, err := q.db.ExecContext(ctx, addBookingItem, arg.BookingID, arg.ItemID)
 	return err
+}
+
+const checkItemCollisions = `-- name: CheckItemCollisions :many
+SELECT bi.item_id, i.name
+FROM booking_items bi
+         JOIN bookings b ON b.id = bi.booking_id
+         JOIN items i ON i.id = bi.item_id
+WHERE bi.item_id = ANY($1::int[])
+  AND b.status IN ('pending', 'active')
+  AND b.start_date <= $2
+  AND b.end_date >= $3
+`
+
+type CheckItemCollisionsParams struct {
+	Column1   []int32
+	StartDate time.Time
+	EndDate   time.Time
+}
+
+type CheckItemCollisionsRow struct {
+	ItemID int32
+	Name   string
+}
+
+func (q *Queries) CheckItemCollisions(ctx context.Context, arg CheckItemCollisionsParams) ([]CheckItemCollisionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, checkItemCollisions, pq.Array(arg.Column1), arg.StartDate, arg.EndDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CheckItemCollisionsRow
+	for rows.Next() {
+		var i CheckItemCollisionsRow
+		if err := rows.Scan(&i.ItemID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const createBooking = `-- name: CreateBooking :one
@@ -412,6 +459,54 @@ func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
 	return items, nil
 }
 
+const getOrCreateCategory = `-- name: GetOrCreateCategory :one
+INSERT INTO categories (name)
+VALUES ($1)
+ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+RETURNING id, name
+`
+
+func (q *Queries) GetOrCreateCategory(ctx context.Context, name string) (Category, error) {
+	row := q.db.QueryRowContext(ctx, getOrCreateCategory, name)
+	var category Category
+	err := row.Scan(&category.ID, &category.Name)
+	return category, err
+}
+
+const addItemCategory = `-- name: AddItemCategory :exec
+INSERT INTO item_categories (item_id, category_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING
+`
+
+type AddItemCategoryParams struct {
+	ItemID     int32
+	CategoryID int32
+}
+
+func (q *Queries) AddItemCategory(ctx context.Context, arg AddItemCategoryParams) error {
+	_, err := q.db.ExecContext(ctx, addItemCategory, arg.ItemID, arg.CategoryID)
+	return err
+}
+
+const clearItemCategories = `-- name: ClearItemCategories :exec
+DELETE FROM item_categories WHERE item_id = $1
+`
+
+func (q *Queries) ClearItemCategories(ctx context.Context, itemID int32) error {
+	_, err := q.db.ExecContext(ctx, clearItemCategories, itemID)
+	return err
+}
+
+const deleteCategory = `-- name: DeleteCategory :exec
+DELETE FROM categories WHERE id = $1
+`
+
+func (q *Queries) DeleteCategory(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteCategory, id)
+	return err
+}
+
 const listItems = `-- name: ListItems :many
 SELECT id, name, isbn, description, image_url, custom_image_url, room, shelf, min_players, max_players, min_playtime, max_playtime, status FROM items ORDER BY name
 `
@@ -551,6 +646,16 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockItemsForBooking = `-- name: LockItemsForBooking :exec
+SELECT pg_advisory_xact_lock(item_id::bigint)
+FROM unnest($1::int[]) AS item_id
+`
+
+func (q *Queries) LockItemsForBooking(ctx context.Context, dollar_1 []int32) error {
+	_, err := q.db.ExecContext(ctx, lockItemsForBooking, pq.Array(dollar_1))
+	return err
 }
 
 const updateBookingStatus = `-- name: UpdateBookingStatus :exec
