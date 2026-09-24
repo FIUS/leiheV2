@@ -62,7 +62,11 @@ DO UPDATE SET
     email = EXCLUDED.email,
            first_name = EXCLUDED.first_name,
            last_name = EXCLUDED.last_name,
-           role = EXCLUDED.role,
+           role = CASE
+                      WHEN users.role IN ('admin', 'maintainer') AND EXCLUDED.role = 'user'
+                          THEN users.role
+                      ELSE EXCLUDED.role
+                  END,
            last_login = NOW()
            RETURNING *;
 

@@ -89,14 +89,17 @@ func UpdateUser(c *gin.Context) {
 		oidcSub = existing.OidcSub
 	}
 
-	_ = queries.UpdateUser(context.Background(), db.UpdateUserParams{
+	if err := queries.UpdateUser(context.Background(), db.UpdateUserParams{
 		ID:        req.ID,
 		FirstName: strings.TrimSpace(req.FirstName),
 		LastName:  strings.TrimSpace(req.LastName),
 		Email:     strings.TrimSpace(req.Email),
 		Role:      db.UserRole(role),
 		OidcSub:   oidcSub,
-	})
+	}); err != nil {
+		c.String(http.StatusInternalServerError, "Nutzerrolle konnte nicht gespeichert werden")
+		return
+	}
 	c.Redirect(http.StatusFound, "/admin?tab=nutzer")
 }
 
