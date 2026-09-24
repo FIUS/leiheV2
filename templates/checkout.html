@@ -101,7 +101,7 @@
                                 <div class="w-8 h-8 flex justify-center items-center rounded text-sm font-semibold relative z-10 transition-all duration-200 border"
                                      :class="{
                                         'opacity-30 cursor-not-allowed': isPast(day),
-                                        'bg-red-900/40 text-red-400 border-red-500/30 cursor-not-allowed': !isPast(day) && isDayBlocked(day) && !isDateSelected(day),
+                                        'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 cursor-not-allowed': !isPast(day) && isDayBlocked(day) && !isDateSelected(day),
                                         'bg-[#1E2532] text-gray-300 border-fius-border hover:border-blue-500': !isPast(day) && !isDateSelected(day) && !isDayBlocked(day),
                                         'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-110': isDateSelected(day) && conflictingGameIds.length === 0,
                                         'bg-red-500 text-white shadow-lg shadow-red-500/30 scale-110': isDateSelected(day) && conflictingGameIds.length > 0
