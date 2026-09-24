@@ -12,6 +12,7 @@ import (
 	"leiheV2/db"
 	"leiheV2/utils"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
@@ -58,6 +59,21 @@ func HandleCreateBooking(c *gin.Context) {
 	if strings.TrimSpace(req.GuestEmail) != "" {
 		guestEmail = sql.NullString{String: strings.TrimSpace(req.GuestEmail), Valid: true}
 	}
+	session := sessions.Default(c)
+	var userID sql.NullInt32
+	var recipientEmail, recipientName string
+	if id, ok := session.Get("user_id").(int32); ok {
+		userID = sql.NullInt32{Int32: id, Valid: true}
+		user, userErr := queries.GetUser(ctx, id)
+		if userErr == nil {
+			recipientEmail = user.Email
+			recipientName = user.FirstName
+		}
+	}
+	if recipientEmail == "" && guestEmail.Valid {
+		recipientEmail = guestEmail.String
+		recipientName = guestName.String
+	}
 
 	// Sperren, prüfen und speichern müssen in derselben Transaktion erfolgen,
 	// damit parallele Buchungen nicht dieselben Spiele reservieren können.
@@ -83,6 +99,7 @@ func HandleCreateBooking(c *gin.Context) {
 
 		booking, err := qTx.CreateBooking(ctx, db.CreateBookingParams{
 			PublicToken: token,
+			UserID:      userID,
 			GuestName:   guestName,
 			GuestEmail:  guestEmail,
 			StartDate:   startDate,
@@ -121,6 +138,18 @@ func HandleCreateBooking(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Buchung konnte nicht gespeichert werden"})
 		return
+	}
+	if recipientEmail != "" {
+		details, detailsErr := queries.GetBookingEmailDetails(ctx, createdToken)
+		if detailsErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Buchungs-E-Mail konnte nicht vorbereitet werden"})
+			return
+		}
+		if mailErr := sendOrderEmail(recipientEmail, recipientName, details); mailErr != nil {
+			logMailError("order", mailErr)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Buchung gespeichert, aber Bestätigungs-E-Mail konnte nicht versendet werden", "token": createdToken})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -20,7 +21,7 @@ import (
 func main() {
 	connStr := os.Getenv("DB_URL")
 	if connStr == "" {
-		connStr = "host=localhost port=5432 user=fius password=pleasechangeme dbname=verleih sslmode=disable"
+		log.Fatal("DB_URL muss gesetzt sein")
 	}
 
 	database, err := sql.Open("postgres", connStr)
@@ -35,17 +36,27 @@ func main() {
 	if err := handlers.InitAuth(context.Background()); err != nil {
 		log.Fatal("Konnte OIDC nicht initialisieren:", err)
 	}
+	if err := handlers.PromoteInitialAdmin(context.Background()); err != nil {
+		log.Fatal("Konnte den Initial-Admin nicht setzen:", err)
+	}
+	if err := handlers.InitMail(); err != nil {
+		log.Fatal("Konnte E-Mail-Versand nicht initialisieren:", err)
+	}
 
 	r := gin.Default()
 	sessionSecret := os.Getenv("SESSION_SECRET")
 	if sessionSecret == "" {
 		log.Fatal("SESSION_SECRET muss gesetzt sein")
 	}
+	sessionCookieSecure, err := requiredBoolEnv("SESSION_COOKIE_SECURE")
+	if err != nil {
+		log.Fatal(err)
+	}
 	store := cookie.NewStore([]byte(sessionSecret))
 	store.Options(sessions.Options{
 		Path:     "/",
 		MaxAge:   30 * 24 * 60 * 60,
-		Secure:   envBool("SESSION_COOKIE_SECURE", false),
+		Secure:   sessionCookieSecure,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
@@ -61,10 +72,17 @@ func main() {
 	r.Run(":8080")
 }
 
-func envBool(key string, fallback bool) bool {
+func requiredBoolEnv(key string) (bool, error) {
 	value := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
 	if value == "" {
-		return fallback
+		return false, fmt.Errorf("%s muss gesetzt sein", key)
 	}
-	return value == "1" || value == "true" || value == "yes"
+	switch value {
+	case "1", "true", "yes":
+		return true, nil
+	case "0", "false", "no":
+		return false, nil
+	default:
+		return false, fmt.Errorf("%s muss true oder false sein", key)
+	}
 }

@@ -15,9 +15,11 @@
         </form>
         <p class="mt-5 text-sm text-fius-muted text-center">Bereits registriert? <a href="/login" class="text-blue-400 hover:text-blue-300">Anmelden</a></p>
         {{ else }}
+        {{ if .OIDCEnabled }}
         <a href="/auth/stuvus/login" class="block w-full text-center bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition">Mit stuvus SSO anmelden</a>
+        {{ end }}
         {{ if .LocalAuth }}
-        <div class="my-6 flex items-center gap-3 text-xs text-fius-muted"><span class="h-px flex-1 bg-fius-border"></span>oder<span class="h-px flex-1 bg-fius-border"></span></div>
+        {{ if .OIDCEnabled }}<div class="my-6 flex items-center gap-3 text-xs text-fius-muted"><span class="h-px flex-1 bg-fius-border"></span>oder<span class="h-px flex-1 bg-fius-border"></span></div>{{ end }}
         <form method="POST" action="/auth/local/login" class="space-y-4">
             <input type="email" name="email" required placeholder="E-Mail" class="w-full bg-fius-bg border border-fius-border text-white p-3 rounded-lg">
             <input type="password" name="password" required placeholder="Passwort" class="w-full bg-fius-bg border border-fius-border text-white p-3 rounded-lg">

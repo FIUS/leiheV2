@@ -5,11 +5,11 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"leiheV2/db"
 
@@ -21,13 +21,15 @@ import (
 )
 
 type authConfig struct {
-	Provider       *oidc.Provider
-	OAuth          oauth2.Config
-	Verifier       *oidc.IDTokenVerifier
-	AdminRole      string
-	MaintainerRole string
-	LocalAuth      bool
-	EmailVerified  bool
+	OIDCEnabled       bool
+	InitialAdminEmail string
+	Provider          *oidc.Provider
+	OAuth             oauth2.Config
+	Verifier          *oidc.IDTokenVerifier
+	AdminRole         string
+	MaintainerRole    string
+	LocalAuth         bool
+	EmailVerified     bool
 }
 
 var auth authConfig
@@ -42,51 +44,83 @@ type oidcClaims struct {
 }
 
 func InitAuth(ctx context.Context) error {
-	issuer := getenv("OIDC_ISSUER", "https://auth.stuvus.uni-stuttgart.de")
-	clientID := os.Getenv("OIDC_CLIENT_ID")
-	clientSecret := os.Getenv("OIDC_CLIENT_SECRET")
-	if clientID == "" || clientSecret == "" {
-		return errors.New("OIDC_CLIENT_ID and OIDC_CLIENT_SECRET must be configured")
+	oidcEnabled, err := requiredBool("ENABLE_OIDC")
+	if err != nil {
+		return err
+	}
+	localAuth, err := requiredBool("ENABLE_LOCAL_AUTH")
+	if err != nil {
+		return err
+	}
+	emailVerified, err := requiredBool("LOCAL_AUTH_REQUIRE_EMAIL_VERIFICATION")
+	if err != nil {
+		return err
+	}
+	auth = authConfig{
+		OIDCEnabled:       oidcEnabled,
+		InitialAdminEmail: strings.ToLower(strings.TrimSpace(os.Getenv("INITIAL_ADMIN_EMAIL"))),
+		LocalAuth:         localAuth,
+		EmailVerified:     emailVerified,
+	}
+	if !oidcEnabled {
+		return nil
 	}
 
+	issuer, err := requiredEnv("OIDC_ISSUER")
+	if err != nil {
+		return err
+	}
+	clientID, err := requiredEnv("OIDC_CLIENT_ID")
+	if err != nil {
+		return err
+	}
+	clientSecret, err := requiredEnv("OIDC_CLIENT_SECRET")
+	if err != nil {
+		return err
+	}
+	redirectURL, err := requiredEnv("OIDC_REDIRECT_URL")
+	if err != nil {
+		return err
+	}
 	provider, err := oidc.NewProvider(ctx, issuer)
 	if err != nil {
 		return fmt.Errorf("initialize OIDC provider: %w", err)
 	}
-	redirectURL := getenv("OIDC_REDIRECT_URL", "http://localhost/auth/stuvus/callback")
-	oauthConfig := oauth2.Config{
+	auth.Provider = provider
+	auth.OAuth = oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		Endpoint:     provider.Endpoint(),
 		RedirectURL:  redirectURL,
 		Scopes:       []string{oidc.ScopeOpenID, "profile", "email", "roles"},
 	}
-
-	auth = authConfig{
-		Provider:       provider,
-		OAuth:          oauthConfig,
-		Verifier:       provider.Verifier(&oidc.Config{ClientID: clientID}),
-		AdminRole:      getenv("OIDC_ADMIN_ROLE", "admin"),
-		MaintainerRole: getenv("OIDC_MAINTAINER_ROLE", "maintainer"),
-		LocalAuth:      getenvBool("ENABLE_LOCAL_AUTH", false),
-		EmailVerified:  getenvBool("LOCAL_AUTH_REQUIRE_EMAIL_VERIFICATION", false),
-	}
+	auth.Verifier = provider.Verifier(&oidc.Config{ClientID: clientID})
+	auth.AdminRole = os.Getenv("OIDC_ADMIN_ROLE")
+	auth.MaintainerRole = os.Getenv("OIDC_MAINTAINER_ROLE")
 	return nil
 }
 
-func getenv(key, fallback string) string {
-	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
-		return value
+func requiredEnv(key string) (string, error) {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return "", fmt.Errorf("%s must be configured", key)
 	}
-	return fallback
+	return value, nil
 }
 
-func getenvBool(key string, fallback bool) bool {
+func requiredBool(key string) (bool, error) {
 	value := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
 	if value == "" {
-		return fallback
+		return false, fmt.Errorf("%s must be configured", key)
 	}
-	return value == "1" || value == "true" || value == "yes"
+	switch value {
+	case "1", "true", "yes":
+		return true, nil
+	case "0", "false", "no":
+		return false, nil
+	default:
+		return false, fmt.Errorf("%s must be a boolean", key)
+	}
 }
 
 func RequireRole(allowedRoles ...string) gin.HandlerFunc {
@@ -126,7 +160,7 @@ func Logout(c *gin.Context) {
 }
 
 func OIDCLogin(c *gin.Context) {
-	if auth.Provider == nil {
+	if !auth.OIDCEnabled || auth.Provider == nil {
 		c.String(http.StatusServiceUnavailable, "OIDC ist nicht konfiguriert")
 		return
 	}
@@ -145,6 +179,10 @@ func OIDCLogin(c *gin.Context) {
 }
 
 func OIDCCallback(c *gin.Context) {
+	if !auth.OIDCEnabled || auth.Provider == nil || auth.Verifier == nil {
+		c.String(http.StatusNotFound, "OIDC ist deaktiviert")
+		return
+	}
 	session := sessions.Default(c)
 	state, _ := session.Get("oidc_state").(string)
 	if state == "" || state != c.Query("state") {
@@ -193,6 +231,13 @@ func OIDCCallback(c *gin.Context) {
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Benutzer konnte nicht gespeichert werden")
 		return
+	}
+	if IsInitialAdminEmail(claims.Email) {
+		if err := queries.PromoteUserToAdminByEmail(c.Request.Context(), claims.Email); err != nil {
+			c.String(http.StatusInternalServerError, "Benutzerrolle konnte nicht gespeichert werden")
+			return
+		}
+		user.Role = db.UserRoleAdmin
 	}
 	session.Set("user_id", user.ID)
 	session.Set("user_role", string(user.Role))
@@ -264,11 +309,67 @@ func RegisterLocal(c *gin.Context) {
 		renderAuthPage(c, http.StatusConflict, "Diese E-Mail-Adresse ist bereits registriert")
 		return
 	}
+
+	if IsInitialAdminEmail(user.Email) {
+		if err := queries.PromoteUserToAdminByEmail(c.Request.Context(), user.Email); err != nil {
+			renderAuthPage(c, http.StatusInternalServerError, "Benutzerrolle konnte nicht gespeichert werden")
+			return
+		}
+		user.Role = db.UserRoleAdmin
+	}
+	if auth.EmailVerified {
+		token, err := randomState()
+		if err != nil {
+			renderAuthPage(c, http.StatusInternalServerError, "Registrierung fehlgeschlagen")
+			return
+		}
+		if err := queries.CreateEmailVerificationToken(c.Request.Context(), hashToken(token), user.ID, time.Now().Add(24*time.Hour)); err != nil {
+			renderAuthPage(c, http.StatusInternalServerError, "Bestätigungs-E-Mail konnte nicht vorbereitet werden")
+			return
+		}
+		if err := sendVerificationEmail(user, token); err != nil {
+			logMailError("verification", err)
+			renderAuthPage(c, http.StatusInternalServerError, "Bestätigungs-E-Mail konnte nicht versendet werden")
+			return
+		}
+		renderAuthPage(c, http.StatusOK, "Registrierung erfolgreich. Bitte bestätige deine E-Mail-Adresse über den Link in deinem Postfach.")
+		return
+	}
 	session := sessions.Default(c)
 	session.Set("user_id", user.ID)
 	session.Set("user_role", string(user.Role))
 	_ = session.Save()
 	c.Redirect(http.StatusFound, "/")
+}
+
+func VerifyEmail(c *gin.Context) {
+	token := strings.TrimSpace(c.Query("token"))
+	if token == "" {
+		c.String(http.StatusBadRequest, "Ungültiger Bestätigungslink")
+		return
+	}
+	userID, err := queries.ConsumeEmailVerificationToken(c.Request.Context(), hashToken(token))
+	if err != nil {
+		c.String(http.StatusBadRequest, "Der Bestätigungslink ist ungültig oder abgelaufen")
+		return
+	}
+	if err := queries.MarkUserEmailVerified(c.Request.Context(), userID); err != nil {
+		c.String(http.StatusInternalServerError, "E-Mail-Adresse konnte nicht bestätigt werden")
+		return
+	}
+	c.Redirect(http.StatusFound, "/login")
+}
+
+func PromoteInitialAdmin(ctx context.Context) error {
+	if auth.InitialAdminEmail == "" {
+		return nil
+	}
+	return queries.PromoteUserToAdminByEmail(ctx, auth.InitialAdminEmail)
+}
+
+func IsInitialAdminEmail(email string) bool {
+	return auth.InitialAdminEmail != "" &&
+		strings.EqualFold(strings.TrimSpace(email), auth.InitialAdminEmail)
 }
 
 func randomState() (string, error) {

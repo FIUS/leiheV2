@@ -15,6 +15,7 @@ func SetupRoutes(r *gin.Engine) {
 	r.GET("/auth/stuvus/callback", handlers.OIDCCallback)
 	r.POST("/auth/local/login", handlers.LocalLogin)
 	r.POST("/auth/local/register", handlers.RegisterLocal)
+	r.GET("/auth/local/verify", handlers.VerifyEmail)
 	r.GET("/logout", handlers.Logout)
 
 	// HTML Pages

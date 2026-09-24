@@ -183,9 +183,10 @@ func RenderRegisterPage(c *gin.Context) {
 
 func renderAuthPage(c *gin.Context, status int, errorMessage string) {
 	c.HTML(status, "auth.html", gin.H{
-		"Error":     errorMessage,
-		"LocalAuth": auth.LocalAuth,
-		"Register":  c.Request.URL.Path == "/register",
+		"Error":       errorMessage,
+		"LocalAuth":   auth.LocalAuth,
+		"OIDCEnabled": auth.OIDCEnabled,
+		"Register":    c.Request.URL.Path == "/register",
 	})
 }
 

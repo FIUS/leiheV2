@@ -164,6 +164,13 @@ type Category struct {
 	Name string
 }
 
+type EmailVerificationToken struct {
+	TokenHash string
+	UserID    int32
+	ExpiresAt time.Time
+	CreatedAt time.Time
+}
+
 type Item struct {
 	ID             int32
 	Name           string
