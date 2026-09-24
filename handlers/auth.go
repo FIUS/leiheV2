@@ -82,6 +82,7 @@ func InitAuth(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	scopes := configuredOIDCScopes()
 	provider, err := oidc.NewProvider(ctx, issuer)
 	if err != nil {
 		return fmt.Errorf("initialize OIDC provider: %w", err)
@@ -92,12 +93,38 @@ func InitAuth(ctx context.Context) error {
 		ClientSecret: clientSecret,
 		Endpoint:     provider.Endpoint(),
 		RedirectURL:  redirectURL,
-		Scopes:       []string{oidc.ScopeOpenID, "profile", "email", "roles"},
+		Scopes:       scopes,
 	}
+
 	auth.Verifier = provider.Verifier(&oidc.Config{ClientID: clientID})
 	auth.AdminRole = os.Getenv("OIDC_ADMIN_ROLE")
 	auth.MaintainerRole = os.Getenv("OIDC_MAINTAINER_ROLE")
 	return nil
+}
+
+func configuredOIDCScopes() []string {
+	value := strings.TrimSpace(os.Getenv("OIDC_SCOPES"))
+	if value == "" {
+		return []string{oidc.ScopeOpenID, "profile", "email"}
+	}
+	seen := make(map[string]struct{})
+	scopes := make([]string, 0)
+	for _, scope := range strings.FieldsFunc(value, func(r rune) bool {
+		return r == ',' || r == ' ' || r == '\t'
+	}) {
+		if scope == "" {
+			continue
+		}
+		if _, exists := seen[scope]; exists {
+			continue
+		}
+		seen[scope] = struct{}{}
+		scopes = append(scopes, scope)
+	}
+	if len(scopes) == 0 {
+		return []string{oidc.ScopeOpenID, "profile", "email"}
+	}
+	return scopes
 }
 
 func requiredEnv(key string) (string, error) {
@@ -181,6 +208,14 @@ func OIDCLogin(c *gin.Context) {
 func OIDCCallback(c *gin.Context) {
 	if !auth.OIDCEnabled || auth.Provider == nil || auth.Verifier == nil {
 		c.String(http.StatusNotFound, "OIDC ist deaktiviert")
+		return
+	}
+	if providerError := strings.TrimSpace(c.Query("error")); providerError != "" {
+		description := strings.TrimSpace(c.Query("error_description"))
+		if description == "" {
+			description = providerError
+		}
+		c.String(http.StatusUnauthorized, "OIDC-Anmeldung wurde vom Anbieter abgelehnt: %s", description)
 		return
 	}
 	session := sessions.Default(c)
