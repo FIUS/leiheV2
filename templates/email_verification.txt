@@ -1,0 +1,10 @@
+Hallo {{ .FirstName }},
+
+bitte bestätige deine E-Mail-Adresse für das FIUS Verleihsystem über diesen Link:
+
+{{ .VerificationURL }}
+
+Der Link ist {{ .ExpiresIn }} gültig. Falls du kein Konto erstellt hast, kannst du diese E-Mail ignorieren.
+
+Viele Grüße
+FIUS Verleih

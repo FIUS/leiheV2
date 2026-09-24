@@ -1,0 +1,15 @@
+Hallo {{ .FirstName }},
+
+deine Reservierungsanfrage wurde erfolgreich erhalten.
+
+Buchungsnummer: {{ .BookingToken }}
+Zeitraum: {{ .StartDate }} bis {{ .EndDate }}
+
+Reservierte Spiele:
+{{ range .Items }}- {{ . }}
+{{ end }}
+
+Der aktuelle Status deiner Anfrage ist: {{ .Status }}
+
+Viele Grüße
+FIUS Verleih
