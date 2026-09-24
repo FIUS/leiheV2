@@ -10,7 +10,6 @@ import (
 
 	"leiheV2/db"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
@@ -61,14 +60,12 @@ func renderAdminGamesError(c *gin.Context, status int, message string) {
 		c.String(http.StatusInternalServerError, "Datenbankfehler")
 		return
 	}
-	session := sessions.Default(c)
-	c.HTML(status, "admin_games.html", gin.H{
+	c.HTML(status, "admin_games.html", pageData(c, gin.H{
 		"ActiveTab":  "games",
 		"Games":      items,
 		"Categories": categories,
-		"UserRole":   session.Get("user_role"),
 		"Error":      message,
-	})
+	}))
 }
 
 func normalizeCategories(categories []string) []string {

@@ -28,6 +28,12 @@ type UpdateUserRequest struct {
 	OidcSub   string `form:"oidc_sub"`
 }
 
+type UpdateUserSettingsRequest struct {
+	FirstName string `form:"first_name" binding:"required"`
+	LastName  string `form:"last_name" binding:"required"`
+	Email     string `form:"email" binding:"required"`
+}
+
 func CreateUser(c *gin.Context) {
 	var req CreateUserRequest
 	if err := c.ShouldBind(&req); err != nil {
@@ -71,6 +77,17 @@ func UpdateUser(c *gin.Context) {
 			oidcSub = "manual-" + strings.TrimSpace(req.Email)
 		}
 	}
+	existing, err := queries.GetUser(context.Background(), req.ID)
+	if err != nil {
+		c.String(http.StatusBadRequest, "Nutzer nicht gefunden")
+		return
+	}
+	if isOIDCUser(existing) {
+		req.FirstName = existing.FirstName
+		req.LastName = existing.LastName
+		req.Email = existing.Email
+		oidcSub = existing.OidcSub
+	}
 
 	_ = queries.UpdateUser(context.Background(), db.UpdateUserParams{
 		ID:        req.ID,
@@ -81,6 +98,37 @@ func UpdateUser(c *gin.Context) {
 		OidcSub:   oidcSub,
 	})
 	c.Redirect(http.StatusFound, "/admin?tab=nutzer")
+}
+
+func UpdateUserSettings(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+	if isOIDCUser(user) {
+		c.Redirect(http.StatusFound, "/settings?error=OIDC-Konten-koennen-diese-Daten-nicht-aendern")
+		return
+	}
+	var req UpdateUserSettingsRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.Redirect(http.StatusFound, "/settings?error=Ungueltige-Eingabe")
+		return
+	}
+	if err := queries.UpdateUser(context.Background(), db.UpdateUserParams{
+		ID: user.ID, FirstName: strings.TrimSpace(req.FirstName),
+		LastName: strings.TrimSpace(req.LastName), Email: strings.TrimSpace(req.Email),
+		Role: user.Role, OidcSub: user.OidcSub,
+	}); err != nil {
+		c.Redirect(http.StatusFound, "/settings?error=Speichern-fehlgeschlagen")
+		return
+	}
+	c.Redirect(http.StatusFound, "/settings?success=Gespeichert")
+}
+
+func isOIDCUser(user db.User) bool {
+	sub := strings.TrimSpace(user.OidcSub)
+	return sub != "" && !strings.HasPrefix(sub, "local-") && !strings.HasPrefix(sub, "manual-")
 }
 
 func DeleteUser(c *gin.Context) {

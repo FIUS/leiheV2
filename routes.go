@@ -23,6 +23,11 @@ func SetupRoutes(r *gin.Engine) {
 	r.GET("/games", handlers.RenderGamesCatalog)
 	r.GET("/setup-bilder", handlers.RequireRole("admin", "maintainer"), handlers.RenderSetupBilder)
 	r.GET("/checkout", handlers.RenderCheckoutPage)
+	r.GET("/settings", handlers.RenderUserSettings)
+	r.POST("/api/user/settings", handlers.UpdateUserSettings)
+	r.GET("/bookings", handlers.RenderUserBookings)
+	r.POST("/api/user/bookings/cancel", handlers.CancelUserBooking)
+	r.POST("/api/user/bookings/update", handlers.UpdateUserBooking)
 
 	// Admin HTML Pages
 	admin := r.Group("/admin")
