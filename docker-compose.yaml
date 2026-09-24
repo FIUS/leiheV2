@@ -28,13 +28,11 @@ services:
     env_file:
       - path: .env
         required: true
+    volumes:
+      - ./static/custom_images:/app/static/custom_images
     depends_on:
       db:
         condition: service_healthy
-    services:S
-      app:
-        volumes:
-          - ./static/custom_images:/app/static/custom_images
 
 volumes:
   postgres_data:
