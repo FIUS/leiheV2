@@ -258,8 +258,8 @@
                     </template>
                 </div>
 
-                <div class="p-6 md:p-8 flex flex-col md:flex-row gap-8">
-                    <div class="flex-1 flex flex-col gap-6">
+                <div class="p-6 md:p-8 flex flex-col md:flex-row gap-6">
+                    <div class="flex-1 flex flex-col gap-5">
                         <div>
                             <div class="flex items-start justify-between gap-4 mb-2 w-full">
                                 <h2 class="text-3xl font-bold text-white leading-tight flex-1 min-w-0 break-all" x-text="activeItem?.name"></h2>
@@ -286,7 +286,7 @@
                             <div class="bg-fius-bg border p-3 rounded-xl flex items-center gap-3"><div class="p-2 bg-[#1E2532] rounded-lg text-blue-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div><div><span class="block text-[10px] uppercase font-bold text-fius-muted">Dauer</span><span class="text-white font-semibold text-sm" x-text="`${activeItem?.min_playtime} - ${activeItem?.max_playtime} Min.`"></span></div></div>
                         </div>
 
-                        <div class="mt-auto pt-6">
+                        <div class="hidden">
                             <template x-if="activeItem?.status === 'rented'"><div class="text-xs text-orange-400 mb-3 text-center bg-orange-500/10 border border-orange-500/20 py-2.5 px-3 rounded-xl flex items-center justify-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>Aktuell verliehen. Vormerken möglich.</span></div></template>
                             <template x-if="isInCart(activeItem?.id)"><button @click="removeFromCart(activeItem.id)" type="button" class="w-full text-center text-sm bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 font-bold py-3.5 px-4 rounded-xl border border-orange-500/30 transition duration-300 flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Aus Leihkorb entfernen</button></template>
                             <template x-if="!isInCart(activeItem?.id)"><button @click="addToCart(activeItem.id, activeItem.name, activeItem.images?.[0] || '')" type="button" class="w-full text-center text-sm bg-[#5B83C2]/10 hover:bg-blue-600 text-[#5B83C2] hover:text-white font-bold py-3.5 px-4 rounded-xl border border-[#5B83C2]/30 transition duration-300 flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg> In den Leihkorb</button></template>
@@ -309,6 +309,10 @@
                                 </template>
                             </div>
                             <div class="mt-auto pt-4 flex gap-4 justify-center text-[10px] font-bold uppercase text-fius-muted shrink-0 border-t "><div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-[#1E2532] border "></div> Verfügbar</div><div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-red-900/40 border border-red-500/30"></div> Verliehen</div></div>
+                        </div>
+                        <div class="mt-4 flex justify-end">
+                            <template x-if="isInCart(activeItem?.id)"><button @click="removeFromCart(activeItem.id)" type="button" class="w-full md:w-auto text-center text-sm bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 font-bold py-3.5 px-4 rounded-xl border border-orange-500/30 transition duration-300 flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Aus Leihkorb entfernen</button></template>
+                            <template x-if="!isInCart(activeItem?.id)"><button @click="addToCart(activeItem.id, activeItem.name, activeItem.images?.[0] || '')" type="button" class="w-full md:w-auto text-center text-sm bg-fius-blue hover:bg-blue-500 text-white font-bold py-3.5 px-4 rounded-xl border border-fius-blue transition duration-300 flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg> In den Leihkorb</button></template>
                         </div>
                     </div>
                 </div>
