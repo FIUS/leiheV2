@@ -87,7 +87,10 @@
                             {{ if eq .Status "available" }}Verfügbar{{ else }}Ausgeliehen{{ end }}
                             </span>
                         </td>
-                        <td class="relative py-3 px-5 text-right flex justify-end items-center gap-4" x-data="{ deleteModalOpen: false, typedName: '', targetName: '{{ .Name }}' }">
+                        <td class="relative py-3 px-5 text-right flex justify-end items-center gap-4"
+                            data-target-name="{{ .Name }}"
+                            x-data="{ deleteModalOpen: false, typedName: '', targetName: '' }"
+                            x-init="targetName = $el.dataset.targetName">
                             <button @click="openBGGModal($event.currentTarget.dataset.name, $event.currentTarget.dataset)"
                                     data-id="{{ .ID }}" data-name="{{ .Name }}" data-min-players="{{ .MinPlayers }}"
                                     data-max-players="{{ .MaxPlayers }}" data-min-playtime="{{ .MinPlaytime }}"
