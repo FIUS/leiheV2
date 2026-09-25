@@ -87,7 +87,7 @@
                             {{ if eq .Status "available" }}Verfügbar{{ else }}Ausgeliehen{{ end }}
                             </span>
                         </td>
-                        <td class="relative py-3 px-5 text-right flex justify-end items-center gap-4" x-data="{ menuOpen: false, deleteModalOpen: false, typedName: '', targetName: '{{ .Name }}' }">
+                        <td class="relative py-3 px-5 text-right flex justify-end items-center gap-4" x-data="{ deleteModalOpen: false, typedName: '', targetName: '{{ .Name }}' }">
                             <button @click="openBGGModal($event.currentTarget.dataset.name, $event.currentTarget.dataset)"
                                     data-id="{{ .ID }}" data-name="{{ .Name }}" data-min-players="{{ .MinPlayers }}"
                                     data-max-players="{{ .MaxPlayers }}" data-min-playtime="{{ .MinPlaytime }}"
@@ -96,7 +96,7 @@
                                     data-is-expansion="{{ .IsExpansion }}" data-categories="{{ .CategoryNames }}"
                                     class="text-orange-400 hover:underline text-xs font-bold flex items-center gap-1">BGG Sync</button>
 
-                            <div class="relative" @click.outside="menuOpen = false">
+                            <div class="relative" x-data="{ menuOpen: false }" @click.outside="menuOpen = false">
                                 <button @click="menuOpen = !menuOpen" class="bg-[#1E2532] border border-fius-border text-gray-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1">
                                     <span>Aktionen</span>
                                 </button>
