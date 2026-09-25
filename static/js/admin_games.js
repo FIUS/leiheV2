@@ -65,9 +65,9 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        openBGGModal(dataset) {
+        openBGGModal(name, dataset) {
             this.openEditGame(dataset);
-            this.bggQuery = dataset.name;
+            this.bggQuery = name || '';
             this.bggResults = [];
             this.bggModalOpen = true;
             this.searchBGG();

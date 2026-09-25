@@ -88,7 +88,7 @@
                             </span>
                         </td>
                         <td class="relative py-3 px-5 text-right flex justify-end items-center gap-4" x-data="{ menuOpen: false, deleteModalOpen: false, typedName: '', targetName: '{{ .Name }}' }">
-                            <button @click="openBGGModal($el.dataset)"
+                            <button @click="openBGGModal($event.currentTarget.dataset.name, $event.currentTarget.dataset)"
                                     data-id="{{ .ID }}" data-name="{{ .Name }}" data-min-players="{{ .MinPlayers }}"
                                     data-max-players="{{ .MaxPlayers }}" data-min-playtime="{{ .MinPlaytime }}"
                                     data-max-playtime="{{ .MaxPlaytime }}" data-room="{{ .Room.String }}"
