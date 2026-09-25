@@ -88,7 +88,13 @@
                             </span>
                         </td>
                         <td class="relative py-3 px-5 text-right flex justify-end items-center gap-4" x-data="{ menuOpen: false, deleteModalOpen: false, typedName: '', targetName: '{{ .Name }}' }">
-                            <button @click="openBGGModal('{{ .Name }}')" class="text-orange-400 hover:underline text-xs font-bold flex items-center gap-1">BGG Sync</button>
+                            <button @click="openBGGModal($el.dataset)"
+                                    data-id="{{ .ID }}" data-name="{{ .Name }}" data-min-players="{{ .MinPlayers }}"
+                                    data-max-players="{{ .MaxPlayers }}" data-min-playtime="{{ .MinPlaytime }}"
+                                    data-max-playtime="{{ .MaxPlaytime }}" data-room="{{ .Room.String }}"
+                                    data-shelf="{{ .Shelf.String }}" data-image-url="{{ .ImageUrl.String }}"
+                                    data-is-expansion="{{ .IsExpansion }}" data-categories="{{ .CategoryNames }}"
+                                    class="text-orange-400 hover:underline text-xs font-bold flex items-center gap-1">BGG Sync</button>
 
                             <div class="relative" @click.outside="menuOpen = false">
                                 <button @click="menuOpen = !menuOpen" class="bg-[#1E2532] border border-fius-border text-gray-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1">
@@ -143,17 +149,17 @@
                         </template>
                         <div>
                             <label class="block text-xs font-bold text-fius-muted uppercase mb-1">Spielname *</label>
-                            <input type="text" name="name" :value="editGame.name" required class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-blue-500">
+                            <input type="text" name="name" x-model="editGame.name" required class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-blue-500">
                         </div>
                         <label class="flex items-center gap-2 text-sm text-gray-200">
                             <input type="checkbox" x-model="editGame.is_expansion" class="accent-blue-500">
                             Erweiterung
                         </label>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Spieler</label><input type="number" min="0" name="min_players" :value="editGame.min_players" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Spieler</label><input type="number" min="0" name="max_players" :value="editGame.max_players" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Dauer</label><input type="number" min="0" name="min_playtime" :value="editGame.min_playtime" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Dauer</label><input type="number" min="0" name="max_playtime" :value="editGame.max_playtime" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Spieler</label><input type="number" min="0" name="min_players" x-model="editGame.min_players" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Spieler</label><input type="number" min="0" name="max_players" x-model="editGame.max_players" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Dauer</label><input type="number" min="0" name="min_playtime" x-model="editGame.min_playtime" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                            <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Dauer</label><input type="number" min="0" name="max_playtime" x-model="editGame.max_playtime" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
                         </div>
                         <div @click.outside="categoryPicker = ''">
                             <label class="block text-xs font-bold text-fius-muted uppercase mb-1">Kategorien</label>
@@ -224,7 +230,9 @@
                                     <p class="font-bold text-white" x-text="result.Name.Value"></p>
                                     <p class="text-xs text-fius-muted">BGG ID: <span x-text="result.ID"></span></p>
                                 </div>
-                                <button @click="fetchBGGDetails(result.ID)" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1.5 px-3 rounded">Übernehmen</button>
+                                <button @click="fetchBGGDetails(result.ID)" :disabled="isLoadingDetails" class="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-wait text-white text-xs font-bold py-1.5 px-3 rounded">
+                                    <span x-text="isLoadingDetails ? 'Lade…' : 'Übernehmen'"></span>
+                                </button>
                             </div>
                         </template>
                     </div>

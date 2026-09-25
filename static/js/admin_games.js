@@ -12,6 +12,7 @@ document.addEventListener('alpine:init', () => {
         bggResults: [],
         isSearching: false,
         bggError: '',
+        isLoadingDetails: false,
 
         openEditGame(dataset) {
             this.editGame = {
@@ -64,8 +65,9 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        openBGGModal(name) {
-            this.bggQuery = name;
+        openBGGModal(dataset) {
+            this.openEditGame(dataset);
+            this.bggQuery = dataset.name;
             this.bggResults = [];
             this.bggModalOpen = true;
             this.searchBGG();
@@ -93,6 +95,8 @@ document.addEventListener('alpine:init', () => {
         },
 
         async fetchBGGDetails(bggId) {
+            this.isLoadingDetails = true;
+            this.bggError = '';
             try {
                 const res = await fetch('/api/bgg/details?id=' + bggId);
                 if (res.ok) {
@@ -107,9 +111,14 @@ document.addEventListener('alpine:init', () => {
                     this.editGame.max_playtime = data.max_playtime;
                     this.bggModalOpen = false;
                     this.editModalOpen = true;
+                } else {
+                    const error = await res.json().catch(() => ({}));
+                    this.bggError = error.detail || error.error || `BGG API Fehler (${res.status})`;
                 }
             } catch (e) {
-                console.error(e);
+                this.bggError = 'BGG API ist nicht erreichbar.';
+            } finally {
+                this.isLoadingDetails = false;
             }
         }
     }));

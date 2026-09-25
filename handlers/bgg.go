@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -72,8 +73,8 @@ type BGGSearchResponse struct {
 
 type BGGThingResponse struct {
 	Items []struct {
-		ID   string `xml:"id,attr"`
-		Name struct {
+		ID    string `xml:"id,attr"`
+		Names []struct {
 			Value string `xml:"value,attr"`
 			Type  string `xml:"type,attr"`
 		} `xml:"name"`
@@ -97,6 +98,23 @@ type BGGThingResponse struct {
 	} `xml:"item"`
 }
 
+func normalizeBGGSearchQuery(query string) string {
+	var builder strings.Builder
+	lastSpace := false
+	for _, r := range strings.TrimSpace(query) {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			builder.WriteRune(r)
+			lastSpace = false
+			continue
+		}
+		if !lastSpace {
+			builder.WriteByte(' ')
+			lastSpace = true
+		}
+	}
+	return strings.TrimSpace(builder.String())
+}
+
 func SearchBGG(c *gin.Context) {
 	query := c.Query("q")
 	if query == "" {
@@ -104,6 +122,11 @@ func SearchBGG(c *gin.Context) {
 		return
 	}
 
+	query = normalizeBGGSearchQuery(query)
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültiger Suchbegriff"})
+		return
+	}
 	bggURL := "https://boardgamegeek.com/xmlapi2/search?type=boardgame&query=" + url.QueryEscape(query)
 	enforceBGGCooldown()
 
@@ -168,6 +191,16 @@ func GetBGGDetails(c *gin.Context) {
 	}
 
 	item := bggResult.Items[0]
+	name := ""
+	for _, candidate := range item.Names {
+		if candidate.Type == "primary" {
+			name = candidate.Value
+			break
+		}
+	}
+	if name == "" && len(item.Names) > 0 {
+		name = item.Names[0].Value
+	}
 	var categories []string
 	isExpansion := false
 	for _, link := range item.Links {
@@ -181,7 +214,7 @@ func GetBGGDetails(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"bgg_id":       item.ID,
-		"name":         item.Name.Value,
+		"name":         name,
 		"image_url":    item.Image,
 		"min_players":  item.MinPlayers.Value,
 		"max_players":  item.MaxPlayers.Value,
