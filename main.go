@@ -36,8 +36,8 @@ func main() {
 	if err := handlers.InitAuth(context.Background()); err != nil {
 		log.Fatal("Konnte OIDC nicht initialisieren:", err)
 	}
-	if err := handlers.PromoteInitialAdmin(context.Background()); err != nil {
-		log.Fatal("Konnte den Initial-Admin nicht setzen:", err)
+	if err := handlers.EnsureDefaultAdmin(context.Background()); err != nil {
+		log.Fatal("Konnte den Default-Admin nicht setzen:", err)
 	}
 	if err := handlers.InitMail(); err != nil {
 		log.Fatal("Konnte E-Mail-Versand nicht initialisieren:", err)

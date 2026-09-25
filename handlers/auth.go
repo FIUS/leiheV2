@@ -21,15 +21,18 @@ import (
 )
 
 type authConfig struct {
-	OIDCEnabled       bool
-	InitialAdminEmail string
-	Provider          *oidc.Provider
-	OAuth             oauth2.Config
-	Verifier          *oidc.IDTokenVerifier
-	AdminRole         string
-	MaintainerRole    string
-	LocalAuth         bool
-	EmailVerified     bool
+	OIDCEnabled           bool
+	DefaultAdminEmail     string
+	DefaultAdminFirstName string
+	DefaultAdminLastName  string
+	DefaultAdminPassword  string
+	Provider              *oidc.Provider
+	OAuth                 oauth2.Config
+	Verifier              *oidc.IDTokenVerifier
+	AdminRole             string
+	MaintainerRole        string
+	LocalAuth             bool
+	EmailVerified         bool
 }
 
 var auth authConfig
@@ -57,10 +60,13 @@ func InitAuth(ctx context.Context) error {
 		return err
 	}
 	auth = authConfig{
-		OIDCEnabled:       oidcEnabled,
-		InitialAdminEmail: strings.ToLower(strings.TrimSpace(os.Getenv("INITIAL_ADMIN_EMAIL"))),
-		LocalAuth:         localAuth,
-		EmailVerified:     emailVerified,
+		OIDCEnabled:           oidcEnabled,
+		DefaultAdminEmail:     strings.ToLower(strings.TrimSpace(os.Getenv("DEFAULT_ADMIN_EMAIL"))),
+		DefaultAdminFirstName: strings.TrimSpace(os.Getenv("DEFAULT_ADMIN_FIRST_NAME")),
+		DefaultAdminLastName:  strings.TrimSpace(os.Getenv("DEFAULT_ADMIN_LAST_NAME")),
+		DefaultAdminPassword:  os.Getenv("DEFAULT_ADMIN_PASSWORD"),
+		LocalAuth:             localAuth,
+		EmailVerified:         emailVerified,
 	}
 	if !oidcEnabled {
 		return nil
@@ -267,7 +273,7 @@ func OIDCCallback(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Benutzer konnte nicht gespeichert werden")
 		return
 	}
-	if IsInitialAdminEmail(claims.Email) {
+	if IsDefaultAdminEmail(claims.Email) {
 		if err := queries.PromoteUserToAdminByEmail(c.Request.Context(), claims.Email); err != nil {
 			c.String(http.StatusInternalServerError, "Benutzerrolle konnte nicht gespeichert werden")
 			return
@@ -345,7 +351,7 @@ func RegisterLocal(c *gin.Context) {
 		return
 	}
 
-	if IsInitialAdminEmail(user.Email) {
+	if IsDefaultAdminEmail(user.Email) {
 		if err := queries.PromoteUserToAdminByEmail(c.Request.Context(), user.Email); err != nil {
 			renderAuthPage(c, http.StatusInternalServerError, "Benutzerrolle konnte nicht gespeichert werden")
 			return
@@ -395,16 +401,48 @@ func VerifyEmail(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/login")
 }
 
-func PromoteInitialAdmin(ctx context.Context) error {
-	if auth.InitialAdminEmail == "" {
+func EnsureDefaultAdmin(ctx context.Context) error {
+	if auth.DefaultAdminEmail == "" {
 		return nil
 	}
-	return queries.PromoteUserToAdminByEmail(ctx, auth.InitialAdminEmail)
+	if err := queries.PromoteUserToAdminByEmail(ctx, auth.DefaultAdminEmail); err == nil {
+		return nil
+	} else if err != sql.ErrNoRows {
+		return err
+	}
+
+	if auth.DefaultAdminPassword == "" {
+		return nil
+	}
+	firstName := auth.DefaultAdminFirstName
+	if firstName == "" {
+		firstName = "Default"
+	}
+	lastName := auth.DefaultAdminLastName
+	if lastName == "" {
+		lastName = "Admin"
+	}
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(auth.DefaultAdminPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("hash default admin password: %w", err)
+	}
+	_, err = queries.CreateLocalUser(ctx, db.CreateLocalUserParams{
+		Email:         auth.DefaultAdminEmail,
+		FirstName:     firstName,
+		LastName:      lastName,
+		OidcSub:       "local-" + auth.DefaultAdminEmail,
+		PasswordHash:  sql.NullString{String: string(passwordHash), Valid: true},
+		EmailVerified: true,
+	})
+	if err != nil {
+		return err
+	}
+	return queries.PromoteUserToAdminByEmail(ctx, auth.DefaultAdminEmail)
 }
 
-func IsInitialAdminEmail(email string) bool {
-	return auth.InitialAdminEmail != "" &&
-		strings.EqualFold(strings.TrimSpace(email), auth.InitialAdminEmail)
+func IsDefaultAdminEmail(email string) bool {
+	return auth.DefaultAdminEmail != "" &&
+		strings.EqualFold(strings.TrimSpace(email), auth.DefaultAdminEmail)
 }
 
 func randomState() (string, error) {
