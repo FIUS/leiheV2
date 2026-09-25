@@ -11,6 +11,7 @@ document.addEventListener('alpine:init', () => {
         bggQuery: '',
         bggResults: [],
         isSearching: false,
+        bggError: '',
 
         openEditGame(dataset) {
             this.editGame = {
@@ -72,13 +73,19 @@ document.addEventListener('alpine:init', () => {
             if (this.bggQuery.length < 2) return;
             this.isSearching = true;
             this.bggResults = [];
+            this.bggError = '';
             try {
                 const res = await fetch('/api/bgg/search?q=' + encodeURIComponent(this.bggQuery));
                 if (res.ok) {
                     this.bggResults = (await res.json()) || [];
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    this.bggError = data.detail
+                        ? `${data.error || 'BGG API Fehler'} (${data.status || res.status}): ${data.detail}`
+                        : (data.error || `BGG API Fehler (${res.status})`);
                 }
             } catch (e) {
-                console.error(e);
+                this.bggError = 'BGG API ist nicht erreichbar.';
             }
             this.isSearching = false;
         },

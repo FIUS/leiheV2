@@ -208,6 +208,7 @@
                         <input type="text" x-model="bggQuery" @keyup.enter="searchBGG()" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none" placeholder="Spielname...">
                         <button @click="searchBGG()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 rounded">Suchen</button>
                     </div>
+                    <div x-show="bggError" x-cloak class="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300" x-text="bggError"></div>
                     <div x-show="isSearching" class="text-center py-8 text-fius-muted">Lade Treffer...</div>
                     <div class="overflow-y-auto flex-1 space-y-2 pr-2" x-show="!isSearching">
                         <template x-for="result in bggResults" :key="result.ID">

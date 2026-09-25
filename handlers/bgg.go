@@ -41,6 +41,23 @@ func newBGGRequest(method, requestURL string) (*http.Request, error) {
 	return req, nil
 }
 
+func respondWithBGGError(c *gin.Context, resp *http.Response, requestErr error) {
+	if requestErr != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "BGG API nicht erreichbar"})
+		return
+	}
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+	message := strings.TrimSpace(string(body))
+	if message == "" {
+		message = http.StatusText(resp.StatusCode)
+	}
+	c.JSON(http.StatusBadGateway, gin.H{
+		"error":  "BGG API Fehler",
+		"status": resp.StatusCode,
+		"detail": message,
+	})
+}
+
 type BGGSearchResponse struct {
 	Items []struct {
 		ID   string `xml:"id,attr"`
@@ -95,7 +112,10 @@ func SearchBGG(c *gin.Context) {
 
 	resp, err := client.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "BGG API Fehler"})
+		if resp != nil {
+			defer resp.Body.Close()
+		}
+		respondWithBGGError(c, resp, err)
 		return
 	}
 	defer resp.Body.Close()
@@ -128,7 +148,10 @@ func GetBGGDetails(c *gin.Context) {
 
 	resp, err := client.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "BGG API Fehler"})
+		if resp != nil {
+			defer resp.Body.Close()
+		}
+		respondWithBGGError(c, resp, err)
 		return
 	}
 	defer resp.Body.Close()
