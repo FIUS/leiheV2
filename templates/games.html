@@ -111,7 +111,7 @@
                 {{ range .Games }}
                 <div data-name="{{ .Name }}" data-duration="{{ .MinPlaytime }}" data-players="{{ .MinPlayers }}" data-rating="8.1"
                      data-game-id="{{ .ID }}" data-game-name="{{ .Name }}"
-                     data-game-image="{{ if .CustomImageUrl.Valid }}{{ .CustomImageUrl.String }}{{ else if .ImageUrl.Valid }}{{ .ImageUrl.String }}{{ end }}"
+                     data-game-image="{{ if .CustomImageUrl.Valid }}{{ .CustomImageUrl.String }}{{ else if .ImageUrl.Valid }}{{ .ImageUrl.String }}{{ else }}/static/images/image-placeholder.svg{{ end }}"
                      x-show="
                         (search === '' || `{{ .Name }}`.toLowerCase().includes(search.toLowerCase())) &&
                         (playersFilter == 0 || ({{ .MinPlayers }} <= playersFilter && {{ .MaxPlayers }} >= playersFilter)) &&
@@ -125,6 +125,7 @@
                     <!-- Cover Area -->
                     <div x-show="viewMode !== 'list'" @click="openDetails({{ .ID }})"
                          class="relative flex items-center justify-center overflow-hidden bg-fius-bg/50 cursor-pointer shrink-0 "
+                         style="background-image: url('/static/images/image-placeholder.svg'); background-size: cover; background-position: center;"
                          :class="viewMode === 'grid' ? 'w-full h-48 border-b' : 'w-24 h-24 sm:w-32 sm:h-32 border-r'">
                         {{ if .CustomImageUrl.Valid }}<img src="{{ .CustomImageUrl.String }}" class="object-cover h-full w-full group-hover:scale-105 transition duration-500">{{ else if .ImageUrl.Valid }}<img src="{{ .ImageUrl.String }}" class="object-cover h-full w-full group-hover:scale-105 transition duration-500">{{ else }}<svg class="w-12 h-12 text-fius-border/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>{{ end }}
                         <div class="absolute top-3 right-3" x-show="viewMode === 'grid'">
@@ -168,7 +169,7 @@
                             </div>
                             <div :class="{ 'w-full': viewMode === 'grid', 'w-full sm:w-48': viewMode === 'list-img', 'w-full sm:w-36': viewMode === 'list' }">
                                 <button x-show="isInCart({{ .ID }})" style="display: none;" @click="removeFromCart({{ .ID }})" class="w-full text-center text-xs bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 font-semibold py-2.5 px-3 rounded-lg border border-orange-500/30 transition duration-300">Entfernen</button>
-                                <button x-show="!isInCart({{ .ID }})" @click='addToCart({{ .ID }}, {{ .Name | printf "%q" }}, {{ if .CustomImageUrl.Valid }}{{ .CustomImageUrl.String | printf "%q" }}{{ else if .ImageUrl.Valid }}{{ .ImageUrl.String | printf "%q" }}{{ else }}""{{ end }})' class="w-full text-center text-xs bg-fius-blue hover:bg-blue-400 text-white font-bold py-2.5 px-3 rounded-lg border border-fius-blue transition duration-300">In den Leihkorb</button>
+                                <button x-show="!isInCart({{ .ID }})" @click='addToCart({{ .ID }}, {{ .Name | printf "%q" }}, {{ if .CustomImageUrl.Valid }}{{ .CustomImageUrl.String | printf "%q" }}{{ else if .ImageUrl.Valid }}{{ .ImageUrl.String | printf "%q" }}{{ else }}"/static/images/image-placeholder.svg"{{ end }})' class="w-full text-center text-xs bg-fius-blue hover:bg-blue-400 text-white font-bold py-2.5 px-3 rounded-lg border border-fius-blue transition duration-300">In den Leihkorb</button>
                             </div>
                         </div>
                     </div>

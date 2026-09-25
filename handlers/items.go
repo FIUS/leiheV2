@@ -15,6 +15,7 @@ import (
 
 type CreateItemRequest struct {
 	Name        string   `form:"name" binding:"required"`
+	ImageURL    string   `form:"image_url"`
 	MinPlayers  int32    `form:"min_players"`
 	MaxPlayers  int32    `form:"max_players"`
 	MinPlaytime int32    `form:"min_playtime"`
@@ -22,11 +23,13 @@ type CreateItemRequest struct {
 	Room        string   `form:"room"`
 	Shelf       string   `form:"shelf"`
 	Categories  []string `form:"categories"`
+	IsExpansion bool     `form:"is_expansion"`
 }
 
 type UpdateItemRequest struct {
 	ID          int32    `form:"id" binding:"required"`
 	Name        string   `form:"name" binding:"required"`
+	ImageURL    string   `form:"image_url"`
 	MinPlayers  int32    `form:"min_players"`
 	MaxPlayers  int32    `form:"max_players"`
 	MinPlaytime int32    `form:"min_playtime"`
@@ -34,6 +37,7 @@ type UpdateItemRequest struct {
 	Room        string   `form:"room"`
 	Shelf       string   `form:"shelf"`
 	Categories  []string `form:"categories"`
+	IsExpansion bool     `form:"is_expansion"`
 }
 
 func validateItemDimensions(minPlayers, maxPlayers, minPlaytime, maxPlaytime int32) error {
@@ -116,6 +120,7 @@ func CreateItem(c *gin.Context) {
 	err := queries.InTx(context.Background(), func(qTx *db.Queries) error {
 		item, err := qTx.CreateItem(context.Background(), db.CreateItemParams{
 			Name:        req.Name,
+			ImageUrl:    sql.NullString{String: strings.TrimSpace(req.ImageURL), Valid: strings.TrimSpace(req.ImageURL) != ""},
 			MinPlayers:  req.MinPlayers,
 			MaxPlayers:  req.MaxPlayers,
 			MinPlaytime: req.MinPlaytime,
@@ -123,6 +128,7 @@ func CreateItem(c *gin.Context) {
 			Status:      "available",
 			Room:        sql.NullString{String: req.Room, Valid: req.Room != ""},
 			Shelf:       sql.NullString{String: req.Shelf, Valid: req.Shelf != ""},
+			IsExpansion: req.IsExpansion,
 		})
 		if err != nil {
 			return err
@@ -151,12 +157,14 @@ func UpdateItem(c *gin.Context) {
 		if err := qTx.UpdateItem(context.Background(), db.UpdateItemParams{
 			ID:          req.ID,
 			Name:        req.Name,
+			ImageUrl:    sql.NullString{String: strings.TrimSpace(req.ImageURL), Valid: strings.TrimSpace(req.ImageURL) != ""},
 			MinPlayers:  req.MinPlayers,
 			MaxPlayers:  req.MaxPlayers,
 			MinPlaytime: req.MinPlaytime,
 			MaxPlaytime: req.MaxPlaytime,
 			Room:        sql.NullString{String: req.Room, Valid: req.Room != ""},
 			Shelf:       sql.NullString{String: req.Shelf, Valid: req.Shelf != ""},
+			IsExpansion: req.IsExpansion,
 		}); err != nil {
 			return err
 		}

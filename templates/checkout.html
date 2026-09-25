@@ -22,8 +22,7 @@
                 <template x-for="item in cartItems" :key="item.id">
                     <div class="flex items-center gap-3 px-4 py-3">
                         <div class="w-10 h-10 rounded-lg bg-[#1E2532] border border-fius-border overflow-hidden shrink-0">
-                            <img x-show="item.image" :src="item.image" :alt="item.name" class="w-full h-full object-cover">
-                            <div x-show="!item.image" class="w-full h-full flex items-center justify-center text-fius-muted text-xs">?</div>
+                            <img :src="item.image || '/static/images/image-placeholder.svg'" :alt="item.name" onerror="this.onerror=null; this.src='/static/images/image-placeholder.svg';" class="w-full h-full object-cover">
                         </div>
                         <span class="min-w-0 flex-1 truncate text-sm text-gray-200" :title="item.name" x-text="item.name"></span>
                         <button type="button"

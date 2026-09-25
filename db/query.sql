@@ -7,9 +7,9 @@ SELECT * FROM items WHERE id = $1 LIMIT 1;
 -- name: CreateItem :one
 INSERT INTO items (
     name, isbn, description, image_url, custom_image_url,
-    min_players, max_players, min_playtime, max_playtime, status, room, shelf
+    min_players, max_players, min_playtime, max_playtime, status, room, shelf, is_expansion
 ) VALUES (
-             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
          ) RETURNING *;
 
 -- name: UpdateItemStatus :exec
@@ -23,7 +23,7 @@ UPDATE items SET custom_image_url = $1 WHERE id = $2;
 
 -- name: UpdateItem :exec
 UPDATE items
-SET name = $2, min_players = $3, max_players = $4, min_playtime = $5, max_playtime = $6, room = $7, shelf = $8
+SET name = $2, image_url = $3, min_players = $4, max_players = $5, min_playtime = $6, max_playtime = $7, room = $8, shelf = $9, is_expansion = $10
 WHERE id = $1;
 
 -- name: ListCategories :many

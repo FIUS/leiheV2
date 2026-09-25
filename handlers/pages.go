@@ -57,7 +57,7 @@ func RenderGamesCatalog(c *gin.Context) {
 	}
 	games := make([]gameCatalogItem, 0, len(items))
 	for _, item := range items {
-		image := ""
+		image := "/static/images/image-placeholder.svg"
 		if item.CustomImageUrl.Valid {
 			image = item.CustomImageUrl.String
 		} else if item.ImageUrl.Valid {

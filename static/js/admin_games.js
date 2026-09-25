@@ -17,6 +17,8 @@ document.addEventListener('alpine:init', () => {
             this.editGame = {
                 id: dataset.id,
                 name: dataset.name,
+                image_url: dataset.imageUrl || '',
+                is_expansion: dataset.isExpansion === 'true',
                 min_players: dataset.minPlayers,
                 max_players: dataset.maxPlayers,
                 min_playtime: dataset.minPlaytime,
@@ -95,6 +97,10 @@ document.addEventListener('alpine:init', () => {
                 const res = await fetch('/api/bgg/details?id=' + bggId);
                 if (res.ok) {
                     const data = await res.json();
+                    this.editGame.name = data.name || this.editGame.name;
+                    this.editGame.image_url = data.image_url || '';
+                    this.editGame.is_expansion = Boolean(data.is_expansion);
+                    this.editGame.categories = data.categories || [];
                     this.editGame.min_players = data.min_players;
                     this.editGame.max_players = data.max_players;
                     this.editGame.min_playtime = data.min_playtime;

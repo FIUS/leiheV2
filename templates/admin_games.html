@@ -99,6 +99,7 @@
                                             data-id="{{ .ID }}" data-name="{{ .Name }}" data-min-players="{{ .MinPlayers }}"
                                             data-max-players="{{ .MaxPlayers }}" data-min-playtime="{{ .MinPlaytime }}"
                                             data-max-playtime="{{ .MaxPlaytime }}" data-room="{{ .Room.String }}" data-shelf="{{ .Shelf.String }}"
+                                            data-image-url="{{ .ImageUrl.String }}" data-is-expansion="{{ .IsExpansion }}"
                                             data-categories="{{ .CategoryNames }}"
                                             class="w-full text-left px-4 py-2 text-xs text-gray-200 hover:bg-fius-bg hover:text-blue-500">Bearbeiten</button>
                                     <div class="border-t border-fius-border my-1"></div>
@@ -135,6 +136,8 @@
                     <h3 class="text-xl font-bold text-white mb-4 border-b border-fius-border pb-3">Spiel bearbeiten</h3>
                     <form method="POST" action="/api/items/update" class="space-y-4" @submit="addCategory('edit', editCategorySearch)">
                         <input type="hidden" name="id" :value="editGame.id">
+                        <input type="hidden" name="image_url" :value="editGame.image_url || ''">
+                        <input type="hidden" name="is_expansion" value="true" x-bind:disabled="!editGame.is_expansion">
                         <template x-for="category in editGame.categories || []" :key="category">
                             <input type="hidden" name="categories" :value="category">
                         </template>
@@ -142,6 +145,10 @@
                             <label class="block text-xs font-bold text-fius-muted uppercase mb-1">Spielname *</label>
                             <input type="text" name="name" :value="editGame.name" required class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded outline-none focus:border-blue-500">
                         </div>
+                        <label class="flex items-center gap-2 text-sm text-gray-200">
+                            <input type="checkbox" x-model="editGame.is_expansion" class="accent-blue-500">
+                            Erweiterung
+                        </label>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Min. Spieler</label><input type="number" min="0" name="min_players" :value="editGame.min_players" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
                             <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Max. Spieler</label><input type="number" min="0" name="max_players" :value="editGame.max_players" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>

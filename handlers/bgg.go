@@ -72,7 +72,11 @@ type BGGSearchResponse struct {
 
 type BGGThingResponse struct {
 	Items []struct {
-		ID         string `xml:"id,attr"`
+		ID   string `xml:"id,attr"`
+		Name struct {
+			Value string `xml:"value,attr"`
+			Type  string `xml:"type,attr"`
+		} `xml:"name"`
 		Image      string `xml:"image"`
 		MinPlayers struct {
 			Value string `xml:"value,attr"`
@@ -165,19 +169,25 @@ func GetBGGDetails(c *gin.Context) {
 
 	item := bggResult.Items[0]
 	var categories []string
+	isExpansion := false
 	for _, link := range item.Links {
 		if link.Type == "boardgamecategory" {
 			categories = append(categories, link.Value)
+		}
+		if link.Type == "boardgameexpansion" {
+			isExpansion = true
 		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"bgg_id":       item.ID,
+		"name":         item.Name.Value,
 		"image_url":    item.Image,
 		"min_players":  item.MinPlayers.Value,
 		"max_players":  item.MaxPlayers.Value,
 		"min_playtime": item.MinPlaytime.Value,
 		"max_playtime": item.MaxPlaytime.Value,
 		"categories":   categories,
+		"is_expansion": isExpansion,
 	})
 }

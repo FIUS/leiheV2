@@ -13,6 +13,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./db/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql
       - ./db/migrations/001_auth.sql:/docker-entrypoint-initdb.d/2_auth.sql
+      - ./db/migrations/002_item_expansion.sql:/docker-entrypoint-initdb.d/3_item_expansion.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fius -d verleih"]
       interval: 5s

@@ -46,7 +46,8 @@ CREATE TABLE items (
                        max_players INT NOT NULL DEFAULT 0,
                        min_playtime INT NOT NULL DEFAULT 0,
                        max_playtime INT NOT NULL DEFAULT 0,
-                       status item_status NOT NULL DEFAULT 'available'
+                       status item_status NOT NULL DEFAULT 'available',
+                       is_expansion BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- ITEM_CATEGORIES
