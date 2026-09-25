@@ -5,11 +5,15 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
+
+const bggRequestCooldown = 5 * time.Second
 
 var bggMutex sync.Mutex
 var bggLastCall time.Time
@@ -18,12 +22,23 @@ func enforceBGGCooldown() {
 	bggMutex.Lock()
 	defer bggMutex.Unlock()
 
-	cooldown := 2 * time.Second
 	elapsed := time.Since(bggLastCall)
-	if elapsed < cooldown {
-		time.Sleep(cooldown - elapsed)
+	if elapsed < bggRequestCooldown {
+		time.Sleep(bggRequestCooldown - elapsed)
 	}
 	bggLastCall = time.Now()
+}
+
+func newBGGRequest(method, requestURL string) (*http.Request, error) {
+	req, err := http.NewRequest(method, requestURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "FIUS-LeiheV2/1.0 (University of Stuttgart)")
+	if token := strings.TrimSpace(os.Getenv("BGG_API_TOKEN")); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	return req, nil
 }
 
 type BGGSearchResponse struct {
@@ -71,8 +86,11 @@ func SearchBGG(c *gin.Context) {
 	bggURL := "https://boardgamegeek.com/xmlapi2/search?type=boardgame&query=" + url.QueryEscape(query)
 	enforceBGGCooldown()
 
-	req, _ := http.NewRequest("GET", bggURL, nil)
-	req.Header.Set("User-Agent", "FIUS-LeiheV2/1.0 (University of Stuttgart)")
+	req, err := newBGGRequest(http.MethodGet, bggURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "BGG Anfrage konnte nicht erstellt werden"})
+		return
+	}
 	client := &http.Client{}
 
 	resp, err := client.Do(req)
@@ -101,8 +119,11 @@ func GetBGGDetails(c *gin.Context) {
 	bggURL := "https://boardgamegeek.com/xmlapi2/thing?id=" + id
 	enforceBGGCooldown()
 
-	req, _ := http.NewRequest("GET", bggURL, nil)
-	req.Header.Set("User-Agent", "FIUS-LeiheV2/1.0 (University of Stuttgart)")
+	req, err := newBGGRequest(http.MethodGet, bggURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "BGG Anfrage konnte nicht erstellt werden"})
+		return
+	}
 	client := &http.Client{}
 
 	resp, err := client.Do(req)
