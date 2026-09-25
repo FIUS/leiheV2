@@ -251,7 +251,7 @@ func GetItemDetails(c *gin.Context) {
 		images = append(images, item.ImageUrl.String)
 	}
 	if len(images) == 0 {
-		images = append(images, "/static/placeholder.png")
+		images = append(images, "/static/images/image-placeholder.svg")
 	}
 
 	c.JSON(http.StatusOK, gin.H{
