@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Bild nicht gefunden">
+  <rect width="400" height="300" fill="#111827"/>
+  <path d="M100 220 170 150l45 45 35-35 50 60H100Z" fill="#24334D"/>
+  <circle cx="270" cy="105" r="25" fill="#24334D"/>
+  <text x="200" y="265" fill="#9CA3AF" font-family="sans-serif" font-size="18" text-anchor="middle">Bild nicht gefunden</text>
+</svg>
