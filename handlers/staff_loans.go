@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	stdmail "net/mail"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,22 +34,50 @@ func SearchStaffLoans(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"bookings": bookings})
 }
 
-func LookupStaffLoanBarcode(c *gin.Context) {
-	barcode := strings.TrimSpace(c.Query("code"))
-	if barcode == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Bitte einen Barcode eingeben"})
+func SearchStaffLoanItems(c *gin.Context) {
+	endDate, err := staffLoanEndDate(c.Query("end_date"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültiges Rückgabedatum"})
 		return
 	}
-	item, err := queries.FindStaffLoanItemByBarcode(c.Request.Context(), barcode)
+	items, err := queries.SearchStaffLoanItems(c.Request.Context(), c.Query("q"), endDate)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Spiele konnten nicht gesucht werden"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"items": items})
+}
+
+func LookupStaffLoanSystemID(c *gin.Context) {
+	rawID := strings.TrimSpace(c.Query("id"))
+	id, err := strconv.ParseInt(rawID, 10, 32)
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bitte eine gültige System-ID eingeben"})
+		return
+	}
+	endDate, err := staffLoanEndDate(c.Query("end_date"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültiges Rückgabedatum"})
+		return
+	}
+	item, err := queries.FindStaffLoanItemBySystemID(c.Request.Context(), int32(id), endDate)
 	if errors.Is(err, sql.ErrNoRows) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Kein verfügbares Spiel mit diesem Barcode gefunden"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Kein Spiel mit dieser System-ID gefunden"})
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Barcode konnte nicht gesucht werden"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "System-ID konnte nicht gesucht werden"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"item": item})
+}
+
+func staffLoanEndDate(date string) (time.Time, error) {
+	endDate, err := time.ParseInLocation("2006-01-02", date, time.Local)
+	if err != nil || date < time.Now().Format("2006-01-02") {
+		return time.Time{}, errors.New("invalid end date")
+	}
+	return endDate.AddDate(0, 0, 1).Add(-time.Nanosecond), nil
 }
 
 type issuePrebookingRequest struct {

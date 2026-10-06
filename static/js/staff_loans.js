@@ -9,16 +9,16 @@ document.addEventListener('alpine:init', () => {
         selectedBooking: null,
         selectedItemIDs: [],
         spontaneousItems: [],
-        barcode: '',
+        itemSearch: '',
+        itemResults: [],
+        systemID: '',
         borrowerName: '',
         borrowerEmail: '',
         endDate: '',
         error: '',
         message: '',
+        itemWarning: '',
         busy: false,
-        cameraActive: false,
-        cameraStream: null,
-        barcodeDetector: null,
 
         init() {
             const today = new Date();
@@ -77,85 +77,94 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async lookupBarcode() {
-            const code = this.barcode.trim();
-            if (!code) return;
-            this.error = '';
+        async searchItems() {
+            this.itemWarning = '';
+            const query = this.itemSearch.trim();
+            if (!query) {
+                this.itemResults = [];
+                return;
+            }
             try {
-                const response = await fetch(`/admin/api/ausgabe/barcode?code=${encodeURIComponent(code)}`);
+                const params = new URLSearchParams({ q: query, end_date: this.endDate });
+                const response = await fetch(`/admin/api/ausgabe/items?${params}`);
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.error || 'Spiel konnte nicht gefunden werden');
-                if (this.spontaneousItems.some(item => Number(item.id) === Number(data.item.id))) {
-                    throw new Error('Dieses Spiel ist bereits ausgewählt');
-                }
-                this.spontaneousItems.push(data.item);
-                this.barcode = '';
+                if (!response.ok) throw new Error(data.error || 'Spiele konnten nicht gesucht werden');
+                this.itemResults = data.items || [];
             } catch (error) {
                 this.error = error.message;
             }
+        },
+
+        async lookupSystemID() {
+            const id = this.systemID.trim();
+            if (!id) return;
+            this.error = '';
+            this.itemWarning = '';
+            try {
+                const params = new URLSearchParams({ id, end_date: this.endDate });
+                const response = await fetch(`/admin/api/ausgabe/system-id?${params}`);
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Spiel konnte nicht gefunden werden');
+                if (!data.item.available) {
+                    this.itemWarning = data.item.warning;
+                    return;
+                }
+                this.addSpontaneousItem(data.item);
+                this.systemID = '';
+            } catch (error) {
+                this.error = error.message;
+            }
+        },
+
+        addSpontaneousItem(item) {
+            this.error = '';
+            this.itemWarning = '';
+            if (!item.available) {
+                this.itemWarning = item.warning;
+                return;
+            }
+            if (this.isItemSelected(item.id)) {
+                this.error = 'Dieses Spiel ist bereits ausgewählt.';
+                return;
+            }
+            this.spontaneousItems.push(item);
+        },
+
+        isItemSelected(itemID) {
+            return this.spontaneousItems.some(item => Number(item.id) === Number(itemID));
         },
 
         removeSpontaneousItem(itemID) {
             this.spontaneousItems = this.spontaneousItems.filter(item => Number(item.id) !== Number(itemID));
         },
 
-        async toggleCamera() {
-            if (this.cameraActive) {
-                this.stopCamera();
-                return;
-            }
-            if (!navigator.mediaDevices?.getUserMedia || !('BarcodeDetector' in window)) {
-                this.error = 'Dieser Browser unterstützt keinen Kamerascanner. Bitte den Barcode manuell eingeben.';
-                return;
-            }
-            try {
-                this.barcodeDetector = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'] });
-                this.cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
-                this.$refs.video.srcObject = this.cameraStream;
-                await this.$refs.video.play();
-                this.cameraActive = true;
-                this.scanFrame();
-            } catch (error) {
-                this.stopCamera();
-                this.error = `Kamera konnte nicht gestartet werden: ${error.message}`;
-            }
-        },
-
-        async scanFrame() {
-            if (!this.cameraActive || !this.barcodeDetector) return;
-            try {
-                const barcodes = await this.barcodeDetector.detect(this.$refs.video);
-                if (barcodes.length > 0) {
-                    this.barcode = barcodes[0].rawValue;
-                    this.stopCamera();
-                    await this.lookupBarcode();
-                    return;
+        async refreshSelectedItems() {
+            this.itemWarning = '';
+            await Promise.all(this.spontaneousItems.map(async item => {
+                try {
+                    const params = new URLSearchParams({ id: String(item.id), end_date: this.endDate });
+                    const response = await fetch(`/admin/api/ausgabe/system-id?${params}`);
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'Spielverfügbarkeit konnte nicht geprüft werden');
+                    Object.assign(item, data.item);
+                } catch (error) {
+                    this.error = error.message;
                 }
-            } catch (error) {
-                this.stopCamera();
-                this.error = `Barcode konnte nicht gelesen werden: ${error.message}`;
-                return;
-            }
-            window.setTimeout(() => this.scanFrame(), 250);
+            }));
         },
 
-        stopCamera() {
-            this.cameraActive = false;
-            if (this.cameraStream) {
-                this.cameraStream.getTracks().forEach(track => track.stop());
-                this.cameraStream = null;
-            }
-            if (this.$refs.video) this.$refs.video.srcObject = null;
+        async refreshAvailability() {
+            await Promise.all([this.refreshSelectedItems(), this.searchItems()]);
         },
 
         async createSpontaneousLoan() {
-            if (this.spontaneousItems.length === 0) return;
+            if (this.spontaneousItems.length === 0 || this.spontaneousItems.some(item => !item.available)) return;
             await this.postJSON('/admin/api/ausgabe/spontaneous', {
                 item_ids: this.spontaneousItems.map(item => Number(item.id)),
                 name: this.borrowerName,
                 email: this.borrowerEmail,
                 end_date: this.endDate
-            }, 'Spontanausleihe wurde ausgegeben.');
+            }, 'Ausleihe wurde ausgegeben.');
             if (!this.error) {
                 this.spontaneousItems = [];
                 this.borrowerName = '';

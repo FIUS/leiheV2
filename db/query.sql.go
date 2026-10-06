@@ -54,8 +54,8 @@ FROM booking_items bi
          JOIN items i ON i.id = bi.item_id
 WHERE bi.item_id = ANY($1::int[])
   AND b.status IN ('pending', 'confirmed', 'active')
-  AND b.start_date <= $2
-  AND b.end_date >= $3
+  AND b.start_date <= $3
+  AND b.end_date >= $2
 `
 
 type CheckItemCollisionsParams struct {

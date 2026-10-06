@@ -20,7 +20,7 @@
             <button type="button" @click="issueSource = 'prebooked'; clearSelection()" :class="issueSource === 'prebooked' ? 'bg-blue-600 text-white' : 'text-theme-muted'"
                     class="flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold">Vorbestellung</button>
             <button type="button" @click="issueSource = 'spontaneous'; clearSelection()" :class="issueSource === 'spontaneous' ? 'bg-blue-600 text-white' : 'text-theme-muted'"
-                    class="flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold">Spontanausleihe</button>
+                    class="flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold">Jetzt ausleihen</button>
         </div>
 
         <div x-show="issueSource === 'prebooked'" class="space-y-5">
@@ -76,15 +76,32 @@
 
         <div x-show="issueSource === 'spontaneous'" class="space-y-5">
             <div class="rounded-xl border border-theme-border bg-theme-card p-5">
-                <h2 class="mb-3 font-bold text-white">Spiel per Barcode hinzufügen</h2>
-                <form @submit.prevent="lookupBarcode()" class="flex flex-col gap-2 sm:flex-row">
-                    <input x-model="barcode" type="text" inputmode="numeric" placeholder="Barcode / ISBN scannen oder eingeben"
+                <h2 class="mb-3 font-bold text-white">Spiel hinzufügen</h2>
+                <label for="item-name-search" class="mb-2 block text-sm font-semibold text-gray-200">Nach Spielnamen suchen</label>
+                <input id="item-name-search" x-model="itemSearch" @input.debounce.300ms="searchItems()" type="search" placeholder="Name des Spiels"
+                       class="w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white outline-none focus:border-blue-500">
+                <div x-show="itemSearch.trim().length > 0" class="mt-3 space-y-2">
+                    <template x-for="item in itemResults" :key="item.id">
+                        <div class="flex flex-col gap-2 rounded-lg border border-theme-border bg-theme-bg p-3 sm:flex-row sm:items-center">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-semibold text-white" x-text="item.name"></p>
+                                <p class="text-xs text-theme-muted" x-text="`System-ID ${item.id} · ${item.room || 'Kein Raum'}${item.shelf ? ' / ' + item.shelf : ''}`"></p>
+                                <p x-show="!item.available" class="mt-1 text-xs font-medium text-amber-300" x-text="item.warning"></p>
+                            </div>
+                            <button type="button" @click="addSpontaneousItem(item)" :disabled="!item.available || isItemSelected(item.id)"
+                                    class="shrink-0 rounded-lg border border-theme-border px-3 py-2 text-sm font-semibold text-gray-200 hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                    x-text="isItemSelected(item.id) ? 'Bereits ausgewählt' : (item.available ? 'Hinzufügen' : 'Nicht verfügbar')"></button>
+                        </div>
+                    </template>
+                    <p x-show="itemResults.length === 0" class="rounded-lg bg-theme-bg p-3 text-sm text-theme-muted">Keine passenden Spiele gefunden.</p>
+                </div>
+                <p x-show="itemWarning" x-cloak class="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-300" x-text="itemWarning"></p>
+                <form @submit.prevent="lookupSystemID()" class="mt-5 flex flex-col gap-2 border-t border-theme-border pt-4 sm:flex-row">
+                    <input x-model="systemID" type="text" inputmode="numeric" placeholder="Barcode / System-ID eingeben"
                            class="min-w-0 flex-1 rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white outline-none focus:border-blue-500">
-                    <button class="rounded-lg border border-theme-border px-4 py-3 text-sm font-semibold text-gray-200 hover:border-blue-500">Hinzufügen</button>
-                    <button type="button" @click="toggleCamera()" class="rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-500" x-text="cameraActive ? 'Kamera stoppen' : 'Kamera öffnen'"></button>
+                    <button class="rounded-lg border border-theme-border px-4 py-3 text-sm font-semibold text-gray-200 hover:border-blue-500">System-ID suchen</button>
                 </form>
-                <video x-ref="video" x-show="cameraActive" autoplay playsinline class="mt-4 max-h-72 w-full rounded-lg bg-black"></video>
-                <p class="mt-2 text-xs text-theme-muted">Der Barcode muss als ISBN beim Spiel hinterlegt sein. Kamerascans benötigen HTTPS und Browserunterstützung.</p>
+                <p class="mt-2 text-xs text-theme-muted">Der Barcode entspricht der System-ID des Spiels.</p>
             </div>
             <div class="rounded-xl border border-theme-border bg-theme-card p-5">
                 <h2 class="mb-3 font-bold text-white">Ausgewählte Spiele</h2>
@@ -94,8 +111,11 @@
                 <div class="space-y-2">
                     <template x-for="item in spontaneousItems" :key="item.id">
                         <div class="flex items-center gap-3 rounded-lg border border-theme-border bg-theme-bg p-3">
-                            <span class="flex-1 text-sm text-gray-200" x-text="item.name"></span>
-                            <span class="text-xs text-theme-muted" x-text="item.isbn"></span>
+                            <div class="min-w-0 flex-1">
+                                <span class="block text-sm text-gray-200" x-text="item.name"></span>
+                                <span class="text-xs text-theme-muted" x-text="`System-ID ${item.id} · ${item.room || 'Kein Raum'}${item.shelf ? ' / ' + item.shelf : ''}`"></span>
+                                <span x-show="!item.available" class="block text-xs font-medium text-amber-300" x-text="item.warning"></span>
+                            </div>
                             <button type="button" @click="removeSpontaneousItem(item.id)" class="text-sm text-red-400 hover:text-red-300">Entfernen</button>
                         </div>
                     </template>
@@ -109,11 +129,11 @@
                     </label>
                 </div>
                 <label class="mt-4 block text-xs font-semibold uppercase text-theme-muted">Voraussichtliche Rückgabe
-                    <input x-model="endDate" type="date" required class="mt-1 w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white sm:max-w-xs">
+                    <input x-model="endDate" @change="refreshAvailability()" type="date" required class="mt-1 w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white sm:max-w-xs">
                 </label>
-                <button type="button" @click="createSpontaneousLoan()" :disabled="busy || spontaneousItems.length === 0"
+                <button type="button" @click="createSpontaneousLoan()" :disabled="busy || spontaneousItems.length === 0 || spontaneousItems.some(item => !item.available)"
                         class="mt-5 w-full rounded-lg bg-green-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50">
-                    <span x-text="busy ? 'Wird gespeichert …' : 'Spontanausleihe ausgeben'"></span>
+                    <span x-text="busy ? 'Wird gespeichert …' : 'Jetzt ausleihen'"></span>
                 </button>
             </div>
         </div>
@@ -133,7 +153,23 @@
                             <h2 class="font-semibold text-white" x-text="booking.person_name"></h2>
                             <p class="mt-1 text-xs text-theme-muted" x-text="booking.token + ' · ' + booking.email"></p>
                             <p class="mt-1 text-xs text-theme-muted" x-text="booking.start_date.substring(0, 10) + ' – ' + booking.end_date.substring(0, 10)"></p>
-                            <p class="mt-2 text-sm text-gray-300" x-text="booking.items.map(item => item.name).join(', ')"></p>
+                            <p class="mt-3 text-sm font-semibold text-white">Spiele zurück ins Regal</p>
+                            <div class="mt-2 overflow-x-auto">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="border-b border-theme-border text-xs uppercase text-theme-muted">
+                                        <tr><th class="py-2 pr-4">Spiel</th><th class="py-2">Lagerort</th></tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-theme-border">
+                                        <template x-for="item in booking.items" :key="item.id">
+                                            <tr>
+                                                <td class="py-2 pr-4 text-gray-200" x-text="item.name"></td>
+                                                <td class="py-2 text-gray-300" x-text="`${item.room || 'Kein Raum'}${item.shelf ? ' / ' + item.shelf : ''}`"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="mt-2 text-xs text-theme-muted">Vielen Dank! Bitte die Spiele gleich wieder an ihren Lagerort aufräumen.</p>
                         </div>
                         <button type="button" @click="returnBooking(booking)" :disabled="busy"
                                 class="shrink-0 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-500 disabled:opacity-50">Zurücknehmen</button>

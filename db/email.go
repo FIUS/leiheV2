@@ -128,9 +128,13 @@ func (q *Queries) CancelConfirmedBooking(ctx context.Context, bookingID int32) e
 }
 
 type StaffLoanItem struct {
-	ID   int32  `json:"id"`
-	Name string `json:"name"`
-	ISBN string `json:"isbn"`
+	ID        int32  `json:"id"`
+	Name      string `json:"name"`
+	ISBN      string `json:"isbn"`
+	Room      string `json:"room"`
+	Shelf     string `json:"shelf"`
+	Available bool   `json:"available"`
+	Warning   string `json:"warning,omitempty"`
 }
 
 type StaffLoanBooking struct {
@@ -178,7 +182,8 @@ func (q *Queries) SearchStaffLoanBookings(ctx context.Context, search, mode stri
 			return nil, err
 		}
 		items, err := q.db.QueryContext(ctx, `
-			SELECT i.id, i.name, COALESCE(i.isbn, '')
+			SELECT i.id, i.name, COALESCE(i.isbn, ''),
+			       COALESCE(i.room, ''), COALESCE(i.shelf, '')
 			FROM booking_items bi JOIN items i ON i.id = bi.item_id
 			WHERE bi.booking_id = $1 ORDER BY i.name
 		`, booking.ID)
@@ -187,7 +192,7 @@ func (q *Queries) SearchStaffLoanBookings(ctx context.Context, search, mode stri
 		}
 		for items.Next() {
 			var item StaffLoanItem
-			if err := items.Scan(&item.ID, &item.Name, &item.ISBN); err != nil {
+			if err := items.Scan(&item.ID, &item.Name, &item.ISBN, &item.Room, &item.Shelf); err != nil {
 				items.Close()
 				return nil, err
 			}
@@ -205,14 +210,73 @@ func (q *Queries) SearchStaffLoanBookings(ctx context.Context, search, mode stri
 	return bookings, rows.Err()
 }
 
-func (q *Queries) FindStaffLoanItemByBarcode(ctx context.Context, barcode string) (StaffLoanItem, error) {
+func (q *Queries) FindStaffLoanItemBySystemID(ctx context.Context, id int32, endDate time.Time) (StaffLoanItem, error) {
 	var item StaffLoanItem
+	var statusAvailable, hasConflict bool
 	err := q.db.QueryRowContext(ctx, `
-		SELECT id, name, COALESCE(isbn, '')
-		FROM items
-		WHERE isbn = $1 AND status = 'available'
-	`, strings.TrimSpace(barcode)).Scan(&item.ID, &item.Name, &item.ISBN)
+		SELECT i.id, i.name, COALESCE(i.isbn, ''),
+		       COALESCE(i.room, ''), COALESCE(i.shelf, ''),
+		       i.status = 'available',
+		       EXISTS (
+		           SELECT 1
+		           FROM booking_items bi
+		           JOIN bookings b ON b.id = bi.booking_id
+		           WHERE bi.item_id = i.id
+		             AND b.status IN ('pending', 'confirmed', 'active')
+		             AND b.start_date <= $2
+		             AND b.end_date >= $3
+		       )
+		FROM items i
+		WHERE i.id = $1
+	`, id, endDate, time.Now()).Scan(&item.ID, &item.Name, &item.ISBN, &item.Room, &item.Shelf, &statusAvailable, &hasConflict)
+	item.Available = statusAvailable && !hasConflict
+	if hasConflict {
+		item.Warning = "Das Spiel ist während des gewählten Zeitraums bereits reserviert oder verliehen."
+	} else if !statusAvailable {
+		item.Warning = "Das Spiel ist aktuell nicht als verfügbar markiert."
+	}
 	return item, err
+}
+
+func (q *Queries) SearchStaffLoanItems(ctx context.Context, search string, endDate time.Time) ([]StaffLoanItem, error) {
+	rows, err := q.db.QueryContext(ctx, `
+		SELECT i.id, i.name, COALESCE(i.isbn, ''),
+		       COALESCE(i.room, ''), COALESCE(i.shelf, ''),
+		       i.status = 'available',
+		       EXISTS (
+		           SELECT 1
+		           FROM booking_items bi
+		           JOIN bookings b ON b.id = bi.booking_id
+		           WHERE bi.item_id = i.id
+		             AND b.status IN ('pending', 'confirmed', 'active')
+		             AND b.start_date <= $2
+		             AND b.end_date >= $3
+		       )
+		FROM items i
+		WHERE i.name ILIKE '%' || $1 || '%'
+		ORDER BY i.name
+		LIMIT 30
+	`, strings.TrimSpace(search), endDate, time.Now())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []StaffLoanItem
+	for rows.Next() {
+		var item StaffLoanItem
+		var statusAvailable, hasConflict bool
+		if err := rows.Scan(&item.ID, &item.Name, &item.ISBN, &item.Room, &item.Shelf, &statusAvailable, &hasConflict); err != nil {
+			return nil, err
+		}
+		item.Available = statusAvailable && !hasConflict
+		if hasConflict {
+			item.Warning = "Das Spiel ist während des gewählten Zeitraums bereits reserviert oder verliehen."
+		} else if !statusAvailable {
+			item.Warning = "Das Spiel ist aktuell nicht als verfügbar markiert."
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
 }
 
 func (q *Queries) CreateSpontaneousLoan(ctx context.Context, token string, staffID int32, guestName, guestEmail string, endDate time.Time, itemIDs []int32) (int32, error) {

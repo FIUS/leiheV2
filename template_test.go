@@ -229,9 +229,12 @@ func TestStaffLoansTemplateRendersIssueAndReturnFlows(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Failed to execute staff_loans.html: %v", err)
 	}
-	for _, expected := range []string{"Buchungen", "Ausgeben", "Zurücknehmen", "Vorbestellung", "Spontanausleihe", "Barcode / ISBN scannen oder eingeben", "Aktive Ausleihe suchen"} {
+	for _, expected := range []string{"Buchungen", "Ausgeben", "Zurücknehmen", "Vorbestellung", "Jetzt ausleihen", "Nach Spielnamen suchen", "Barcode / System-ID eingeben", "System-ID", "Lagerort", "Bitte die Spiele gleich wieder an ihren Lagerort aufräumen", "Aktive Ausleihe suchen"} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected staff lending page to contain %q", expected)
 		}
+	}
+	if bytes.Contains(output.Bytes(), []byte("Kamera")) {
+		t.Error("staff lending page should not render camera scanning controls")
 	}
 }

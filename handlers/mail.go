@@ -167,7 +167,7 @@ func sendOrderEmail(to, firstName string, details db.BookingEmailDetails) error 
 	if details.Status == "confirmed" {
 		subject = "Ausleihe bestätigt"
 	} else if details.Status == "active" {
-		subject = "Spontanausleihe ausgegeben"
+		subject = "Ausleihe"
 	}
 	return sendMail(to, subject, body)
 }
@@ -189,7 +189,11 @@ func sendBookingUpdateEmail(details db.BookingEmailDetails, change string) error
 	if err != nil {
 		return err
 	}
-	return sendMail(details.Email.String, "Änderung deiner Ausleihe", body)
+	subject := "Änderung deiner Ausleihe"
+	if details.Status == "active" && change == "ausgegeben" {
+		subject = "Ausleihe"
+	}
+	return sendMail(details.Email.String, subject, body)
 }
 
 func bookingStatusLabel(status string) string {
