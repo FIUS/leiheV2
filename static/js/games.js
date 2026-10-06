@@ -123,7 +123,7 @@ document.addEventListener('alpine:init', () => {
                 const categories = data.categories ? data.categories.split(",").map((category) => category.trim()) : [];
 
                 return (!search || data.name.toLowerCase().includes(search)) &&
-                    (!this.playersFilter || (minPlayers <= this.playersFilter && maxPlayers >= this.playersFilter)) &&
+                    (Number(this.playersFilter) === 0 || (minPlayers <= Number(this.playersFilter) && maxPlayers >= Number(this.playersFilter))) &&
                     (this.maxDurationFilter > 240
                         ? maxPlaytime >= this.minDurationFilter
                         : minPlaytime <= this.maxDurationFilter && maxPlaytime >= this.minDurationFilter) &&
