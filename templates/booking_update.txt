@@ -1,0 +1,14 @@
+Hallo {{ .FirstName }},
+
+deine Ausleihe wurde {{ .Change }}.
+
+Buchungsnummer: {{ .BookingToken }}
+Zeitraum: {{ .StartDate }} bis {{ .EndDate }}
+Status: {{ .Status }}
+
+Reservierte Spiele:
+{{ range .Items }}- {{ . }}
+{{ end }}
+
+Viele Grüße
+FIUS Verleih

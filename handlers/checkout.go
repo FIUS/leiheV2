@@ -61,14 +61,33 @@ func HandleCreateBooking(c *gin.Context) {
 	}
 	session := sessions.Default(c)
 	var userID sql.NullInt32
+	var createdByUserID sql.NullInt32
+	status := db.BookingStatusPending
 	var recipientEmail, recipientName string
-	if id, ok := session.Get("user_id").(int32); ok {
+	id, authenticated := session.Get("user_id").(int32)
+	role := session.Get("user_role")
+	isStaff := role == "admin" || role == "maintainer"
+	if isStaff {
+		if !authenticated {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Bitte erneut anmelden"})
+			return
+		}
+		if guestName.Valid != guestEmail.Valid {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Für eine Ausleihe für andere Personen müssen Name und E-Mail angegeben werden"})
+			return
+		}
+		createdByUserID = sql.NullInt32{Int32: id, Valid: true}
+		status = db.BookingStatusConfirmed
+	}
+	if authenticated && !(isStaff && guestName.Valid) {
 		userID = sql.NullInt32{Int32: id, Valid: true}
 		user, userErr := queries.GetUser(ctx, id)
-		if userErr == nil {
-			recipientEmail = user.Email
-			recipientName = user.FirstName
+		if userErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Benutzerkonto konnte nicht geladen werden"})
+			return
 		}
+		recipientEmail = user.Email
+		recipientName = user.FirstName
 	}
 	if recipientEmail == "" && guestEmail.Valid {
 		recipientEmail = guestEmail.String
@@ -98,13 +117,14 @@ func HandleCreateBooking(c *gin.Context) {
 		}
 
 		booking, err := qTx.CreateBooking(ctx, db.CreateBookingParams{
-			PublicToken: token,
-			UserID:      userID,
-			GuestName:   guestName,
-			GuestEmail:  guestEmail,
-			StartDate:   startDate,
-			EndDate:     endDate,
-			Status:      db.BookingStatusPending,
+			PublicToken:     token,
+			UserID:          userID,
+			CreatedByUserID: createdByUserID,
+			GuestName:       guestName,
+			GuestEmail:      guestEmail,
+			StartDate:       startDate,
+			EndDate:         endDate,
+			Status:          status,
 		})
 		if err != nil {
 			return err

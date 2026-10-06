@@ -14,6 +14,8 @@ services:
       - ./db/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql
       - ./db/migrations/001_auth.sql:/docker-entrypoint-initdb.d/2_auth.sql
       - ./db/migrations/002_item_expansion.sql:/docker-entrypoint-initdb.d/3_item_expansion.sql
+      - ./db/migrations/003_booking_confirmation.sql:/docker-entrypoint-initdb.d/4_booking_confirmation.sql
+      - ./db/migrations/004_booking_creator.sql:/docker-entrypoint-initdb.d/5_booking_creator.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U leih -d verleih"]
       interval: 5s

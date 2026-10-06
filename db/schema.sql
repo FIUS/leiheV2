@@ -1,7 +1,7 @@
 -- ENUMS
 CREATE TYPE user_role AS ENUM ('user', 'maintainer', 'admin');
 CREATE TYPE item_status AS ENUM ('available', 'rented', 'maintenance', 'lost');
-CREATE TYPE booking_status AS ENUM ('pending', 'active', 'returned', 'cancelled');
+CREATE TYPE booking_status AS ENUM ('pending', 'confirmed', 'active', 'returned', 'cancelled');
 
 -- USERS
 CREATE TABLE users (
@@ -62,6 +62,7 @@ CREATE TABLE bookings (
                           id SERIAL PRIMARY KEY,
                           public_token VARCHAR(12) UNIQUE NOT NULL,
                           user_id INT REFERENCES users(id) ON DELETE SET NULL,
+                          created_by_user_id INT REFERENCES users(id) ON DELETE SET NULL,
                           guest_name VARCHAR(255),
                           guest_email VARCHAR(255),
                           start_date TIMESTAMPTZ NOT NULL,
@@ -83,3 +84,4 @@ CREATE INDEX idx_items_players ON items(min_players, max_players);
 CREATE INDEX idx_items_playtime ON items(min_playtime, max_playtime);
 CREATE INDEX idx_bookings_status ON bookings(status);
 CREATE INDEX idx_bookings_token ON bookings(public_token);
+CREATE INDEX idx_bookings_pending_start_date ON bookings(start_date) WHERE status = 'pending';

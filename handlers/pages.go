@@ -131,8 +131,14 @@ func RenderAdminUsers(c *gin.Context) {
 }
 
 func RenderAdminBookings(c *gin.Context) {
+	bookings, err := queries.ListBookingOverview(c.Request.Context())
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Buchungen konnten nicht geladen werden")
+		return
+	}
 	c.HTML(http.StatusOK, "admin_bookings.html", pageData(c, gin.H{
 		"ActiveTab": "bookings",
+		"Bookings":  bookings,
 	}))
 }
 

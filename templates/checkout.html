@@ -120,14 +120,17 @@
             </div>
 
             <!-- Gast Daten Formular -->
-            <template x-if="'{{ .UserRole }}' === 'guest' || '{{ .UserRole }}' === ''">
+            <template x-if="'{{ .UserRole }}' === 'guest' || '{{ .UserRole }}' === '' || '{{ .UserRole }}' === 'admin' || '{{ .UserRole }}' === 'maintainer'">
                 <div class="space-y-4 pt-4 border-t border-theme-border">
+                    {{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }}
+                    <p class="text-xs text-theme-muted">Optional: Trage Name und E-Mail ein, wenn du die Ausleihe für eine andere Person erstellst. Team-Ausleihen werden automatisch bestätigt.</p>
+                    {{ end }}
                     <div>
-                        <label class="block text-xs font-bold text-theme-muted uppercase mb-1">Name</label>
+                        <label class="block text-xs font-bold text-theme-muted uppercase mb-1">Name{{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }} (optional){{ end }}</label>
                         <input type="text" x-model="checkoutData.guestName" placeholder="Vor- und Nachname" class="w-full bg-theme-bg border border-theme-border rounded-lg p-2.5 text-white text-sm focus:border-blue-500 outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-theme-muted uppercase mb-1">E-Mail</label>
+                        <label class="block text-xs font-bold text-theme-muted uppercase mb-1">E-Mail{{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }} (optional){{ end }}</label>
                         <input type="email" x-model="checkoutData.guestEmail" placeholder="name@beispiel.de" class="w-full bg-theme-bg border border-theme-border rounded-lg p-2.5 text-white text-sm focus:border-blue-500 outline-none">
                     </div>
                 </div>

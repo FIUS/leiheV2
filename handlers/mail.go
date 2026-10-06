@@ -155,7 +155,48 @@ func sendOrderEmail(to, firstName string, details db.BookingEmailDetails) error 
 	if err != nil {
 		return err
 	}
-	return sendMail(to, "Reservierungsanfrage erhalten", body)
+	subject := "Reservierungsanfrage erhalten"
+	if details.Status == "confirmed" {
+		subject = "Ausleihe bestätigt"
+	}
+	return sendMail(to, subject, body)
+}
+
+func sendBookingUpdateEmail(details db.BookingEmailDetails, change string) error {
+	body, err := renderMailTemplate("templates/booking_update.txt", struct {
+		FirstName    string
+		BookingToken string
+		StartDate    string
+		EndDate      string
+		Items        []string
+		Status       string
+		Change       string
+	}{
+		FirstName: details.FirstName, BookingToken: details.Token,
+		StartDate: details.StartDate.Format("02.01.2006"), EndDate: details.EndDate.Format("02.01.2006"),
+		Items: details.ItemNames, Status: bookingStatusLabel(details.Status), Change: change,
+	})
+	if err != nil {
+		return err
+	}
+	return sendMail(details.Email.String, "Änderung deiner Ausleihe", body)
+}
+
+func bookingStatusLabel(status string) string {
+	switch status {
+	case "pending":
+		return "Ausstehend"
+	case "confirmed":
+		return "Bestätigt"
+	case "active":
+		return "Aktiv"
+	case "returned":
+		return "Zurückgegeben"
+	case "cancelled":
+		return "Storniert"
+	default:
+		return status
+	}
 }
 
 func renderMailTemplate(path string, data any) (string, error) {

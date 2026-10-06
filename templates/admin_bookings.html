@@ -2,10 +2,31 @@
 <div class="flex flex-col min-h-[85vh] bg-theme-bg text-gray-100 border border-theme-border rounded-xl shadow-lg mt-4 overflow-hidden">
     {{ template "admin_nav" . }}
     <main class="flex-1 p-4 md:p-8 bg-[#0B101A] overflow-y-auto">
-        <h1 class="text-3xl font-bold text-white mb-6">Buchungsübersicht</h1>
-        <div class="bg-theme-card p-6 rounded-xl border border-theme-border text-theme-muted text-sm">
-            Hier werden aktive und anstehende Reservierungen gelistet.
+        <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <h1 class="text-3xl font-bold text-white">Buchungen</h1>
+            <a href="/games" class="inline-flex shrink-0 items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-500">Neue Ausleihe erstellen</a>
         </div>
+
+        {{ if not .Bookings }}
+        <div class="rounded-xl border border-theme-border bg-theme-card p-6 text-sm text-theme-muted">Keine Buchungen vorhanden.</div>
+        {{ else }}
+        <div class="space-y-4">
+            {{ range .Bookings }}
+            <article class="rounded-xl border border-theme-border bg-theme-card p-5">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div class="min-w-0">
+                        <h2 class="font-bold text-white">{{ range $index, $name := .ItemNames }}{{ if $index }}, {{ end }}{{ $name }}{{ end }}</h2>
+                        <p class="mt-2 text-sm text-gray-200">{{ .PersonName }}{{ if .Email.Valid }} <span class="text-theme-muted">· {{ .Email.String }}</span>{{ end }}</p>
+                        <p class="mt-1 text-xs text-theme-muted">Buchungscode: <span class="font-mono">{{ .Token }}</span></p>
+                        <p class="mt-2 text-sm text-theme-muted">{{ .StartDate.Format "02.01.2006" }} – {{ .EndDate.Format "02.01.2006" }}</p>
+                        <p class="mt-1 text-xs text-theme-muted">{{ if .CreatedByStaff }}Erstellt durch Team{{ else }}Von Nutzer:in erstellt{{ end }}</p>
+                    </div>
+                    <span class="shrink-0 self-start rounded-lg border border-theme-border px-3 py-1.5 text-xs font-semibold uppercase text-blue-300">{{ if eq .Status "pending" }}Ausstehend{{ else if eq .Status "confirmed" }}Bestätigt{{ else if eq .Status "active" }}Aktiv{{ else if eq .Status "returned" }}Zurückgegeben{{ else if eq .Status "cancelled" }}Storniert{{ else }}{{ .Status }}{{ end }}</span>
+                </div>
+            </article>
+            {{ end }}
+        </div>
+        {{ end }}
     </main>
 </div>
 <style> [x-cloak] { display: none !important; } </style>

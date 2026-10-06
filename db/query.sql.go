@@ -53,7 +53,7 @@ FROM booking_items bi
          JOIN bookings b ON b.id = bi.booking_id
          JOIN items i ON i.id = bi.item_id
 WHERE bi.item_id = ANY($1::int[])
-  AND b.status IN ('pending', 'active')
+  AND b.status IN ('pending', 'confirmed', 'active')
   AND b.start_date <= $2
   AND b.end_date >= $3
 `
@@ -103,26 +103,28 @@ func (q *Queries) ClearItemCategories(ctx context.Context, itemID int32) error {
 
 const createBooking = `-- name: CreateBooking :one
 INSERT INTO bookings (
-    public_token, user_id, guest_name, guest_email, start_date, end_date, status
+    public_token, user_id, created_by_user_id, guest_name, guest_email, start_date, end_date, status
 ) VALUES (
-             $1, $2, $3, $4, $5, $6, $7
+             $1, $2, $3, $4, $5, $6, $7, $8
          ) RETURNING id, public_token, user_id, guest_name, guest_email, start_date, end_date, status, created_at
 `
 
 type CreateBookingParams struct {
-	PublicToken string
-	UserID      sql.NullInt32
-	GuestName   sql.NullString
-	GuestEmail  sql.NullString
-	StartDate   time.Time
-	EndDate     time.Time
-	Status      BookingStatus
+	PublicToken     string
+	UserID          sql.NullInt32
+	CreatedByUserID sql.NullInt32
+	GuestName       sql.NullString
+	GuestEmail      sql.NullString
+	StartDate       time.Time
+	EndDate         time.Time
+	Status          BookingStatus
 }
 
 func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (Booking, error) {
 	row := q.db.QueryRowContext(ctx, createBooking,
 		arg.PublicToken,
 		arg.UserID,
+		arg.CreatedByUserID,
 		arg.GuestName,
 		arg.GuestEmail,
 		arg.StartDate,

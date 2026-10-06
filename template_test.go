@@ -126,3 +126,40 @@ func TestAdminGamesRendersSingleDeleteDialog(t *testing.T) {
 		t.Errorf("Expected one edit dialog, got %d", count)
 	}
 }
+
+func TestAdminBookingsRendersAllBookingStatesAndOrigins(t *testing.T) {
+	tmpl, err := template.ParseGlob("templates/*.html")
+	if err != nil {
+		t.Fatalf("Failed to parse templates: %v", err)
+	}
+
+	bookings := []db.BookingOverview{
+		{
+			ID: 1, Token: "PENDING1", PersonName: "User One",
+			Email:  sql.NullString{String: "user@example.com", Valid: true},
+			Status: "pending", ItemNames: []string{"First Game"},
+		},
+		{
+			ID: 2, Token: "CONFIRM1", PersonName: "Staff Borrower",
+			Status: "confirmed", CreatedByStaff: true, ItemNames: []string{"Second Game"},
+		},
+		{
+			ID: 3, Token: "CANCELLED1", PersonName: "User Two",
+			Status: "cancelled", ItemNames: []string{"Third Game"},
+		},
+	}
+	var output bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&output, "admin_bookings.html", map[string]interface{}{
+		"UserRole":  "admin",
+		"UserName":  "Admin",
+		"ActiveTab": "bookings",
+		"Bookings":  bookings,
+	}); err != nil {
+		t.Fatalf("Failed to execute admin_bookings.html: %v", err)
+	}
+	for _, expected := range []string{"PENDING1", "CONFIRM1", "CANCELLED1", "Ausstehend", "Bestätigt", "Storniert", "Erstellt durch Team"} {
+		if !bytes.Contains(output.Bytes(), []byte(expected)) {
+			t.Errorf("Expected admin bookings output to contain %q", expected)
+		}
+	}
+}

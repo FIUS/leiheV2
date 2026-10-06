@@ -1,0 +1,2 @@
+ALTER TABLE bookings
+    ADD COLUMN IF NOT EXISTS created_by_user_id INT REFERENCES users(id) ON DELETE SET NULL;

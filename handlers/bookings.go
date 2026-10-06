@@ -40,9 +40,23 @@ func CancelUserBooking(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/bookings?error=Ungueltige-Buchung")
 		return
 	}
-	if err := queries.CancelUserBooking(c.Request.Context(), user.ID, int32(bookingID)); err != nil {
+	bookingID32 := int32(bookingID)
+	if err := queries.CancelUserBooking(c.Request.Context(), user.ID, bookingID32); err != nil {
 		c.Redirect(http.StatusFound, "/bookings?error=Diese-Buchung-kann-nicht-mehr-storniert-werden")
 		return
+	}
+	details, err := queries.GetBookingEmailDetailsByID(c.Request.Context(), bookingID32)
+	if err != nil {
+		logMailError("booking update details", err)
+		c.Redirect(http.StatusFound, "/bookings?error=email-failed")
+		return
+	}
+	if details.Email.Valid {
+		if err := sendBookingUpdateEmail(details, "storniert"); err != nil {
+			logMailError("booking update", err)
+			c.Redirect(http.StatusFound, "/bookings?error=email-failed")
+			return
+		}
 	}
 	c.Redirect(http.StatusFound, "/bookings?success=Buchung-storniert")
 }
@@ -73,6 +87,19 @@ func UpdateUserBooking(c *gin.Context) {
 	case err != nil:
 		c.Redirect(http.StatusFound, "/bookings?error=Speichern-fehlgeschlagen")
 	default:
+		details, detailsErr := queries.GetBookingEmailDetailsByID(c.Request.Context(), int32(bookingID))
+		if detailsErr != nil {
+			logMailError("booking update details", detailsErr)
+			c.Redirect(http.StatusFound, "/bookings?error=email-failed")
+			return
+		}
+		if details.Email.Valid {
+			if mailErr := sendBookingUpdateEmail(details, "geändert"); mailErr != nil {
+				logMailError("booking update", mailErr)
+				c.Redirect(http.StatusFound, "/bookings?error=email-failed")
+				return
+			}
+		}
 		c.Redirect(http.StatusFound, "/bookings?success=Buchung-geaendert")
 	}
 }

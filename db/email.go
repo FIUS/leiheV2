@@ -28,30 +28,38 @@ type BookingEmailDetails struct {
 	Status     string
 	GuestName  sql.NullString
 	GuestEmail sql.NullString
+	FirstName  string
+	Email      sql.NullString
 	ItemNames  []string
 }
 
 type BookingOverview struct {
-	ID         int32
-	Token      string
-	GuestName  sql.NullString
-	GuestEmail sql.NullString
-	StartDate  time.Time
-	EndDate    time.Time
-	Status     string
-	CreatedAt  time.Time
-	ItemNames  []string
+	PersonName     string
+	ID             int32
+	Token          string
+	Email          sql.NullString
+	StartDate      time.Time
+	EndDate        time.Time
+	Status         string
+	CreatedByStaff bool
+	CreatedAt      time.Time
+	ItemNames      []string
 }
 
 func (q *Queries) ListBookingOverview(ctx context.Context) ([]BookingOverview, error) {
 	rows, err := q.db.QueryContext(ctx, `
-		SELECT b.id, b.public_token, b.guest_name, b.guest_email,
-		       b.start_date, b.end_date, b.status::text, b.created_at,
+		SELECT b.id, b.public_token,
+		       COALESCE(NULLIF(TRIM(CONCAT_WS(' ', borrower.first_name, borrower.last_name)), ''),
+		                b.guest_name, b.guest_email, 'Gast'),
+		       COALESCE(borrower.email, b.guest_email),
+		       b.start_date, b.end_date, b.status::text,
+		       b.created_by_user_id IS NOT NULL, b.created_at,
 		       COALESCE(string_agg(i.name, ', ' ORDER BY i.name), '')
 		FROM bookings b
+		LEFT JOIN users borrower ON borrower.id = b.user_id
 		LEFT JOIN booking_items bi ON bi.booking_id = b.id
 		LEFT JOIN items i ON i.id = bi.item_id
-		GROUP BY b.id
+		GROUP BY b.id, borrower.first_name, borrower.last_name, borrower.email
 		ORDER BY b.start_date DESC, b.created_at DESC
 	`)
 	if err != nil {
@@ -62,9 +70,9 @@ func (q *Queries) ListBookingOverview(ctx context.Context) ([]BookingOverview, e
 	for rows.Next() {
 		var itemNames string
 		var booking BookingOverview
-		if err := rows.Scan(&booking.ID, &booking.Token, &booking.GuestName,
-			&booking.GuestEmail, &booking.StartDate, &booking.EndDate,
-			&booking.Status, &booking.CreatedAt, &itemNames); err != nil {
+		if err := rows.Scan(&booking.ID, &booking.Token, &booking.PersonName,
+			&booking.Email, &booking.StartDate, &booking.EndDate,
+			&booking.Status, &booking.CreatedByStaff, &booking.CreatedAt, &itemNames); err != nil {
 			return nil, err
 		}
 		if itemNames != "" {
@@ -116,7 +124,7 @@ func (q *Queries) CancelUserBooking(ctx context.Context, userID, bookingID int32
 	result, err := q.db.ExecContext(ctx, `
 		UPDATE bookings
 		SET status = 'cancelled'
-		WHERE id = $1 AND user_id = $2 AND status IN ('pending', 'active')
+		WHERE id = $1 AND user_id = $2 AND status IN ('pending', 'confirmed', 'active')
 	`, bookingID, userID)
 	if err != nil {
 		return err
@@ -184,7 +192,7 @@ func (q *Queries) UpdateUserBookingDates(ctx context.Context, userID, bookingID 
 			JOIN bookings b ON b.id = bi.booking_id
 			WHERE bi.item_id = ANY($1::int[])
 			  AND b.id <> $2
-			  AND b.status IN ('pending', 'active')
+			  AND b.status IN ('pending', 'confirmed', 'active')
 			  AND b.start_date <= $4
 			  AND b.end_date >= $3
 		`, itemIDs, bookingID, startDate, endDate).Scan(&conflicts); err != nil {
@@ -247,10 +255,12 @@ func (q *Queries) GetBookingEmailDetails(ctx context.Context, publicToken string
 	var details BookingEmailDetails
 	rows, err := q.db.QueryContext(ctx, `
 		SELECT b.public_token, b.start_date, b.end_date, b.status::text,
-		       b.guest_name, b.guest_email, i.name
+		       b.guest_name, b.guest_email, COALESCE(u.first_name, ''),
+		       COALESCE(u.email, b.guest_email), i.name
 		FROM bookings b
 		JOIN booking_items bi ON bi.booking_id = b.id
 		JOIN items i ON i.id = bi.item_id
+		LEFT JOIN users u ON u.id = b.user_id
 		WHERE b.public_token = $1
 		ORDER BY i.name
 	`, publicToken)
@@ -261,7 +271,37 @@ func (q *Queries) GetBookingEmailDetails(ctx context.Context, publicToken string
 	for rows.Next() {
 		var itemName string
 		if err := rows.Scan(&details.Token, &details.StartDate, &details.EndDate,
-			&details.Status, &details.GuestName, &details.GuestEmail, &itemName); err != nil {
+			&details.Status, &details.GuestName, &details.GuestEmail, &details.FirstName,
+			&details.Email, &itemName); err != nil {
+			return details, err
+		}
+		details.ItemNames = append(details.ItemNames, itemName)
+	}
+	return details, rows.Err()
+}
+
+func (q *Queries) GetBookingEmailDetailsByID(ctx context.Context, bookingID int32) (BookingEmailDetails, error) {
+	var details BookingEmailDetails
+	rows, err := q.db.QueryContext(ctx, `
+		SELECT b.public_token, b.start_date, b.end_date, b.status::text,
+		       b.guest_name, b.guest_email, COALESCE(u.first_name, ''),
+		       COALESCE(u.email, b.guest_email), i.name
+		FROM bookings b
+		JOIN booking_items bi ON bi.booking_id = b.id
+		JOIN items i ON i.id = bi.item_id
+		LEFT JOIN users u ON u.id = b.user_id
+		WHERE b.id = $1
+		ORDER BY i.name
+	`, bookingID)
+	if err != nil {
+		return details, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var itemName string
+		if err := rows.Scan(&details.Token, &details.StartDate, &details.EndDate,
+			&details.Status, &details.GuestName, &details.GuestEmail, &details.FirstName,
+			&details.Email, &itemName); err != nil {
 			return details, err
 		}
 		details.ItemNames = append(details.ItemNames, itemName)

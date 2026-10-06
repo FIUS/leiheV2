@@ -120,10 +120,10 @@ ORDER BY b.start_date DESC;
 
 -- name: CreateBooking :one
 INSERT INTO bookings (
-    public_token, user_id, guest_name, guest_email, start_date, end_date, status
+    public_token, user_id, created_by_user_id, guest_name, guest_email, start_date, end_date, status
 ) VALUES (
-             $1, $2, $3, $4, $5, $6, $7
-         ) RETURNING *;
+             $1, $2, $3, $4, $5, $6, $7, $8
+         ) RETURNING id, public_token, user_id, guest_name, guest_email, start_date, end_date, status, created_at;
 
 -- name: AddBookingItem :exec
 INSERT INTO booking_items (
@@ -152,7 +152,7 @@ FROM booking_items bi
          JOIN bookings b ON b.id = bi.booking_id
          JOIN items i ON i.id = bi.item_id
 WHERE bi.item_id = ANY($1::int[])
-  AND b.status IN ('pending', 'active')
+  AND b.status IN ('pending', 'confirmed', 'active')
   AND b.start_date <= $2
   AND b.end_date >= $3;
 
