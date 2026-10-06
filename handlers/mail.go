@@ -8,7 +8,10 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"mime"
+	"mime/quotedprintable"
 	"net"
+	netmail "net/mail"
 	"net/smtp"
 	"os"
 	"strconv"
@@ -83,20 +86,18 @@ func firstConfiguredEnv(keys ...string) (string, error) {
 }
 
 func sendMail(to, subject, body string) error {
-	if strings.TrimSpace(to) == "" {
-		return fmt.Errorf("email recipient is empty")
+	message, recipient, err := formatMailMessage(mail.FromName, mail.From, to, subject, body)
+	if err != nil {
+		return err
 	}
 	address := net.JoinHostPort(mail.Host, strconv.Itoa(mail.Port))
-	headers := fmt.Sprintf("From: %s <%s>\r\nTo: %s\r\nSubject: %s\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n",
-		mail.FromName, mail.From, to, subject)
-	message := []byte(headers + body)
 
 	var auth smtp.Auth
 	if mail.Username != "" {
 		auth = smtp.PlainAuth("", mail.Username, mail.Password, mail.Host)
 	}
 	if !mail.StartTLS {
-		if err := smtp.SendMail(address, auth, mail.From, []string{to}, message); err != nil {
+		if err := smtp.SendMail(address, auth, mail.From, []string{recipient}, message); err != nil {
 			return fmt.Errorf("SMTP send failed: %w", err)
 		}
 		log.Printf("SMTP accepted email for delivery (subject=%q)", subject)
@@ -119,7 +120,7 @@ func sendMail(to, subject, body string) error {
 	if err := conn.Mail(mail.From); err != nil {
 		return err
 	}
-	if err := conn.Rcpt(to); err != nil {
+	if err := conn.Rcpt(recipient); err != nil {
 		return err
 	}
 	writer, err := conn.Data()
@@ -135,6 +136,36 @@ func sendMail(to, subject, body string) error {
 	}
 	log.Printf("SMTP accepted email for delivery (subject=%q)", subject)
 	return nil
+}
+
+func formatMailMessage(fromName, fromAddress, to, subject, body string) ([]byte, string, error) {
+	if strings.TrimSpace(to) == "" {
+		return nil, "", fmt.Errorf("email recipient is empty")
+	}
+	from, err := netmail.ParseAddress(fromAddress)
+	if err != nil || from.Address != fromAddress {
+		return nil, "", fmt.Errorf("invalid SMTP sender address")
+	}
+	recipient, err := netmail.ParseAddress(to)
+	if err != nil || recipient.Address != to {
+		return nil, "", fmt.Errorf("invalid email recipient address")
+	}
+	var message bytes.Buffer
+	headers := fmt.Sprintf(
+		"From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n",
+		(&netmail.Address{Name: fromName, Address: from.Address}).String(),
+		recipient.String(),
+		mime.QEncoding.Encode("UTF-8", subject),
+	)
+	message.WriteString(headers)
+	writer := quotedprintable.NewWriter(&message)
+	if _, err := writer.Write([]byte(body)); err != nil {
+		return nil, "", fmt.Errorf("encode email body: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return nil, "", fmt.Errorf("encode email body: %w", err)
+	}
+	return message.Bytes(), recipient.Address, nil
 }
 
 func sendVerificationEmail(user db.User, token string) error {
