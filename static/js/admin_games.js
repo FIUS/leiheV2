@@ -116,7 +116,7 @@ document.addEventListener('alpine:init', () => {
                 if (res.ok) {
                     const data = await res.json();
                     this.editGame.name = result.Name?.Value || data.name || this.editGame.name;
-                    this.editGame.image_url = data.image_url || '';
+                    this.editGame.image_url = data.image_url || this.editGame.image_url || '';
                     this.editGame.is_expansion = Boolean(data.is_expansion);
                     this.editGame.categories = data.categories || [];
                     this.editGame.min_players = data.min_players;

@@ -315,7 +315,13 @@ func selectBGGVersionImage(item BGGThingItem, selectedName string) string {
 	if version.Image != "" {
 		return version.Image
 	}
-	return item.Image
+	if version.Thumbnail != "" {
+		return version.Thumbnail
+	}
+	if item.Image != "" {
+		return item.Image
+	}
+	return item.Thumbnail
 }
 
 func selectBGGVersion(item BGGThingItem, selectedName string) BGGVersion {
