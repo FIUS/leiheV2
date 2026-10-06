@@ -13,6 +13,7 @@ import (
 	_ "image/png"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -195,25 +196,18 @@ func compressThumbnail(data []byte) ([]byte, error) {
 
 	sourceBounds := source.Bounds()
 	sourceWidth, sourceHeight := sourceBounds.Dx(), sourceBounds.Dy()
-	cropWidth, cropHeight := sourceWidth, sourceHeight
-	if sourceWidth*thumbnailHeight > sourceHeight*thumbnailWidth {
-		cropWidth = sourceHeight * thumbnailWidth / thumbnailHeight
-	} else {
-		cropHeight = sourceWidth * thumbnailHeight / thumbnailWidth
+	scale := math.Min(float64(thumbnailWidth)/float64(sourceWidth), float64(thumbnailHeight)/float64(sourceHeight))
+	if scale > 1 {
+		scale = 1
 	}
-	cropX := sourceBounds.Min.X + (sourceWidth-cropWidth)/2
-	cropY := sourceBounds.Min.Y + (sourceHeight-cropHeight)/2
-
-	outputWidth, outputHeight := thumbnailWidth, thumbnailHeight
-	if cropWidth <= thumbnailWidth && cropHeight <= thumbnailHeight {
-		outputWidth, outputHeight = cropWidth, cropHeight
-	}
+	outputWidth := max(1, int(float64(sourceWidth)*scale))
+	outputHeight := max(1, int(float64(sourceHeight)*scale))
 	resized := image.NewRGBA(image.Rect(0, 0, outputWidth, outputHeight))
 	background := color.RGBA{R: 17, G: 24, B: 39, A: 255}
 	for y := 0; y < outputHeight; y++ {
 		for x := 0; x < outputWidth; x++ {
-			sourceX := cropX + x*cropWidth/outputWidth
-			sourceY := cropY + y*cropHeight/outputHeight
+			sourceX := sourceBounds.Min.X + x*sourceWidth/outputWidth
+			sourceY := sourceBounds.Min.Y + y*sourceHeight/outputHeight
 			pixel := color.NRGBAModel.Convert(source.At(sourceX, sourceY)).(color.NRGBA)
 			alpha := uint32(pixel.A)
 			resized.SetRGBA(x, y, color.RGBA{
