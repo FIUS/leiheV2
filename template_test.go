@@ -229,7 +229,7 @@ func TestStaffLoansTemplateRendersIssueAndReturnFlows(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Failed to execute staff_loans.html: %v", err)
 	}
-	for _, expected := range []string{"Leihschalter", "Ausgeben", "Zurücknehmen", "Vorbestellung", "Spontanausleihe", "Barcode / ISBN scannen oder eingeben", "Aktive Ausleihe suchen"} {
+	for _, expected := range []string{"Buchungen", "Ausgeben", "Zurücknehmen", "Vorbestellung", "Spontanausleihe", "Barcode / ISBN scannen oder eingeben", "Aktive Ausleihe suchen"} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected staff lending page to contain %q", expected)
 		}
