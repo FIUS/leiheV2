@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -57,6 +58,8 @@ func CancelUserBooking(c *gin.Context) {
 			c.Redirect(http.StatusFound, "/bookings?error=email-failed")
 			return
 		}
+	} else {
+		log.Printf("booking cancellation email skipped: no recipient (booking id=%d)", bookingID32)
 	}
 	c.Redirect(http.StatusFound, "/bookings?success=Buchung-storniert")
 }
@@ -99,6 +102,8 @@ func UpdateUserBooking(c *gin.Context) {
 				c.Redirect(http.StatusFound, "/bookings?error=email-failed")
 				return
 			}
+		} else {
+			log.Printf("booking date update email skipped: no recipient (booking id=%d)", bookingID)
 		}
 		c.Redirect(http.StatusFound, "/bookings?success=Buchung-geaendert")
 	}
@@ -141,6 +146,42 @@ func ReviewPendingBooking(c *gin.Context) {
 			c.Redirect(http.StatusFound, "/admin/bookings?error=email-failed")
 			return
 		}
+	} else {
+		log.Printf("booking review email skipped: no recipient (booking id=%d)", bookingID32)
 	}
 	c.Redirect(http.StatusFound, "/admin/bookings?success=booking-reviewed")
+}
+
+func CancelConfirmedBooking(c *gin.Context) {
+	bookingID, err := strconv.ParseInt(c.PostForm("id"), 10, 32)
+	if err != nil || bookingID <= 0 {
+		c.Redirect(http.StatusFound, "/admin/bookings?error=invalid-booking")
+		return
+	}
+	bookingID32 := int32(bookingID)
+	if err := queries.CancelConfirmedBooking(c.Request.Context(), bookingID32); err != nil {
+		if errors.Is(err, db.ErrBookingNotEditable) {
+			c.Redirect(http.StatusFound, "/admin/bookings?error=booking-not-confirmed")
+			return
+		}
+		c.String(http.StatusInternalServerError, "Buchung konnte nicht storniert werden")
+		return
+	}
+
+	details, err := queries.GetBookingEmailDetailsByID(c.Request.Context(), bookingID32)
+	if err != nil {
+		logMailError("confirmed booking cancellation details", err)
+		c.Redirect(http.StatusFound, "/admin/bookings?error=email-failed")
+		return
+	}
+	if details.Email.Valid {
+		if err := sendBookingUpdateEmail(details, "vom Team storniert"); err != nil {
+			logMailError("confirmed booking cancellation", err)
+			c.Redirect(http.StatusFound, "/admin/bookings?error=email-failed")
+			return
+		}
+	} else {
+		log.Printf("confirmed booking cancellation email skipped: no recipient (booking id=%d)", bookingID32)
+	}
+	c.Redirect(http.StatusFound, "/admin/bookings?success=booking-cancelled")
 }

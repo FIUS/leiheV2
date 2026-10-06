@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -170,6 +171,8 @@ func HandleCreateBooking(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Buchung gespeichert, aber Bestätigungs-E-Mail konnte nicht versendet werden", "token": createdToken})
 			return
 		}
+	} else {
+		log.Printf("booking confirmation email skipped: no recipient")
 	}
 
 	c.JSON(http.StatusOK, gin.H{

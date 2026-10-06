@@ -6,9 +6,45 @@
             <h1 class="text-3xl font-bold text-white">Buchungen</h1>
             <a href="/games" class="inline-flex shrink-0 items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-500">Neue Ausleihe erstellen</a>
         </div>
-        {{ if .Success }}<div class="mb-6 rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-sm text-green-400">{{ if eq .Success "booking-reviewed" }}Buchungsstatus wurde aktualisiert.{{ else }}{{ .Success }}{{ end }}</div>{{ end }}
-        {{ if .Error }}<div class="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">{{ if eq .Error "email-failed" }}Status wurde geändert, aber die Benachrichtigungs-E-Mail konnte nicht vorbereitet oder versendet werden.{{ else if eq .Error "booking-not-pending" }}Diese Buchung ist nicht mehr ausstehend.{{ else if eq .Error "invalid-status" }}Ungültige Statusänderung.{{ else if eq .Error "invalid-booking" }}Ungültige Buchung.{{ else }}{{ .Error }}{{ end }}</div>{{ end }}
+        {{ if .Success }}<div class="mb-6 rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-sm text-green-400">{{ if eq .Success "booking-reviewed" }}Buchungsstatus wurde aktualisiert.{{ else if eq .Success "booking-cancelled" }}Buchung wurde storniert.{{ else }}{{ .Success }}{{ end }}</div>{{ end }}
+        {{ if .Error }}<div class="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">{{ if eq .Error "email-failed" }}Status wurde geändert, aber die Benachrichtigungs-E-Mail konnte nicht vorbereitet oder versendet werden.{{ else if eq .Error "booking-not-pending" }}Diese Buchung ist nicht mehr ausstehend.{{ else if eq .Error "booking-not-confirmed" }}Diese Buchung ist nicht mehr bestätigt.{{ else if eq .Error "invalid-status" }}Ungültige Statusänderung.{{ else if eq .Error "invalid-booking" }}Ungültige Buchung.{{ else }}{{ .Error }}{{ end }}</div>{{ end }}
 
+        <section class="mb-10">
+            <h2 class="mb-4 text-xl font-bold text-white">Zu bearbeitende Buchungen</h2>
+            {{ if not .PendingBookings }}
+            <div class="rounded-xl border border-theme-border bg-theme-card p-5 text-sm text-theme-muted">Keine ausstehenden Buchungen.</div>
+            {{ else }}
+            <div class="space-y-4">
+                {{ range .PendingBookings }}
+                <article class="rounded-xl border border-amber-500/30 bg-theme-card p-5">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="min-w-0">
+                            <h3 class="font-bold text-white">{{ range $index, $name := .ItemNames }}{{ if $index }}, {{ end }}{{ $name }}{{ end }}</h3>
+                            <p class="mt-2 text-sm text-gray-200">{{ .PersonName }}{{ if .Email.Valid }} <span class="text-theme-muted">· {{ .Email.String }}</span>{{ end }}</p>
+                            <p class="mt-1 text-xs text-theme-muted">Buchungscode: <span class="font-mono">{{ .Token }}</span></p>
+                            <p class="mt-2 text-sm text-theme-muted">{{ .StartDate.Format "02.01.2006" }} – {{ .EndDate.Format "02.01.2006" }}</p>
+                        </div>
+                        <span class="shrink-0 self-start rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-amber-300">Ausstehend</span>
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-2 border-t border-theme-border pt-4">
+                        <form method="POST" action="/admin/bookings/review">
+                            <input type="hidden" name="id" value="{{ .ID }}">
+                            <input type="hidden" name="status" value="confirmed">
+                            <button class="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-green-500">Bestätigen</button>
+                        </form>
+                        <form method="POST" action="/admin/bookings/review" onsubmit="return confirm('Diese Buchungsanfrage wirklich ablehnen?')">
+                            <input type="hidden" name="id" value="{{ .ID }}">
+                            <input type="hidden" name="status" value="cancelled">
+                            <button class="rounded-lg border border-red-500/40 px-4 py-2 text-sm font-bold text-red-400 transition hover:bg-red-500/10">Ablehnen</button>
+                        </form>
+                    </div>
+                </article>
+                {{ end }}
+            </div>
+            {{ end }}
+        </section>
+
+        <h2 class="mb-4 text-xl font-bold text-white">Alle Buchungen</h2>
         {{ if not .Bookings }}
         <div class="rounded-xl border border-theme-border bg-theme-card p-6 text-sm text-theme-muted">Keine Buchungen vorhanden.</div>
         {{ else }}
@@ -25,17 +61,11 @@
                     </div>
                     <span class="shrink-0 self-start rounded-lg border border-theme-border px-3 py-1.5 text-xs font-semibold uppercase text-blue-300">{{ if eq .Status "pending" }}Ausstehend{{ else if eq .Status "confirmed" }}Bestätigt{{ else if eq .Status "active" }}Aktiv{{ else if eq .Status "returned" }}Zurückgegeben{{ else if eq .Status "cancelled" }}Storniert{{ else }}{{ .Status }}{{ end }}</span>
                 </div>
-                {{ if and (eq .Status "pending") (not .CreatedByStaff) }}
-                <div class="mt-4 flex flex-wrap gap-2 border-t border-theme-border pt-4">
-                    <form method="POST" action="/admin/bookings/review">
+                {{ if and (eq .Status "confirmed") (eq $.UserRole "admin") }}
+                <div class="mt-4 border-t border-theme-border pt-4">
+                    <form method="POST" action="/admin/bookings/confirmed/cancel" onsubmit="return confirm('Diese bestätigte Buchung wirklich stornieren?')">
                         <input type="hidden" name="id" value="{{ .ID }}">
-                        <input type="hidden" name="status" value="confirmed">
-                        <button class="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-green-500">Bestätigen</button>
-                    </form>
-                    <form method="POST" action="/admin/bookings/review" onsubmit="return confirm('Diese Buchungsanfrage wirklich ablehnen?')">
-                        <input type="hidden" name="id" value="{{ .ID }}">
-                        <input type="hidden" name="status" value="cancelled">
-                        <button class="rounded-lg border border-red-500/40 px-4 py-2 text-sm font-bold text-red-400 transition hover:bg-red-500/10">Ablehnen</button>
+                        <button class="rounded-lg border border-red-500/40 px-4 py-2 text-sm font-bold text-red-400 transition hover:bg-red-500/10">Bestätigte Buchung stornieren</button>
                     </form>
                 </div>
                 {{ end }}

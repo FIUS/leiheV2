@@ -108,6 +108,23 @@ func (q *Queries) ReviewPendingBooking(ctx context.Context, bookingID int32, sta
 	return nil
 }
 
+func (q *Queries) CancelConfirmedBooking(ctx context.Context, bookingID int32) error {
+	result, err := q.db.ExecContext(ctx, `
+		UPDATE bookings
+		SET status = 'cancelled'
+		WHERE id = $1 AND status = 'confirmed'
+	`, bookingID)
+	if err != nil {
+		return err
+	}
+	if count, err := result.RowsAffected(); err != nil {
+		return err
+	} else if count == 0 {
+		return ErrBookingNotEditable
+	}
+	return nil
+}
+
 func (q *Queries) ListBookingsForUser(ctx context.Context, userID int32) ([]UserBooking, error) {
 	rows, err := q.db.QueryContext(ctx, `
 		SELECT b.id, b.public_token, b.start_date, b.end_date,

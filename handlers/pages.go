@@ -136,11 +136,18 @@ func RenderAdminBookings(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Buchungen konnten nicht geladen werden")
 		return
 	}
+	pendingBookings := make([]db.BookingOverview, 0)
+	for _, booking := range bookings {
+		if booking.Status == "pending" {
+			pendingBookings = append(pendingBookings, booking)
+		}
+	}
 	c.HTML(http.StatusOK, "admin_bookings.html", pageData(c, gin.H{
-		"ActiveTab": "bookings",
-		"Bookings":  bookings,
-		"Success":   c.Query("success"),
-		"Error":     c.Query("error"),
+		"ActiveTab":       "bookings",
+		"Bookings":        bookings,
+		"PendingBookings": pendingBookings,
+		"Success":         c.Query("success"),
+		"Error":           c.Query("error"),
 	}))
 }
 
@@ -208,7 +215,11 @@ func currentUser(c *gin.Context) (db.User, bool) {
 
 func pageData(c *gin.Context, values gin.H) gin.H {
 	session := sessions.Default(c)
-	values["UserRole"] = session.Get("user_role")
+	userRole := session.Get("user_role")
+	if userRole == nil || userRole == "" {
+		userRole = "guest"
+	}
+	values["UserRole"] = userRole
 	if user, ok := currentUser(c); ok {
 		values["UserName"] = strings.TrimSpace(strings.TrimSpace(user.FirstName) + " " + strings.TrimSpace(user.LastName))
 		values["CurrentUser"] = user

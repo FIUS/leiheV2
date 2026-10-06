@@ -150,16 +150,66 @@ func TestAdminBookingsRendersAllBookingStatesAndOrigins(t *testing.T) {
 	}
 	var output bytes.Buffer
 	if err := tmpl.ExecuteTemplate(&output, "admin_bookings.html", map[string]interface{}{
-		"UserRole":  "admin",
-		"UserName":  "Admin",
-		"ActiveTab": "bookings",
-		"Bookings":  bookings,
+		"UserRole":        "admin",
+		"UserName":        "Admin",
+		"ActiveTab":       "bookings",
+		"Bookings":        bookings,
+		"PendingBookings": bookings[:1],
 	}); err != nil {
 		t.Fatalf("Failed to execute admin_bookings.html: %v", err)
 	}
-	for _, expected := range []string{"PENDING1", "CONFIRM1", "CANCELLED1", "Ausstehend", "Bestätigt", "Storniert", "Erstellt durch Team", `action="/admin/bookings/review"`, "Bestätigen", "Ablehnen"} {
+	for _, expected := range []string{"Zu bearbeitende Buchungen", "Alle Buchungen", "PENDING1", "CONFIRM1", "CANCELLED1", "Ausstehend", "Bestätigt", "Storniert", "Erstellt durch Team", `action="/admin/bookings/review"`, "Bestätigen", "Ablehnen", `action="/admin/bookings/confirmed/cancel"`} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected admin bookings output to contain %q", expected)
 		}
+	}
+
+	output.Reset()
+	if err := tmpl.ExecuteTemplate(&output, "admin_bookings.html", map[string]interface{}{
+		"UserRole":        "maintainer",
+		"UserName":        "Maintainer",
+		"ActiveTab":       "bookings",
+		"Bookings":        bookings,
+		"PendingBookings": bookings[:1],
+	}); err != nil {
+		t.Fatalf("Failed to execute maintainer admin_bookings.html: %v", err)
+	}
+	if bytes.Contains(output.Bytes(), []byte(`action="/admin/bookings/confirmed/cancel"`)) {
+		t.Error("maintainers must not see confirmed-booking cancellation")
+	}
+	if !bytes.Contains(output.Bytes(), []byte(`action="/admin/bookings/review"`)) {
+		t.Error("maintainers should be able to review pending bookings")
+	}
+}
+
+func TestCheckoutAccountViewDoesNotShowGuestForm(t *testing.T) {
+	tmpl, err := template.ParseGlob("templates/*.html")
+	if err != nil {
+		t.Fatalf("Failed to parse templates: %v", err)
+	}
+
+	var output bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&output, "checkout.html", map[string]interface{}{
+		"UserRole": "user",
+		"UserName": "Account User",
+	}); err != nil {
+		t.Fatalf("Failed to execute checkout.html: %v", err)
+	}
+	if bytes.Contains(output.Bytes(), []byte("bookingForSomeoneElse")) {
+		t.Error("regular account checkout should not render the staff booking toggle")
+	}
+	if bytes.Contains(output.Bytes(), []byte("Vor- und Nachname")) {
+		t.Error("regular account checkout should use the signed-in account instead of guest details")
+	}
+
+	output.Reset()
+	if err := tmpl.ExecuteTemplate(&output, "checkout.html", map[string]interface{}{
+		"UserRole": "maintainer",
+		"UserName": "Staff User",
+	}); err != nil {
+		t.Fatalf("Failed to execute staff checkout.html: %v", err)
+	}
+	if !bytes.Contains(output.Bytes(), []byte("bookingForSomeoneElse")) {
+		t.Error("staff checkout should render the opt-in for booking on someone else's behalf")
 	}
 }

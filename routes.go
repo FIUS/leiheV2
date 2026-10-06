@@ -38,6 +38,7 @@ func SetupRoutes(r *gin.Engine) {
 		admin.GET("/games", handlers.RenderAdminGames)
 		admin.GET("/bookings", handlers.RenderAdminBookings)
 		admin.POST("/bookings/review", handlers.ReviewPendingBooking)
+		admin.POST("/bookings/confirmed/cancel", handlers.RequireRole("admin"), handlers.CancelConfirmedBooking)
 
 		admin.GET("/users", handlers.RequireRole("admin"), handlers.RenderAdminUsers)
 		admin.GET("/settings", handlers.RequireRole("admin"), handlers.RenderAdminSettings)

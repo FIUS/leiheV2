@@ -84,7 +84,7 @@ func firstConfiguredEnv(keys ...string) (string, error) {
 
 func sendMail(to, subject, body string) error {
 	if strings.TrimSpace(to) == "" {
-		return nil
+		return fmt.Errorf("email recipient is empty")
 	}
 	address := net.JoinHostPort(mail.Host, strconv.Itoa(mail.Port))
 	headers := fmt.Sprintf("From: %s <%s>\r\nTo: %s\r\nSubject: %s\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n",
@@ -96,7 +96,11 @@ func sendMail(to, subject, body string) error {
 		auth = smtp.PlainAuth("", mail.Username, mail.Password, mail.Host)
 	}
 	if !mail.StartTLS {
-		return smtp.SendMail(address, auth, mail.From, []string{to}, message)
+		if err := smtp.SendMail(address, auth, mail.From, []string{to}, message); err != nil {
+			return fmt.Errorf("SMTP send failed: %w", err)
+		}
+		log.Printf("SMTP accepted email for delivery (subject=%q)", subject)
+		return nil
 	}
 
 	conn, err := smtp.Dial(address)
@@ -126,7 +130,11 @@ func sendMail(to, subject, body string) error {
 		_ = writer.Close()
 		return err
 	}
-	return writer.Close()
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("SMTP send failed: %w", err)
+	}
+	log.Printf("SMTP accepted email for delivery (subject=%q)", subject)
+	return nil
 }
 
 func sendVerificationEmail(user db.User, token string) error {
