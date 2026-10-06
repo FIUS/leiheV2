@@ -262,8 +262,8 @@
     <!-- Leihkorb Sidebar Ende -->
 
     <!-- Detail-Modal Start -->
-    <div x-show="detailModalOpen" x-cloak class="fixed top-0 right-0 bottom-0 left-0 z-[100] flex items-start justify-center bg-black/80 backdrop-blur-sm p-0">
-        <div @click.away="detailModalOpen = false" class=" border rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] flex flex-col mt-4 overflow-hidden relative">
+    <div x-show="detailModalOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-sm sm:p-6">
+        <div @click.away="detailModalOpen = false" class="relative my-auto flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border shadow-2xl sm:max-h-[calc(100dvh-3rem)]">
             <button @click="detailModalOpen = false" class="absolute top-4 right-4 z-50 text-white/70 hover:text-white bg-black/60 hover:bg-black/90 rounded-full p-2 backdrop-blur transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
