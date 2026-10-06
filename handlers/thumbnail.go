@@ -30,7 +30,7 @@ const (
 	thumbnailWidth  = 480
 	thumbnailHeight = 288
 	maxImageBytes   = 8 << 20
-	maxImagePixels  = 12_000_000
+	maxImagePixels  = 20_000_000
 	maxThumbCache   = 256
 )
 
