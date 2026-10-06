@@ -3,6 +3,9 @@ document.addEventListener('alpine:init', () => {
         showAddForm: false,
         editModalOpen: false,
         editGame: {},
+        deleteModalOpen: false,
+        deleteGame: { id: '', name: '' },
+        typedDeleteName: '',
         addCategories: [],
         categorySearch: '',
         editCategorySearch: '',
@@ -29,6 +32,12 @@ document.addEventListener('alpine:init', () => {
                 categories: dataset.categories ? dataset.categories.split(',').map(value => value.trim()).filter(Boolean) : []
             };
             this.editModalOpen = true;
+        },
+
+        openDeleteGame(id, name) {
+            this.deleteGame = { id, name };
+            this.typedDeleteName = '';
+            this.deleteModalOpen = true;
         },
 
         categoryMatches(query, selected) {

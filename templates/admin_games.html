@@ -87,10 +87,7 @@
                             {{ if eq .Status "available" }}Verfügbar{{ else }}Ausgeliehen{{ end }}
                             </span>
                         </td>
-                        <td class="relative py-3 px-5 text-right flex justify-end items-center gap-4"
-                            data-target-name="{{ .Name }}"
-                            x-data="{ deleteModalOpen: false, typedName: '', targetName: '' }"
-                            x-init="targetName = $el.dataset.targetName">
+                        <td class="relative py-3 px-5 text-right flex justify-end items-center gap-4">
                             <button @click="openBGGModal($event.currentTarget.dataset.name, $event.currentTarget.dataset)"
                                     data-id="{{ .ID }}" data-name="{{ .Name }}" data-min-players="{{ .MinPlayers }}"
                                     data-max-players="{{ .MaxPlayers }}" data-min-playtime="{{ .MinPlaytime }}"
@@ -112,24 +109,7 @@
                                             data-categories="{{ .CategoryNames }}"
                                             class="w-full text-left px-4 py-2 text-xs text-gray-200 hover:bg-theme-bg hover:text-blue-500">Bearbeiten</button>
                                     <div class="border-t border-theme-border my-1"></div>
-                                    <button @click="deleteModalOpen = true; menuOpen = false" class="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-theme-bg hover:text-red-300">Löschen</button>
-                                </div>
-                            </div>
-
-                            <!-- Delete Modal -->
-                            <div x-show="deleteModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm text-left">
-                                <div @click.away="deleteModalOpen = false" class="bg-theme-card border border-theme-border p-6 rounded-xl shadow-2xl w-full max-w-md">
-                                    <h3 class="text-lg font-bold text-white mb-2">Spiel unwiderruflich löschen?</h3>
-                                    <p class="text-sm text-theme-muted mb-4">Tippe <strong class="text-white">{{ .Name }}</strong> zur Bestätigung:</p>
-                                    <form action="/api/items/delete" method="POST" class="space-y-4">
-                                        <input type="hidden" name="id" value="{{ .ID }}">
-                                        <input type="hidden" name="real_name" value="{{ .Name }}">
-                                        <input type="text" x-model="typedName" name="confirm_name" class="w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded outline-none focus:border-red-500">
-                                        <div class="flex justify-end gap-2">
-                                            <button type="button" @click="deleteModalOpen = false" class="bg-theme-bg border border-theme-border text-white text-xs font-bold py-2 px-4 rounded-lg">Abbrechen</button>
-                                            <button type="submit" :disabled="typedName !== targetName" :class="typedName === targetName ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-600/30 text-gray-400 cursor-not-allowed'" class="text-xs font-bold py-2 px-4 rounded-lg transition">Löschen</button>
-                                        </div>
-                                    </form>
+                                    <button @click="openDeleteGame({{ .ID }}, {{ .Name | printf "%q" }}); menuOpen = false" class="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-theme-bg hover:text-red-300">Löschen</button>
                                 </div>
                             </div>
                         </td>
@@ -137,6 +117,22 @@
                     {{ end }}
                     </tbody>
                 </table>
+            </div>
+
+            <div x-show="deleteModalOpen" x-cloak class="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 text-left">
+                <div @click.away="deleteModalOpen = false" class="w-full max-w-md rounded-xl border border-theme-border bg-theme-card p-6 shadow-2xl">
+                    <h3 class="mb-2 text-lg font-bold text-white">Spiel unwiderruflich löschen?</h3>
+                    <p class="mb-4 text-sm text-theme-muted">Tippe <strong class="text-white" x-text="deleteGame.name"></strong> zur Bestätigung:</p>
+                    <form action="/api/items/delete" method="POST" class="space-y-4">
+                        <input type="hidden" name="id" :value="deleteGame.id">
+                        <input type="hidden" name="real_name" :value="deleteGame.name">
+                        <input type="text" x-model="typedDeleteName" name="confirm_name" class="w-full rounded border border-theme-border bg-theme-bg p-2.5 text-white outline-none focus:border-red-500">
+                        <div class="flex justify-end gap-2">
+                            <button type="button" @click="deleteModalOpen = false" class="rounded-lg border border-theme-border bg-theme-bg px-4 py-2 text-xs font-bold text-white">Abbrechen</button>
+                            <button type="submit" :disabled="typedDeleteName !== deleteGame.name" :class="typedDeleteName === deleteGame.name ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-600/30 text-gray-400 cursor-not-allowed'" class="rounded-lg px-4 py-2 text-xs font-bold transition">Löschen</button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             <!-- Edit Game Modal -->
@@ -243,8 +239,7 @@
             </div>
 </div>
 
-<script src="/static/js/admin_games.js"></script>
+<script src="/static/js/admin_games.js?v=2"></script>
     </main>
 </div>
-<style> [x-cloak] { display: none !important; } </style>
 {{ template "footer" . }}

@@ -97,3 +97,32 @@ func TestTemplatesParseAndExecute(t *testing.T) {
 		t.Errorf("Expected output to contain 'Keine Nutzer vorhanden.'")
 	}
 }
+
+func TestAdminGamesRendersSingleDeleteDialog(t *testing.T) {
+	tmpl, err := template.ParseGlob("templates/*.html")
+	if err != nil {
+		t.Fatalf("Failed to parse templates: %v", err)
+	}
+
+	games := []db.ListItemsWithCategoriesRow{
+		{ID: 1, Name: "First Game", Status: "available"},
+		{ID: 2, Name: "Second Game", Status: "available"},
+	}
+	var output bytes.Buffer
+	err = tmpl.ExecuteTemplate(&output, "admin_games.html", map[string]interface{}{
+		"UserRole":   "admin",
+		"ActiveTab":  "games",
+		"Games":      games,
+		"Categories": []db.Category{},
+	})
+	if err != nil {
+		t.Fatalf("Failed to execute admin_games.html: %v", err)
+	}
+
+	if count := bytes.Count(output.Bytes(), []byte(`x-show="deleteModalOpen"`)); count != 1 {
+		t.Errorf("Expected one shared delete dialog, got %d", count)
+	}
+	if count := bytes.Count(output.Bytes(), []byte(`x-show="editModalOpen"`)); count != 1 {
+		t.Errorf("Expected one edit dialog, got %d", count)
+	}
+}
