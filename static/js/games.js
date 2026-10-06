@@ -1,3 +1,58 @@
+function normalizeGameSearchText(value) {
+    return value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ß/g, 'ss')
+        .toLowerCase()
+        .match(/[\p{L}\p{N}]+/gu) || [];
+}
+
+function gameSearchDistance(left, right) {
+    const previousPrevious = [];
+    let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+
+    for (let leftIndex = 1; leftIndex <= left.length; leftIndex++) {
+        const current = [leftIndex];
+        for (let rightIndex = 1; rightIndex <= right.length; rightIndex++) {
+            const substitutionCost = left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1;
+            let distance = Math.min(
+                previous[rightIndex] + 1,
+                current[rightIndex - 1] + 1,
+                previous[rightIndex - 1] + substitutionCost
+            );
+            if (leftIndex > 1 && rightIndex > 1 &&
+                left[leftIndex - 1] === right[rightIndex - 2] &&
+                left[leftIndex - 2] === right[rightIndex - 1]) {
+                distance = Math.min(distance, previousPrevious[rightIndex - 2] + 1);
+            }
+            current.push(distance);
+        }
+        previousPrevious.splice(0, previousPrevious.length, ...previous);
+        previous = current;
+    }
+
+    return previous[right.length];
+}
+
+function gameSearchTokenMatches(queryToken, nameToken) {
+    if (nameToken.includes(queryToken)) return true;
+    if (queryToken.length < 3) return false;
+
+    const maxDistance = queryToken.length >= 7 ? 2 : 1;
+    if (Math.abs(queryToken.length - nameToken.length) > maxDistance) return false;
+    return gameSearchDistance(queryToken, nameToken) <= maxDistance;
+}
+
+function gameNameMatchesSearch(name, query) {
+    const queryTokens = normalizeGameSearchText(query);
+    if (queryTokens.length === 0) return true;
+
+    const nameTokens = normalizeGameSearchText(name);
+    return queryTokens.every(queryToken =>
+        nameTokens.some(nameToken => gameSearchTokenMatches(queryToken, nameToken))
+    );
+}
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('gamesCatalog', () => {
         let filteredGamesCacheKey = '';
@@ -122,7 +177,7 @@ document.addEventListener('alpine:init', () => {
                 const maxPlaytime = Number(data.maxPlaytime);
                 const categories = data.categories ? data.categories.split(",").map((category) => category.trim()) : [];
 
-                return (!search || data.name.toLowerCase().includes(search)) &&
+                return (!search || gameNameMatchesSearch(data.name, search)) &&
                     (Number(this.playersFilter) === 0 || (minPlayers <= Number(this.playersFilter) && maxPlayers >= Number(this.playersFilter))) &&
                     (this.maxDurationFilter > 240
                         ? maxPlaytime >= this.minDurationFilter
