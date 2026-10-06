@@ -1,0 +1,148 @@
+{{ template "header" . }}
+<main id="staff-loans" x-data="staffLoans" class="mx-auto max-w-5xl">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-white">Leihschalter</h1>
+        <p class="mt-2 text-sm text-theme-muted">Ausgaben verwalten und Spiele zurücknehmen.</p>
+    </div>
+
+    <div class="mb-6 flex gap-2 border-b border-theme-border">
+        <button type="button" @click="setMode('issue')" :class="mode === 'issue' ? 'border-blue-500 text-blue-400' : 'border-transparent text-theme-muted'"
+                class="border-b-2 px-4 py-3 text-sm font-semibold">Ausgeben</button>
+        <button type="button" @click="setMode('return')" :class="mode === 'return' ? 'border-blue-500 text-blue-400' : 'border-transparent text-theme-muted'"
+                class="border-b-2 px-4 py-3 text-sm font-semibold">Zurücknehmen</button>
+    </div>
+
+    <div x-show="message" x-cloak class="mb-5 rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-sm text-green-300" x-text="message"></div>
+    <div x-show="error" x-cloak class="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300" x-text="error"></div>
+
+    <section x-show="mode === 'issue'" x-cloak class="space-y-6">
+        <div class="flex gap-2 rounded-xl border border-theme-border bg-theme-card p-1">
+            <button type="button" @click="issueSource = 'prebooked'; clearSelection()" :class="issueSource === 'prebooked' ? 'bg-blue-600 text-white' : 'text-theme-muted'"
+                    class="flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold">Vorbestellung</button>
+            <button type="button" @click="issueSource = 'spontaneous'; clearSelection()" :class="issueSource === 'spontaneous' ? 'bg-blue-600 text-white' : 'text-theme-muted'"
+                    class="flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold">Spontanausleihe</button>
+        </div>
+
+        <div x-show="issueSource === 'prebooked'" class="space-y-5">
+            <div class="rounded-xl border border-theme-border bg-theme-card p-5">
+                <label for="prebooking-search" class="mb-2 block text-sm font-semibold text-white">Vorbestellung suchen</label>
+                <input id="prebooking-search" type="search" x-model="issueSearch" @input.debounce.300ms="searchBookings('issue')"
+                       placeholder="Name, Buchungsnummer oder E-Mail" class="w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white outline-none focus:border-blue-500">
+                <p class="mt-2 text-xs text-theme-muted">Suche nach Namen, Buchungscode oder E-Mail-Adresse.</p>
+            </div>
+            <div x-show="!selectedBooking" class="space-y-3">
+                <template x-for="booking in issueBookings" :key="booking.id">
+                    <button type="button" @click="selectBooking(booking)"
+                            class="w-full rounded-xl border border-theme-border bg-theme-card p-4 text-left transition hover:border-blue-500">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span class="font-semibold text-white" x-text="booking.person_name"></span>
+                            <span class="rounded-md border border-amber-500/30 px-2 py-1 text-xs text-amber-300" x-text="booking.status === 'pending' ? 'Ausstehend' : 'Bestätigt'"></span>
+                        </div>
+                        <span class="mt-1 block text-xs text-theme-muted" x-text="booking.token + ' · ' + booking.email"></span>
+                        <span class="mt-1 block text-xs text-theme-muted" x-text="booking.start_date.substring(0, 10) + ' – ' + booking.end_date.substring(0, 10)"></span>
+                        <span class="mt-2 block text-sm text-gray-300" x-text="booking.items.map(item => item.name).join(', ')"></span>
+                    </button>
+                </template>
+                <p x-show="issueSearch.length > 0 && issueBookings.length === 0" class="rounded-xl border border-theme-border bg-theme-card p-5 text-sm text-theme-muted">Keine passenden Vorbestellungen gefunden.</p>
+            </div>
+
+            <template x-if="selectedBooking">
+                <div class="rounded-xl border border-theme-border bg-theme-card p-5">
+                    <div class="mb-4 flex items-start justify-between gap-4">
+                        <div>
+                            <h2 class="font-bold text-white" x-text="selectedBooking.person_name"></h2>
+                            <p class="mt-1 text-xs text-theme-muted" x-text="selectedBooking.token + ' · ' + selectedBooking.email"></p>
+                        </div>
+                        <button type="button" @click="clearSelection()" class="text-sm text-blue-400 hover:text-blue-300">Andere Buchung wählen</button>
+                    </div>
+                    <p class="mb-3 text-sm font-semibold text-white">Spiele für die Ausgabe auswählen</p>
+                    <div class="space-y-2">
+                        <template x-for="item in selectedBooking.items" :key="item.id">
+                            <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-theme-border bg-theme-bg p-3">
+                                <input type="checkbox" :value="item.id" x-model="selectedItemIDs" class="h-4 w-4 accent-blue-500">
+                                <span class="flex-1 text-sm text-gray-200" x-text="item.name"></span>
+                                <span x-show="item.isbn" class="text-xs text-theme-muted" x-text="'Barcode ' + item.isbn"></span>
+                            </label>
+                        </template>
+                    </div>
+                    <p class="mt-3 text-xs text-theme-muted">Abgewählte Spiele werden aus dieser Buchung entfernt, zum Beispiel bei einem Defekt.</p>
+                    <button type="button" @click="issueSelectedBooking()" :disabled="busy || selectedItemIDs.length === 0"
+                            class="mt-5 w-full rounded-lg bg-green-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50">
+                        <span x-text="busy ? 'Wird ausgegeben …' : 'Ausgabe abschließen'"></span>
+                    </button>
+                </div>
+            </template>
+        </div>
+
+        <div x-show="issueSource === 'spontaneous'" class="space-y-5">
+            <div class="rounded-xl border border-theme-border bg-theme-card p-5">
+                <h2 class="mb-3 font-bold text-white">Spiel per Barcode hinzufügen</h2>
+                <form @submit.prevent="lookupBarcode()" class="flex flex-col gap-2 sm:flex-row">
+                    <input x-model="barcode" type="text" inputmode="numeric" placeholder="Barcode / ISBN scannen oder eingeben"
+                           class="min-w-0 flex-1 rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white outline-none focus:border-blue-500">
+                    <button class="rounded-lg border border-theme-border px-4 py-3 text-sm font-semibold text-gray-200 hover:border-blue-500">Hinzufügen</button>
+                    <button type="button" @click="toggleCamera()" class="rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-500" x-text="cameraActive ? 'Kamera stoppen' : 'Kamera öffnen'"></button>
+                </form>
+                <video x-ref="video" x-show="cameraActive" autoplay playsinline class="mt-4 max-h-72 w-full rounded-lg bg-black"></video>
+                <p class="mt-2 text-xs text-theme-muted">Der Barcode muss als ISBN beim Spiel hinterlegt sein. Kamerascans benötigen HTTPS und Browserunterstützung.</p>
+            </div>
+            <div class="rounded-xl border border-theme-border bg-theme-card p-5">
+                <h2 class="mb-3 font-bold text-white">Ausgewählte Spiele</h2>
+                <template x-if="spontaneousItems.length === 0">
+                    <p class="text-sm text-theme-muted">Noch keine Spiele hinzugefügt.</p>
+                </template>
+                <div class="space-y-2">
+                    <template x-for="item in spontaneousItems" :key="item.id">
+                        <div class="flex items-center gap-3 rounded-lg border border-theme-border bg-theme-bg p-3">
+                            <span class="flex-1 text-sm text-gray-200" x-text="item.name"></span>
+                            <span class="text-xs text-theme-muted" x-text="item.isbn"></span>
+                            <button type="button" @click="removeSpontaneousItem(item.id)" class="text-sm text-red-400 hover:text-red-300">Entfernen</button>
+                        </div>
+                    </template>
+                </div>
+                <div class="mt-5 grid gap-4 sm:grid-cols-3">
+                    <label class="text-xs font-semibold uppercase text-theme-muted sm:col-span-2">Name der ausleihenden Person
+                        <input x-model="borrowerName" required class="mt-1 w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm normal-case text-white" placeholder="Vor- und Nachname">
+                    </label>
+                    <label class="text-xs font-semibold uppercase text-theme-muted">E-Mail (optional)
+                        <input x-model="borrowerEmail" type="email" class="mt-1 w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm normal-case text-white" placeholder="name@example.org">
+                    </label>
+                </div>
+                <label class="mt-4 block text-xs font-semibold uppercase text-theme-muted">Voraussichtliche Rückgabe
+                    <input x-model="endDate" type="date" required class="mt-1 w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white sm:max-w-xs">
+                </label>
+                <button type="button" @click="createSpontaneousLoan()" :disabled="busy || spontaneousItems.length === 0"
+                        class="mt-5 w-full rounded-lg bg-green-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50">
+                    <span x-text="busy ? 'Wird gespeichert …' : 'Spontanausleihe ausgeben'"></span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section x-show="mode === 'return'" x-cloak class="space-y-5">
+        <div class="rounded-xl border border-theme-border bg-theme-card p-5">
+            <label for="return-search" class="mb-2 block text-sm font-semibold text-white">Aktive Ausleihe suchen</label>
+            <input id="return-search" type="search" x-model="returnSearch" @input.debounce.300ms="searchBookings('return')"
+                   placeholder="Name, Buchungsnummer oder E-Mail" class="w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white outline-none focus:border-blue-500">
+        </div>
+        <div class="space-y-3">
+            <template x-for="booking in returnBookings" :key="booking.id">
+                <article class="rounded-xl border border-theme-border bg-theme-card p-5">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 class="font-semibold text-white" x-text="booking.person_name"></h2>
+                            <p class="mt-1 text-xs text-theme-muted" x-text="booking.token + ' · ' + booking.email"></p>
+                            <p class="mt-1 text-xs text-theme-muted" x-text="booking.start_date.substring(0, 10) + ' – ' + booking.end_date.substring(0, 10)"></p>
+                            <p class="mt-2 text-sm text-gray-300" x-text="booking.items.map(item => item.name).join(', ')"></p>
+                        </div>
+                        <button type="button" @click="returnBooking(booking)" :disabled="busy"
+                                class="shrink-0 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-500 disabled:opacity-50">Zurücknehmen</button>
+                    </div>
+                </article>
+            </template>
+            <p x-show="returnSearch.length > 0 && returnBookings.length === 0" class="rounded-xl border border-theme-border bg-theme-card p-5 text-sm text-theme-muted">Keine aktiven Ausleihen gefunden.</p>
+        </div>
+    </section>
+</main>
+<script src="/static/js/staff_loans.js?v=1"></script>
+{{ template "footer" . }}
