@@ -182,7 +182,7 @@ func TestAdminBookingsRendersAllBookingStatesAndOrigins(t *testing.T) {
 	}
 }
 
-func TestCheckoutAccountViewDoesNotShowGuestForm(t *testing.T) {
+func TestCheckoutAccountViewDoesNotShowOtherBorrowerFields(t *testing.T) {
 	tmpl, err := template.ParseGlob("templates/*.html")
 	if err != nil {
 		t.Fatalf("Failed to parse templates: %v", err)
@@ -209,7 +209,29 @@ func TestCheckoutAccountViewDoesNotShowGuestForm(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Failed to execute staff checkout.html: %v", err)
 	}
-	if !bytes.Contains(output.Bytes(), []byte("bookingForSomeoneElse")) {
-		t.Error("staff checkout should render the opt-in for booking on someone else's behalf")
+	if bytes.Contains(output.Bytes(), []byte("bookingForSomeoneElse")) {
+		t.Error("staff checkout should not render an option to book on someone else's behalf")
+	}
+	if bytes.Contains(output.Bytes(), []byte("Vor- und Nachname")) {
+		t.Error("staff checkout should use the staff account instead of borrower details")
+	}
+}
+
+func TestStaffLoansTemplateRendersIssueAndReturnFlows(t *testing.T) {
+	tmpl, err := template.ParseGlob("templates/*.html")
+	if err != nil {
+		t.Fatalf("Failed to parse templates: %v", err)
+	}
+	var output bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&output, "staff_loans.html", map[string]interface{}{
+		"UserRole": "maintainer",
+		"UserName": "Staff",
+	}); err != nil {
+		t.Fatalf("Failed to execute staff_loans.html: %v", err)
+	}
+	for _, expected := range []string{"Leihschalter", "Ausgeben", "Zurücknehmen", "Vorbestellung", "Spontanausleihe", "Barcode / ISBN scannen oder eingeben", "Aktive Ausleihe suchen"} {
+		if !bytes.Contains(output.Bytes(), []byte(expected)) {
+			t.Errorf("Expected staff lending page to contain %q", expected)
+		}
 	}
 }

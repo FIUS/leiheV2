@@ -1,6 +1,6 @@
 Hallo {{ .FirstName }},
 
-{{ if eq .Status "confirmed" }}deine Ausleihe wurde bestätigt.{{ else }}deine Reservierungsanfrage wurde erfolgreich erhalten.{{ end }}
+{{ if eq .Status "active" }}deine Spontanausleihe wurde ausgegeben.{{ else if eq .Status "confirmed" }}deine Ausleihe wurde bestätigt.{{ else }}deine Reservierungsanfrage wurde erfolgreich erhalten.{{ end }}
 
 Buchungsnummer: {{ .BookingToken }}
 Zeitraum: {{ .StartDate }} bis {{ .EndDate }}
@@ -9,7 +9,7 @@ Reservierte Spiele:
 {{ range .Items }}- {{ . }}
 {{ end }}
 
-Status: {{ if eq .Status "confirmed" }}Bestätigt{{ else }}Ausstehend{{ end }}
+Status: {{ if eq .Status "active" }}Ausgegeben{{ else if eq .Status "confirmed" }}Bestätigt{{ else }}Ausstehend{{ end }}
 
 Viele Grüße
 FIUS Verleih

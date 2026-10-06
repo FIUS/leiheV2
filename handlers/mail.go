@@ -166,6 +166,8 @@ func sendOrderEmail(to, firstName string, details db.BookingEmailDetails) error 
 	subject := "Reservierungsanfrage erhalten"
 	if details.Status == "confirmed" {
 		subject = "Ausleihe bestätigt"
+	} else if details.Status == "active" {
+		subject = "Spontanausleihe ausgegeben"
 	}
 	return sendMail(to, subject, body)
 }
@@ -197,7 +199,7 @@ func bookingStatusLabel(status string) string {
 	case "confirmed":
 		return "Bestätigt"
 	case "active":
-		return "Aktiv"
+		return "Ausgegeben"
 	case "returned":
 		return "Zurückgegeben"
 	case "cancelled":

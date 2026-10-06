@@ -6,6 +6,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 var ErrBookingNotEditable = errors.New("booking is not editable")
@@ -120,6 +122,230 @@ func (q *Queries) CancelConfirmedBooking(ctx context.Context, bookingID int32) e
 	if count, err := result.RowsAffected(); err != nil {
 		return err
 	} else if count == 0 {
+		return ErrBookingNotEditable
+	}
+	return nil
+}
+
+type StaffLoanItem struct {
+	ID   int32  `json:"id"`
+	Name string `json:"name"`
+	ISBN string `json:"isbn"`
+}
+
+type StaffLoanBooking struct {
+	ID         int32           `json:"id"`
+	Token      string          `json:"token"`
+	PersonName string          `json:"person_name"`
+	Email      string          `json:"email"`
+	StartDate  time.Time       `json:"start_date"`
+	EndDate    time.Time       `json:"end_date"`
+	Status     string          `json:"status"`
+	Items      []StaffLoanItem `json:"items"`
+}
+
+func (q *Queries) SearchStaffLoanBookings(ctx context.Context, search, mode string) ([]StaffLoanBooking, error) {
+	statuses := []string{"pending", "confirmed"}
+	if mode == "return" {
+		statuses = []string{"active"}
+	}
+	rows, err := q.db.QueryContext(ctx, `
+		SELECT b.id, b.public_token,
+		       COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+		                b.guest_name, b.guest_email, 'Gast'),
+		       COALESCE(u.email, b.guest_email, ''), b.start_date, b.end_date, b.status::text
+		FROM bookings b
+		LEFT JOIN users u ON u.id = b.user_id
+		WHERE b.status::text = ANY($1::text[])
+		  AND ($2 = '' OR b.public_token ILIKE '%' || $2 || '%'
+		       OR COALESCE(u.first_name, '') ILIKE '%' || $2 || '%'
+		       OR COALESCE(u.last_name, '') ILIKE '%' || $2 || '%'
+		       OR CONCAT_WS(' ', u.first_name, u.last_name) ILIKE '%' || $2 || '%'
+		       OR COALESCE(u.email, b.guest_email, '') ILIKE '%' || $2 || '%'
+		       OR COALESCE(b.guest_name, '') ILIKE '%' || $2 || '%')
+		ORDER BY b.start_date, b.created_at DESC
+		LIMIT 50
+	`, pq.Array(statuses), strings.TrimSpace(search))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var bookings []StaffLoanBooking
+	for rows.Next() {
+		var booking StaffLoanBooking
+		if err := rows.Scan(&booking.ID, &booking.Token, &booking.PersonName, &booking.Email,
+			&booking.StartDate, &booking.EndDate, &booking.Status); err != nil {
+			return nil, err
+		}
+		items, err := q.db.QueryContext(ctx, `
+			SELECT i.id, i.name, COALESCE(i.isbn, '')
+			FROM booking_items bi JOIN items i ON i.id = bi.item_id
+			WHERE bi.booking_id = $1 ORDER BY i.name
+		`, booking.ID)
+		if err != nil {
+			return nil, err
+		}
+		for items.Next() {
+			var item StaffLoanItem
+			if err := items.Scan(&item.ID, &item.Name, &item.ISBN); err != nil {
+				items.Close()
+				return nil, err
+			}
+			booking.Items = append(booking.Items, item)
+		}
+		if err := items.Err(); err != nil {
+			items.Close()
+			return nil, err
+		}
+		if err := items.Close(); err != nil {
+			return nil, err
+		}
+		bookings = append(bookings, booking)
+	}
+	return bookings, rows.Err()
+}
+
+func (q *Queries) FindStaffLoanItemByBarcode(ctx context.Context, barcode string) (StaffLoanItem, error) {
+	var item StaffLoanItem
+	err := q.db.QueryRowContext(ctx, `
+		SELECT id, name, COALESCE(isbn, '')
+		FROM items
+		WHERE isbn = $1 AND status = 'available'
+	`, strings.TrimSpace(barcode)).Scan(&item.ID, &item.Name, &item.ISBN)
+	return item, err
+}
+
+func (q *Queries) CreateSpontaneousLoan(ctx context.Context, token string, staffID int32, guestName, guestEmail string, endDate time.Time, itemIDs []int32) (int32, error) {
+	var bookingID int32
+	err := q.InTx(ctx, func(tx *Queries) error {
+		if len(itemIDs) == 0 {
+			return ErrBookingNotEditable
+		}
+		startDate := time.Now()
+		if err := tx.LockItemsForBooking(ctx, itemIDs); err != nil {
+			return err
+		}
+		conflicts, err := tx.CheckItemCollisions(ctx, CheckItemCollisionsParams{
+			Column1: itemIDs, StartDate: startDate, EndDate: endDate,
+		})
+		if err != nil {
+			return err
+		}
+		if len(conflicts) > 0 {
+			return ErrBookingConflict
+		}
+		var availableCount int
+		if err := tx.db.QueryRowContext(ctx, `
+			SELECT COUNT(DISTINCT id) FROM items
+			WHERE id = ANY($1::int[]) AND status = 'available'
+		`, pq.Array(itemIDs)).Scan(&availableCount); err != nil {
+			return err
+		}
+		if availableCount != len(itemIDs) {
+			return ErrBookingConflict
+		}
+		booking, err := tx.CreateBooking(ctx, CreateBookingParams{
+			PublicToken:     token,
+			CreatedByUserID: sql.NullInt32{Int32: staffID, Valid: true},
+			GuestName:       sql.NullString{String: strings.TrimSpace(guestName), Valid: strings.TrimSpace(guestName) != ""},
+			GuestEmail:      sql.NullString{String: strings.TrimSpace(guestEmail), Valid: strings.TrimSpace(guestEmail) != ""},
+			StartDate:       startDate,
+			EndDate:         endDate,
+			Status:          BookingStatusActive,
+		})
+		if err != nil {
+			return err
+		}
+		bookingID = booking.ID
+		for _, itemID := range itemIDs {
+			if err := tx.AddBookingItem(ctx, AddBookingItemParams{BookingID: booking.ID, ItemID: itemID}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return bookingID, err
+}
+
+func (q *Queries) IssuePrebookedLoan(ctx context.Context, bookingID int32, itemIDs []int32) error {
+	return q.InTx(ctx, func(tx *Queries) error {
+		var status string
+		if err := tx.db.QueryRowContext(ctx, `
+			SELECT status::text FROM bookings WHERE id = $1 FOR UPDATE
+		`, bookingID).Scan(&status); err != nil {
+			return ErrBookingNotEditable
+		}
+		if status != "pending" && status != "confirmed" {
+			return ErrBookingNotEditable
+		}
+		var bookedIDs []int32
+		rows, err := tx.db.QueryContext(ctx, `
+			SELECT item_id FROM booking_items WHERE booking_id = $1 ORDER BY item_id FOR UPDATE
+		`, bookingID)
+		if err != nil {
+			return err
+		}
+		for rows.Next() {
+			var id int32
+			if err := rows.Scan(&id); err != nil {
+				rows.Close()
+				return err
+			}
+			bookedIDs = append(bookedIDs, id)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return err
+		}
+		if err := rows.Close(); err != nil {
+			return err
+		}
+		if len(itemIDs) == 0 {
+			return ErrBookingNotEditable
+		}
+		selected := make(map[int32]bool, len(itemIDs))
+		for _, id := range itemIDs {
+			if selected[id] {
+				return ErrBookingNotEditable
+			}
+			selected[id] = true
+		}
+		for _, id := range bookedIDs {
+			if selected[id] {
+				delete(selected, id)
+				continue
+			}
+			if _, err := tx.db.ExecContext(ctx, `DELETE FROM booking_items WHERE booking_id = $1 AND item_id = $2`, bookingID, id); err != nil {
+				return err
+			}
+		}
+		if len(selected) > 0 {
+			return ErrBookingNotEditable
+		}
+		_, err = tx.db.ExecContext(ctx, `
+			UPDATE bookings
+			SET status = 'active',
+			    start_date = CURRENT_DATE,
+			    end_date = GREATEST(end_date, CURRENT_DATE)
+			WHERE id = $1
+		`, bookingID)
+		return err
+	})
+}
+
+func (q *Queries) ReturnStaffLoan(ctx context.Context, bookingID int32) error {
+	result, err := q.db.ExecContext(ctx, `
+		UPDATE bookings SET status = 'returned'
+		WHERE id = $1 AND status = 'active'
+	`, bookingID)
+	if err != nil {
+		return err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
 		return ErrBookingNotEditable
 	}
 	return nil
@@ -292,7 +518,7 @@ func (q *Queries) GetBookingEmailDetails(ctx context.Context, publicToken string
 	var details BookingEmailDetails
 	rows, err := q.db.QueryContext(ctx, `
 		SELECT b.public_token, b.start_date, b.end_date, b.status::text,
-		       b.guest_name, b.guest_email, COALESCE(u.first_name, ''),
+		       b.guest_name, b.guest_email, COALESCE(u.first_name, b.guest_name, ''),
 		       COALESCE(u.email, b.guest_email), i.name
 		FROM bookings b
 		JOIN booking_items bi ON bi.booking_id = b.id
@@ -321,7 +547,7 @@ func (q *Queries) GetBookingEmailDetailsByID(ctx context.Context, bookingID int3
 	var details BookingEmailDetails
 	rows, err := q.db.QueryContext(ctx, `
 		SELECT b.public_token, b.start_date, b.end_date, b.status::text,
-		       b.guest_name, b.guest_email, COALESCE(u.first_name, ''),
+		       b.guest_name, b.guest_email, COALESCE(u.first_name, b.guest_name, ''),
 		       COALESCE(u.email, b.guest_email), i.name
 		FROM bookings b
 		JOIN booking_items bi ON bi.booking_id = b.id

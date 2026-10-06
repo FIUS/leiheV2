@@ -39,6 +39,12 @@ func SetupRoutes(r *gin.Engine) {
 		admin.GET("/bookings", handlers.RenderAdminBookings)
 		admin.POST("/bookings/review", handlers.ReviewPendingBooking)
 		admin.POST("/bookings/confirmed/cancel", handlers.RequireRole("admin"), handlers.CancelConfirmedBooking)
+		admin.GET("/ausgabe", handlers.RenderStaffLoans)
+		admin.GET("/api/ausgabe/bookings", handlers.SearchStaffLoans)
+		admin.GET("/api/ausgabe/barcode", handlers.LookupStaffLoanBarcode)
+		admin.POST("/api/ausgabe/prebooked", handlers.IssuePrebookedBooking)
+		admin.POST("/api/ausgabe/spontaneous", handlers.CreateSpontaneousStaffLoan)
+		admin.POST("/api/ausgabe/return", handlers.ReturnStaffLoan)
 
 		admin.GET("/users", handlers.RequireRole("admin"), handlers.RenderAdminUsers)
 		admin.GET("/settings", handlers.RequireRole("admin"), handlers.RenderAdminSettings)

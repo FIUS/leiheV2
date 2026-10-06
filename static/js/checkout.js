@@ -4,7 +4,6 @@ document.addEventListener('alpine:init', () => {
         cart: [],
         cartItems: [],
         checkoutData: { startDate: '', endDate: '', guestName: '', guestEmail: '' },
-        bookingForSomeoneElse: false,
         bookingToken: '',
         errorMessage: '',
         isLoading: false,
@@ -218,8 +217,8 @@ document.addEventListener('alpine:init', () => {
                         games: this.cart,
                         startDate: this.checkoutData.startDate,
                         endDate: this.checkoutData.endDate,
-                        guestName: this.bookingForSomeoneElse ? this.checkoutData.guestName : '',
-                        guestEmail: this.bookingForSomeoneElse ? this.checkoutData.guestEmail : ''
+                        guestName: this.checkoutData.guestName,
+                        guestEmail: this.checkoutData.guestEmail
                     })
                 });
 

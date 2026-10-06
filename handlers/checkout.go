@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"leiheV2/db"
@@ -54,12 +53,6 @@ func HandleCreateBooking(c *gin.Context) {
 	}
 
 	var guestName, guestEmail sql.NullString
-	if strings.TrimSpace(req.GuestName) != "" {
-		guestName = sql.NullString{String: strings.TrimSpace(req.GuestName), Valid: true}
-	}
-	if strings.TrimSpace(req.GuestEmail) != "" {
-		guestEmail = sql.NullString{String: strings.TrimSpace(req.GuestEmail), Valid: true}
-	}
 	session := sessions.Default(c)
 	var userID sql.NullInt32
 	var createdByUserID sql.NullInt32
@@ -73,14 +66,10 @@ func HandleCreateBooking(c *gin.Context) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Bitte erneut anmelden"})
 			return
 		}
-		if guestName.Valid != guestEmail.Valid {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Für eine Ausleihe für andere Personen müssen Name und E-Mail angegeben werden"})
-			return
-		}
 		createdByUserID = sql.NullInt32{Int32: id, Valid: true}
 		status = db.BookingStatusConfirmed
 	}
-	if authenticated && !(isStaff && guestName.Valid) {
+	if authenticated {
 		userID = sql.NullInt32{Int32: id, Valid: true}
 		user, userErr := queries.GetUser(ctx, id)
 		if userErr != nil {
@@ -89,10 +78,6 @@ func HandleCreateBooking(c *gin.Context) {
 		}
 		recipientEmail = user.Email
 		recipientName = user.FirstName
-	}
-	if recipientEmail == "" && guestEmail.Valid {
-		recipientEmail = guestEmail.String
-		recipientName = guestName.String
 	}
 
 	// Sperren, prüfen und speichern müssen in derselben Transaktion erfolgen,
