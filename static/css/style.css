@@ -6,10 +6,3 @@
 .divide-y > :not([hidden]) ~ :not([hidden]) {
     border-color: #24334d;
 }
-
-.bg-theme-card {
-    margin-top: 24px;
-}
-.bg-theme-overlay {
-    margin-top: 0 !important;
-}

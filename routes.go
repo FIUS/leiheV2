@@ -49,6 +49,7 @@ func SetupRoutes(r *gin.Engine) {
 	r.POST("/api/categories", handlers.RequireRole("admin", "maintainer"), handlers.CreateCategory)
 	r.POST("/api/categories/delete", handlers.RequireRole("admin", "maintainer"), handlers.DeleteCategory)
 	r.GET("/api/items/details", handlers.GetItemDetails)
+	r.GET("/api/items/thumbnail", handlers.GetItemThumbnail)
 	r.GET("/api/items/history", handlers.RequireRole("admin", "maintainer"), handlers.GetItemHistory)
 	r.POST("/setup-bilder", handlers.RequireRole("admin", "maintainer"), handlers.UpdateItemImage)
 
