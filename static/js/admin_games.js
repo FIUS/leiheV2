@@ -104,14 +104,18 @@ document.addEventListener('alpine:init', () => {
             this.isSearching = false;
         },
 
-        async fetchBGGDetails(bggId) {
+        async fetchBGGDetails(result) {
             this.isLoadingDetails = true;
             this.bggError = '';
             try {
-                const res = await fetch('/api/bgg/details?id=' + bggId);
+                const params = new URLSearchParams({
+                    id: result.ID,
+                    name: result.Name?.Value || ''
+                });
+                const res = await fetch('/api/bgg/details?' + params.toString());
                 if (res.ok) {
                     const data = await res.json();
-                    this.editGame.name = data.name || this.editGame.name;
+                    this.editGame.name = result.Name?.Value || data.name || this.editGame.name;
                     this.editGame.image_url = data.image_url || '';
                     this.editGame.is_expansion = Boolean(data.is_expansion);
                     this.editGame.categories = data.categories || [];

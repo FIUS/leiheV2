@@ -225,12 +225,13 @@
                     <div x-show="isSearching" class="text-center py-8 text-theme-muted">Lade Treffer...</div>
                     <div class="overflow-y-auto flex-1 space-y-2 pr-2" x-show="!isSearching">
                         <template x-for="result in bggResults" :key="result.ID">
-                            <div class="flex justify-between items-center bg-[#1E2532] border border-theme-border p-3 rounded-lg">
-                                <div>
+                            <div class="flex items-center gap-3 bg-[#1E2532] border border-theme-border p-3 rounded-lg">
+                                <img x-show="result.Thumbnail" :src="result.Thumbnail" :alt="result.Name.Value" loading="lazy" decoding="async" class="h-16 w-12 shrink-0 rounded object-cover bg-theme-bg">
+                                <div class="min-w-0 flex-1">
                                     <p class="font-bold text-white" x-text="result.Name.Value"></p>
-                                    <p class="text-xs text-theme-muted">BGG ID: <span x-text="result.ID"></span></p>
+                                    <p class="text-xs text-theme-muted"><span x-show="result.Year?.Value" x-text="result.Year?.Value"></span><span x-show="result.Year?.Value"> · </span>BGG ID: <span x-text="result.ID"></span></p>
                                 </div>
-                                <button @click="fetchBGGDetails(result.ID)" :disabled="isLoadingDetails" class="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-wait text-white text-xs font-bold py-1.5 px-3 rounded">
+                                <button @click="fetchBGGDetails(result)" :disabled="isLoadingDetails" class="shrink-0 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-wait text-white text-xs font-bold py-1.5 px-3 rounded">
                                     <span x-text="isLoadingDetails ? 'Lade…' : 'Übernehmen'"></span>
                                 </button>
                             </div>
@@ -240,7 +241,7 @@
             </div>
 </div>
 
-<script src="/static/js/admin_games.js?v=2"></script>
+<script src="/static/js/admin_games.js?v=3"></script>
     </main>
 </div>
 {{ template "footer" . }}

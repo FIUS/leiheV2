@@ -63,48 +63,66 @@ func respondWithBGGError(c *gin.Context, resp *http.Response, requestErr error) 
 
 type BGGSearchResponse struct {
 	Items []struct {
-		ID   string `xml:"id,attr"`
+		ID   string `xml:"id,attr" json:"ID"`
 		Name struct {
-			Value string `xml:"value,attr"`
-		} `xml:"name"`
+			Value string `xml:"value,attr" json:"Value"`
+		} `xml:"name" json:"Name"`
 		Year struct {
-			Value string `xml:"value,attr"`
-		} `xml:"yearpublished"`
+			Value string `xml:"value,attr" json:"Value"`
+		} `xml:"yearpublished" json:"Year"`
+		Thumbnail string `xml:"-" json:"Thumbnail"`
 	} `xml:"item"`
 }
 
+type BGGName struct {
+	Value string `xml:"value,attr"`
+	Type  string `xml:"type,attr"`
+}
+
+type BGGLink struct {
+	Type  string `xml:"type,attr"`
+	Value string `xml:"value,attr"`
+}
+
+type BGGVersion struct {
+	Names     []BGGName `xml:"name"`
+	Image     string    `xml:"image"`
+	Thumbnail string    `xml:"thumbnail"`
+	Links     []BGGLink `xml:"link"`
+}
+
+type BGGThingItem struct {
+	ID        string    `xml:"id,attr"`
+	Names     []BGGName `xml:"name"`
+	Image     string    `xml:"image"`
+	Thumbnail string    `xml:"thumbnail"`
+	Versions  struct {
+		Items []BGGVersion `xml:"item"`
+	} `xml:"versions"`
+	MinPlayers struct {
+		Value string `xml:"value,attr"`
+	} `xml:"minplayers"`
+	MaxPlayers struct {
+		Value string `xml:"value,attr"`
+	} `xml:"maxplayers"`
+	MinPlaytime struct {
+		Value string `xml:"value,attr"`
+	} `xml:"minplaytime"`
+	MaxPlaytime struct {
+		Value string `xml:"value,attr"`
+	} `xml:"maxplaytime"`
+	Links      []BGGLink `xml:"link"`
+	Statistics struct {
+		Ratings struct {
+			Average struct {
+				Value string `xml:"value,attr"`
+			} `xml:"average"`
+		} `xml:"ratings"`
+	} `xml:"statistics"`
+}
+
 type BGGThingResponse struct {
-	Items []struct {
-		ID    string `xml:"id,attr"`
-		Names []struct {
-			Value string `xml:"value,attr"`
-			Type  string `xml:"type,attr"`
-		} `xml:"name"`
-		Image      string `xml:"image"`
-		MinPlayers struct {
-			Value string `xml:"value,attr"`
-		} `xml:"minplayers"`
-		MaxPlayers struct {
-			Value string `xml:"value,attr"`
-		} `xml:"maxplayers"`
-		MinPlaytime struct {
-			Value string `xml:"value,attr"`
-		} `xml:"minplaytime"`
-		MaxPlaytime struct {
-			Value string `xml:"value,attr"`
-		} `xml:"maxplaytime"`
-		Links []struct {
-			Type  string `xml:"type,attr"`
-			Value string `xml:"value,attr"`
-		} `xml:"link"`
-		Statistics struct {
-			Ratings struct {
-				Average struct {
-					Value string `xml:"value,attr"`
-				} `xml:"average"`
-			} `xml:"ratings"`
-		} `xml:"statistics"`
-	} `xml:"item"`
+	Items []BGGThingItem `xml:"item"`
 }
 
 func normalizeBGGSearchQuery(query string) string {
@@ -162,17 +180,68 @@ func SearchBGG(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "XML Parse Fehler"})
 		return
 	}
+
+	if len(bggResult.Items) > 0 {
+		ids := make([]string, 0, len(bggResult.Items))
+		namesByID := make(map[string]string, len(bggResult.Items))
+		for _, item := range bggResult.Items {
+			ids = append(ids, item.ID)
+			namesByID[item.ID] = item.Name.Value
+		}
+		thingsURL := "https://boardgamegeek.com/xmlapi2/thing?id=" + url.QueryEscape(strings.Join(ids, ",")) + "&versions=1"
+		enforceBGGCooldown()
+		thingsReq, err := newBGGRequest(http.MethodGet, thingsURL)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "BGG Bildanfrage konnte nicht erstellt werden"})
+			return
+		}
+		thingsResp, err := client.Do(thingsReq)
+		if err != nil || thingsResp.StatusCode != http.StatusOK {
+			if thingsResp != nil {
+				defer thingsResp.Body.Close()
+			}
+			respondWithBGGError(c, thingsResp, err)
+			return
+		}
+		defer thingsResp.Body.Close()
+		thingsBody, err := io.ReadAll(thingsResp.Body)
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": "BGG Bilder konnten nicht gelesen werden"})
+			return
+		}
+		var things BGGThingResponse
+		if err := xml.Unmarshal(thingsBody, &things); err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": "BGG Bilddaten konnten nicht verarbeitet werden"})
+			return
+		}
+		imagesByID := make(map[string]string, len(things.Items))
+		for _, item := range things.Items {
+			version := selectBGGVersion(item, namesByID[item.ID])
+			thumbnail := version.Thumbnail
+			if thumbnail == "" {
+				thumbnail = version.Image
+			}
+			if thumbnail == "" {
+				thumbnail = item.Thumbnail
+			}
+			imagesByID[item.ID] = thumbnail
+		}
+		for i := range bggResult.Items {
+			bggResult.Items[i].Thumbnail = imagesByID[bggResult.Items[i].ID]
+		}
+	}
 	c.JSON(http.StatusOK, bggResult.Items)
 }
 
 func GetBGGDetails(c *gin.Context) {
 	id := c.Query("id")
+	selectedName := strings.TrimSpace(c.Query("name"))
 	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Keine ID"})
 		return
 	}
 
-	bggURL := "https://boardgamegeek.com/xmlapi2/thing?id=" + url.QueryEscape(id) + "&stats=1"
+	bggURL := "https://boardgamegeek.com/xmlapi2/thing?id=" + url.QueryEscape(id) + "&stats=1&versions=1"
 	enforceBGGCooldown()
 
 	req, err := newBGGRequest(http.MethodGet, bggURL)
@@ -200,15 +269,17 @@ func GetBGGDetails(c *gin.Context) {
 	}
 
 	item := bggResult.Items[0]
-	name := ""
-	for _, candidate := range item.Names {
-		if candidate.Type == "primary" {
-			name = candidate.Value
-			break
+	name := selectedName
+	if name == "" {
+		for _, candidate := range item.Names {
+			if candidate.Type == "primary" {
+				name = candidate.Value
+				break
+			}
 		}
-	}
-	if name == "" && len(item.Names) > 0 {
-		name = item.Names[0].Value
+		if name == "" && len(item.Names) > 0 {
+			name = item.Names[0].Value
+		}
 	}
 	var categories []string
 	isExpansion := false
@@ -228,7 +299,7 @@ func GetBGGDetails(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"bgg_id":       item.ID,
 		"name":         name,
-		"image_url":    item.Image,
+		"image_url":    selectBGGVersionImage(item, selectedName),
 		"min_players":  item.MinPlayers.Value,
 		"max_players":  item.MaxPlayers.Value,
 		"min_playtime": item.MinPlaytime.Value,
@@ -237,4 +308,40 @@ func GetBGGDetails(c *gin.Context) {
 		"categories":   categories,
 		"is_expansion": isExpansion,
 	})
+}
+
+func selectBGGVersionImage(item BGGThingItem, selectedName string) string {
+	version := selectBGGVersion(item, selectedName)
+	if version.Image != "" {
+		return version.Image
+	}
+	return item.Image
+}
+
+func selectBGGVersion(item BGGThingItem, selectedName string) BGGVersion {
+	var germanVersion BGGVersion
+	for _, version := range item.Versions.Items {
+		matchesName := false
+		isGerman := false
+		for _, link := range version.Links {
+			if link.Type == "language" && strings.EqualFold(link.Value, "German") {
+				isGerman = true
+			}
+		}
+		for _, name := range version.Names {
+			if name.Type == "primary" && selectedName != "" && strings.EqualFold(name.Value, selectedName) {
+				matchesName = true
+			}
+		}
+		if matchesName {
+			return version
+		}
+		if selectedName != "" && isGerman && germanVersion.Image == "" && germanVersion.Thumbnail == "" {
+			germanVersion = version
+		}
+	}
+	if germanVersion.Image != "" || germanVersion.Thumbnail != "" {
+		return germanVersion
+	}
+	return BGGVersion{}
 }
