@@ -1,4 +1,4 @@
-package main
+package tests
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 )
 
 func TestTemplatesParseAndExecute(t *testing.T) {
-	tmpl, err := template.ParseGlob("templates/*.html")
+	tmpl, err := template.ParseGlob("../templates/*.html")
 	if err != nil {
 		t.Fatalf("Failed to parse templates: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestTemplatesParseAndExecute(t *testing.T) {
 }
 
 func TestAdminGamesRendersSingleDeleteDialog(t *testing.T) {
-	tmpl, err := template.ParseGlob("templates/*.html")
+	tmpl, err := template.ParseGlob("../templates/*.html")
 	if err != nil {
 		t.Fatalf("Failed to parse templates: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestAdminGamesRendersSingleDeleteDialog(t *testing.T) {
 }
 
 func TestAdminBookingsRendersAllBookingStatesAndOrigins(t *testing.T) {
-	tmpl, err := template.ParseGlob("templates/*.html")
+	tmpl, err := template.ParseGlob("../templates/*.html")
 	if err != nil {
 		t.Fatalf("Failed to parse templates: %v", err)
 	}
@@ -183,7 +183,7 @@ func TestAdminBookingsRendersAllBookingStatesAndOrigins(t *testing.T) {
 }
 
 func TestCheckoutAccountViewDoesNotShowOtherBorrowerFields(t *testing.T) {
-	tmpl, err := template.ParseGlob("templates/*.html")
+	tmpl, err := template.ParseGlob("../templates/*.html")
 	if err != nil {
 		t.Fatalf("Failed to parse templates: %v", err)
 	}
@@ -218,7 +218,7 @@ func TestCheckoutAccountViewDoesNotShowOtherBorrowerFields(t *testing.T) {
 }
 
 func TestStaffLoansTemplateRendersIssueAndReturnFlows(t *testing.T) {
-	tmpl, err := template.ParseGlob("templates/*.html")
+	tmpl, err := template.ParseGlob("../templates/*.html")
 	if err != nil {
 		t.Fatalf("Failed to parse templates: %v", err)
 	}

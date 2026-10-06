@@ -1,19 +1,12 @@
 package handlers
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"image"
-	"image/color"
-	_ "image/gif"
-	"image/jpeg"
-	_ "image/png"
 	"io"
 	"log"
-	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -24,15 +17,14 @@ import (
 	"sync"
 	"time"
 
+	"leiheV2/internal/imageutil"
+
 	"github.com/gin-gonic/gin"
 )
 
 const (
-	thumbnailWidth  = 480
-	thumbnailHeight = 288
-	maxImageBytes   = 8 << 20
-	maxImagePixels  = 20_000_000
-	maxThumbCache   = 256
+	maxImageBytes = 8 << 20
+	maxThumbCache = 256
 )
 
 var (
@@ -42,7 +34,7 @@ var (
 	thumbnailClient  = &http.Client{
 		Timeout: 8 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 5 || req.URL.Scheme != "https" || !allowedImagePort(req.URL.Port()) || !isAllowedImageHost(req.URL.Hostname()) {
+			if len(via) >= 5 || req.URL.Scheme != "https" || !allowedImagePort(req.URL.Port()) || !imageutil.IsAllowedHost(req.URL.Hostname()) {
 				return http.ErrUseLastResponse
 			}
 			return nil
@@ -85,7 +77,7 @@ func GetItemThumbnail(c *gin.Context) {
 			c.Status(http.StatusBadGateway)
 			return
 		}
-		thumbnail, err = compressThumbnail(source)
+		thumbnail, err = imageutil.CompressThumbnail(source)
 		if err != nil {
 			log.Printf("Could not create thumbnail for game %d: %v", item.ID, err)
 			c.Status(http.StatusUnsupportedMediaType)
@@ -130,7 +122,7 @@ func readGameImage(imageURL string) ([]byte, error) {
 	}
 
 	parsed, err := url.Parse(imageURL)
-	if err != nil || parsed.Scheme != "https" || parsed.User != nil || !allowedImagePort(parsed.Port()) || !isAllowedImageHost(parsed.Hostname()) {
+	if err != nil || parsed.Scheme != "https" || parsed.User != nil || !allowedImagePort(parsed.Port()) || !imageutil.IsAllowedHost(parsed.Hostname()) {
 		return nil, fmt.Errorf("image host is not allowed")
 	}
 	request, err := http.NewRequest(http.MethodGet, parsed.String(), nil)
@@ -146,15 +138,6 @@ func readGameImage(imageURL string) ([]byte, error) {
 		return nil, fmt.Errorf("image server returned %s", response.Status)
 	}
 	return readLimited(response.Body)
-}
-
-func isAllowedImageHost(host string) bool {
-	switch strings.ToLower(host) {
-	case "cf.geekdo-images.com", "boardgamegeek.com", "www.boardgamegeek.com", "images.boardgamegeek.com":
-		return true
-	default:
-		return false
-	}
 }
 
 func allowedImagePort(port string) bool {
@@ -179,49 +162,4 @@ func readLimited(reader io.Reader) ([]byte, error) {
 		return nil, fmt.Errorf("image exceeds size limit")
 	}
 	return data, nil
-}
-
-func compressThumbnail(data []byte) ([]byte, error) {
-	config, _, err := image.DecodeConfig(bytes.NewReader(data))
-	if err != nil {
-		return nil, err
-	}
-	if config.Width <= 0 || config.Height <= 0 || int64(config.Width)*int64(config.Height) > maxImagePixels {
-		return nil, fmt.Errorf("image dimensions exceed limit")
-	}
-	source, _, err := image.Decode(bytes.NewReader(data))
-	if err != nil {
-		return nil, err
-	}
-
-	sourceBounds := source.Bounds()
-	sourceWidth, sourceHeight := sourceBounds.Dx(), sourceBounds.Dy()
-	scale := math.Min(float64(thumbnailWidth)/float64(sourceWidth), float64(thumbnailHeight)/float64(sourceHeight))
-	if scale > 1 {
-		scale = 1
-	}
-	outputWidth := max(1, int(float64(sourceWidth)*scale))
-	outputHeight := max(1, int(float64(sourceHeight)*scale))
-	resized := image.NewRGBA(image.Rect(0, 0, outputWidth, outputHeight))
-	background := color.RGBA{R: 17, G: 24, B: 39, A: 255}
-	for y := 0; y < outputHeight; y++ {
-		for x := 0; x < outputWidth; x++ {
-			sourceX := sourceBounds.Min.X + x*sourceWidth/outputWidth
-			sourceY := sourceBounds.Min.Y + y*sourceHeight/outputHeight
-			pixel := color.NRGBAModel.Convert(source.At(sourceX, sourceY)).(color.NRGBA)
-			alpha := uint32(pixel.A)
-			resized.SetRGBA(x, y, color.RGBA{
-				R: uint8((uint32(pixel.R)*alpha + uint32(background.R)*(255-alpha)) / 255),
-				G: uint8((uint32(pixel.G)*alpha + uint32(background.G)*(255-alpha)) / 255),
-				B: uint8((uint32(pixel.B)*alpha + uint32(background.B)*(255-alpha)) / 255),
-				A: 255,
-			})
-		}
-	}
-
-	var output bytes.Buffer
-	if err := jpeg.Encode(&output, resized, &jpeg.Options{Quality: 76}); err != nil {
-		return nil, err
-	}
-	return output.Bytes(), nil
 }

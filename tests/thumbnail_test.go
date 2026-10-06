@@ -1,4 +1,4 @@
-package handlers
+package tests
 
 import (
 	"bytes"
@@ -6,6 +6,8 @@ import (
 	"image/color"
 	"image/jpeg"
 	"testing"
+
+	"leiheV2/internal/imageutil"
 )
 
 func TestCompressThumbnailResizesAndEncodesJPEG(t *testing.T) {
@@ -20,7 +22,7 @@ func TestCompressThumbnailResizesAndEncodesJPEG(t *testing.T) {
 		t.Fatalf("encode source image: %v", err)
 	}
 
-	output, err := compressThumbnail(input.Bytes())
+	output, err := imageutil.CompressThumbnail(input.Bytes())
 	if err != nil {
 		t.Fatalf("compress thumbnail: %v", err)
 	}
@@ -28,8 +30,8 @@ func TestCompressThumbnailResizesAndEncodesJPEG(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode thumbnail: %v", err)
 	}
-	if config.Width > thumbnailWidth || config.Height > thumbnailHeight {
-		t.Fatalf("thumbnail dimensions = %dx%d, exceeds maximum %dx%d", config.Width, config.Height, thumbnailWidth, thumbnailHeight)
+	if config.Width > imageutil.ThumbnailWidth || config.Height > imageutil.ThumbnailHeight {
+		t.Fatalf("thumbnail dimensions = %dx%d, exceeds maximum %dx%d", config.Width, config.Height, imageutil.ThumbnailWidth, imageutil.ThumbnailHeight)
 	}
 	if config.Width*2 != config.Height*3 {
 		t.Fatalf("thumbnail dimensions = %dx%d, want the full source aspect ratio 3:2", config.Width, config.Height)
@@ -46,7 +48,7 @@ func TestCompressThumbnailAcceptsHighResolutionJPEG(t *testing.T) {
 		t.Fatalf("encode source image: %v", err)
 	}
 
-	output, err := compressThumbnail(input.Bytes())
+	output, err := imageutil.CompressThumbnail(input.Bytes())
 	if err != nil {
 		t.Fatalf("compress high-resolution thumbnail: %v", err)
 	}
@@ -60,10 +62,10 @@ func TestCompressThumbnailAcceptsHighResolutionJPEG(t *testing.T) {
 }
 
 func TestIsAllowedImageHost(t *testing.T) {
-	if !isAllowedImageHost("cf.geekdo-images.com") {
+	if !imageutil.IsAllowedHost("cf.geekdo-images.com") {
 		t.Fatal("expected BoardGameGeek image host to be allowed")
 	}
-	if isAllowedImageHost("127.0.0.1") {
+	if imageutil.IsAllowedHost("127.0.0.1") {
 		t.Fatal("unexpected host allowed")
 	}
 }

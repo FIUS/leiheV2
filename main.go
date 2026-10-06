@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"leiheV2/db"
 	"leiheV2/handlers"
@@ -33,6 +34,7 @@ func main() {
 	// Initialisiere die generierten sqlc Queries und übergebe sie an die Handler
 	queries := db.New(database)
 	handlers.InitQueries(queries)
+	startUncollectedBookingCleanup(queries)
 	if err := handlers.InitAuth(context.Background()); err != nil {
 		log.Fatal("Konnte OIDC nicht initialisieren:", err)
 	}
@@ -70,6 +72,30 @@ func main() {
 
 	log.Println("Leih-Backend startet auf http://localhost:8080")
 	r.Run(":8080")
+}
+
+func startUncollectedBookingCleanup(queries *db.Queries) {
+	cleanup := func() {
+		now := time.Now().UTC()
+		pickupDayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+		cancelled, err := queries.CancelUncollectedBookings(context.Background(), pickupDayStart)
+		if err != nil {
+			log.Printf("could not cancel uncollected bookings: %v", err)
+			return
+		}
+		if cancelled > 0 {
+			log.Printf("cancelled %d uncollected booking(s)", cancelled)
+		}
+	}
+
+	cleanup()
+	go func() {
+		ticker := time.NewTicker(15 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			cleanup()
+		}
+	}()
 }
 
 func requiredBoolEnv(key string) (bool, error) {
