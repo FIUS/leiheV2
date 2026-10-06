@@ -153,6 +153,9 @@ func (q *Queries) SearchStaffLoanBookings(ctx context.Context, search, mode stri
 	if mode == "return" {
 		statuses = []string{"active"}
 	}
+	today := time.Now().UTC()
+	todayStart := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
+	tomorrowStart := todayStart.AddDate(0, 0, 1)
 	rows, err := q.db.QueryContext(ctx, `
 		SELECT b.id, b.public_token,
 		       COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
@@ -161,15 +164,16 @@ func (q *Queries) SearchStaffLoanBookings(ctx context.Context, search, mode stri
 		FROM bookings b
 		LEFT JOIN users u ON u.id = b.user_id
 		WHERE b.status::text = ANY($1::text[])
-		  AND ($2 = '' OR b.public_token ILIKE '%' || $2 || '%'
-		       OR COALESCE(u.first_name, '') ILIKE '%' || $2 || '%'
-		       OR COALESCE(u.last_name, '') ILIKE '%' || $2 || '%'
-		       OR CONCAT_WS(' ', u.first_name, u.last_name) ILIKE '%' || $2 || '%'
-		       OR COALESCE(u.email, b.guest_email, '') ILIKE '%' || $2 || '%'
-		       OR COALESCE(b.guest_name, '') ILIKE '%' || $2 || '%')
+		  AND ($5 <> 'issue' OR (b.start_date >= $2 AND b.start_date < $3))
+		  AND ($4 = '' OR b.public_token ILIKE '%' || $4 || '%'
+		       OR COALESCE(u.first_name, '') ILIKE '%' || $4 || '%'
+		       OR COALESCE(u.last_name, '') ILIKE '%' || $4 || '%'
+		       OR CONCAT_WS(' ', u.first_name, u.last_name) ILIKE '%' || $4 || '%'
+		       OR COALESCE(u.email, b.guest_email, '') ILIKE '%' || $4 || '%'
+		       OR COALESCE(b.guest_name, '') ILIKE '%' || $4 || '%')
 		ORDER BY b.start_date, b.created_at DESC
 		LIMIT 50
-	`, pq.Array(statuses), strings.TrimSpace(search))
+	`, pq.Array(statuses), todayStart, tomorrowStart, strings.TrimSpace(search), mode)
 	if err != nil {
 		return nil, err
 	}

@@ -12,8 +12,8 @@
                 class="border-b-2 px-4 py-3 text-sm font-semibold">Zurücknehmen</button>
     </div>
 
-    <div x-show="message" x-cloak class="mb-5 rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-sm text-green-300" x-text="message"></div>
-    <div x-show="error" x-cloak class="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300" x-text="error"></div>
+    <div x-show="message" x-cloak class="mb-5 rounded-xl border border-green-800 bg-green-950 p-4 text-sm text-green-200" x-text="message"></div>
+    <div x-show="error" x-cloak class="mb-5 rounded-xl border border-red-800 bg-red-950 p-4 text-sm text-red-200" x-text="error"></div>
 
     <section x-show="mode === 'issue'" x-cloak class="space-y-6">
         <div class="flex gap-2 rounded-xl border border-theme-border bg-theme-card p-1">
@@ -36,7 +36,9 @@
                             class="w-full rounded-xl border border-theme-border bg-theme-card p-4 text-left transition hover:border-blue-500">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <span class="font-semibold text-white" x-text="booking.person_name"></span>
-                            <span class="rounded-md border border-amber-500/30 px-2 py-1 text-xs text-amber-300" x-text="booking.status === 'pending' ? 'Ausstehend' : 'Bestätigt'"></span>
+                            <span class="rounded-md border px-2 py-1 text-xs"
+                                  :class="booking.status === 'pending' ? 'border-amber-700 bg-amber-950 text-amber-200' : 'border-green-800 bg-green-950 text-green-200'"
+                                  x-text="booking.status === 'pending' ? 'Ausstehend' : 'Bestätigt'"></span>
                         </div>
                         <span class="mt-1 block text-xs text-theme-muted" x-text="booking.token + ' · ' + booking.email"></span>
                         <span class="mt-1 block text-xs text-theme-muted" x-text="booking.start_date.substring(0, 10) + ' – ' + booking.end_date.substring(0, 10)"></span>

@@ -43,8 +43,9 @@
     </div>
 
     <!-- Nutzer Tabelle -->
-    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
-        <table class="min-w-full divide-y divide-theme-border text-sm">
+    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm">
+        <div class="overflow-x-auto rounded-xl">
+        <table class="w-full min-w-[720px] divide-y divide-theme-border text-sm">
             <thead class="bg-theme-bg text-theme-muted text-left font-semibold uppercase tracking-wider text-[10px]">
             <tr>
                 <th class="py-3 px-5">ID</th>
@@ -59,11 +60,13 @@
             <tr class="hover:bg-[#1E2532] transition">
                 <td class="py-3 px-5 font-mono text-xs text-theme-muted">{{ .ID }}</td>
                 <td class="py-3 px-5 font-bold text-white">{{ .FirstName }} {{ .LastName }}</td>
-                <td class="py-3 px-5 text-theme-muted">{{ .Email }}</td>
+                <td class="break-all py-3 px-5 text-theme-muted">{{ .Email }}</td>
                 <td class="py-3 px-5"><span class="px-2 py-1 bg-blue-900/30 text-blue-400 rounded text-xs uppercase font-bold">{{ .Role }}</span></td>
-                <td class="py-3 px-5 text-right flex justify-end gap-2" x-data="{ menuOpen: false, deleteModalOpen: false, typedName: '', targetName: '{{ .FirstName }} {{ .LastName }}' }">
-                    <button @click="openEditUser($el.dataset)" data-id="{{ .ID }}" data-first-name="{{ .FirstName }}" data-last-name="{{ .LastName }}" data-email="{{ .Email }}" data-role="{{ .Role }}" data-oidc-sub="{{ .OidcSub }}" class="text-xs text-blue-400 hover:underline">Bearbeiten</button>
-                    <button @click="deleteModalOpen = true" class="text-xs text-red-400 hover:underline ml-2">Löschen</button>
+                <td class="py-3 px-5 text-right" x-data="{ menuOpen: false, deleteModalOpen: false, typedName: '', targetName: '{{ .FirstName }} {{ .LastName }}' }">
+                    <div class="flex justify-end gap-3 whitespace-nowrap">
+                        <button @click="openEditUser($el.dataset)" data-id="{{ .ID }}" data-first-name="{{ .FirstName }}" data-last-name="{{ .LastName }}" data-email="{{ .Email }}" data-role="{{ .Role }}" data-oidc-sub="{{ .OidcSub }}" class="text-xs text-blue-400 hover:underline">Bearbeiten</button>
+                        <button @click="deleteModalOpen = true" class="text-xs text-red-400 hover:underline">Löschen</button>
+                    </div>
 
                     <!-- Delete Modal -->
                     <div x-show="deleteModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm text-left">
@@ -86,6 +89,7 @@
             {{ end }}
             </tbody>
         </table>
+        </div>
     </div>
 
     <!-- Edit User Modal -->
