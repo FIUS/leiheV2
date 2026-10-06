@@ -2,6 +2,7 @@
 
 <div class="relative -mt-8"
      id="games-root"
+     x-cloak
      data-user-role="{{ .UserRole }}"
      data-games='{{ printf "%s" .GamesJSON }}'
      x-data="gamesCatalog">
@@ -119,7 +120,7 @@
             <div class="mb-4 flex items-center justify-between text-sm text-theme-muted" aria-live="polite">
                 <span x-text="resultSummary"></span>
             </div>
-            <div id="games-container" :class="viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6' : 'flex flex-col gap-4'">
+            <div id="games-container" class="catalog-game-grid" :class="viewMode === 'grid' ? '' : 'catalog-game-list'">
 
                 {{ range .Games }}
                 <div data-name="{{ .Name }}" data-duration="{{ .MinPlaytime }}" data-players="{{ .MinPlayers }}" data-rating="8.1"
@@ -369,9 +370,7 @@
     <!-- Detail-Modal Ende -->
 </div>
 
-<style> [x-cloak] { display: none !important; } </style>
-
 <!-- import .js-->
-<script src="/static/js/games.js?v=2"></script>
+<script src="/static/js/games.js?v=3"></script>
 
 {{ template "footer" . }}
