@@ -157,7 +157,7 @@ func TestAdminBookingsRendersAllBookingStatesAndOrigins(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Failed to execute admin_bookings.html: %v", err)
 	}
-	for _, expected := range []string{"PENDING1", "CONFIRM1", "CANCELLED1", "Ausstehend", "Bestätigt", "Storniert", "Erstellt durch Team"} {
+	for _, expected := range []string{"PENDING1", "CONFIRM1", "CANCELLED1", "Ausstehend", "Bestätigt", "Storniert", "Erstellt durch Team", `action="/admin/bookings/review"`, "Bestätigen", "Ablehnen"} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected admin bookings output to contain %q", expected)
 		}

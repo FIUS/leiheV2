@@ -103,3 +103,44 @@ func UpdateUserBooking(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/bookings?success=Buchung-geaendert")
 	}
 }
+
+func ReviewPendingBooking(c *gin.Context) {
+	bookingID, err := strconv.ParseInt(c.PostForm("id"), 10, 32)
+	if err != nil || bookingID <= 0 {
+		c.Redirect(http.StatusFound, "/admin/bookings?error=invalid-booking")
+		return
+	}
+	status := c.PostForm("status")
+	if status != "confirmed" && status != "cancelled" {
+		c.Redirect(http.StatusFound, "/admin/bookings?error=invalid-status")
+		return
+	}
+	bookingID32 := int32(bookingID)
+	if err := queries.ReviewPendingBooking(c.Request.Context(), bookingID32, status); err != nil {
+		if errors.Is(err, db.ErrBookingNotEditable) {
+			c.Redirect(http.StatusFound, "/admin/bookings?error=booking-not-pending")
+			return
+		}
+		c.String(http.StatusInternalServerError, "Buchungsstatus konnte nicht aktualisiert werden")
+		return
+	}
+
+	details, err := queries.GetBookingEmailDetailsByID(c.Request.Context(), bookingID32)
+	if err != nil {
+		logMailError("booking review details", err)
+		c.Redirect(http.StatusFound, "/admin/bookings?error=email-failed")
+		return
+	}
+	if details.Email.Valid {
+		change := "bestätigt"
+		if status == "cancelled" {
+			change = "abgelehnt und storniert"
+		}
+		if err := sendBookingUpdateEmail(details, change); err != nil {
+			logMailError("booking review", err)
+			c.Redirect(http.StatusFound, "/admin/bookings?error=email-failed")
+			return
+		}
+	}
+	c.Redirect(http.StatusFound, "/admin/bookings?success=booking-reviewed")
+}

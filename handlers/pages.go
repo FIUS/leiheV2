@@ -139,6 +139,8 @@ func RenderAdminBookings(c *gin.Context) {
 	c.HTML(http.StatusOK, "admin_bookings.html", pageData(c, gin.H{
 		"ActiveTab": "bookings",
 		"Bookings":  bookings,
+		"Success":   c.Query("success"),
+		"Error":     c.Query("error"),
 	}))
 }
 
