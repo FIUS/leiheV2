@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"leiheV2/db"
 	"leiheV2/utils"
@@ -17,7 +18,23 @@ import (
 )
 
 func RenderStaffLoans(c *gin.Context) {
-	c.HTML(http.StatusOK, "staff_loans.html", pageData(c, gin.H{}))
+	settings, err := queries.GetAppSettings(c.Request.Context())
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Einstellungen konnten nicht geladen werden")
+		return
+	}
+	c.HTML(http.StatusOK, "staff_loans.html", pageData(c, gin.H{"RequireDeposit": settings.RequireDeposit}))
+}
+
+func validateStaffLoanDeposit(deposit string, requireDeposit bool) (string, error) {
+	deposit = strings.TrimSpace(deposit)
+	if requireDeposit && deposit == "" {
+		return "", errors.New("Bitte das abgegebene Pfand erfassen")
+	}
+	if utf8.RuneCountInString(deposit) > 1000 {
+		return "", errors.New("Pfandangabe darf höchstens 1000 Zeichen lang sein")
+	}
+	return deposit, nil
 }
 
 func SearchStaffLoans(c *gin.Context) {
@@ -83,6 +100,7 @@ func staffLoanEndDate(date string) (time.Time, error) {
 type issuePrebookingRequest struct {
 	BookingID int32   `json:"booking_id" binding:"required,gt=0"`
 	ItemIDs   []int32 `json:"item_ids" binding:"required,min=1"`
+	Deposit   string  `json:"deposit"`
 }
 
 func IssuePrebookedBooking(c *gin.Context) {
@@ -91,7 +109,17 @@ func IssuePrebookedBooking(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Buchung und mindestens ein Spiel auswählen"})
 		return
 	}
-	if err := queries.IssuePrebookedLoan(c.Request.Context(), req.BookingID, req.ItemIDs); err != nil {
+	settings, err := queries.GetAppSettings(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Einstellungen konnten nicht geladen werden"})
+		return
+	}
+	deposit, err := validateStaffLoanDeposit(req.Deposit, settings.RequireDeposit)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := queries.IssuePrebookedLoan(c.Request.Context(), req.BookingID, req.ItemIDs, deposit); err != nil {
 		if errors.Is(err, db.ErrBookingNotEditable) {
 			c.JSON(http.StatusConflict, gin.H{"error": "Buchung ist nicht mehr ausstehend oder die Spielauswahl ist ungültig"})
 			return
@@ -110,6 +138,7 @@ type spontaneousLoanRequest struct {
 	ItemIDs []int32 `json:"item_ids" binding:"required,min=1"`
 	Name    string  `json:"name" binding:"required"`
 	Email   string  `json:"email"`
+	Deposit string  `json:"deposit"`
 	EndDate string  `json:"end_date" binding:"required"`
 }
 
@@ -117,6 +146,16 @@ func CreateSpontaneousStaffLoan(c *gin.Context) {
 	var req spontaneousLoanRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Name, Rückgabedatum und mindestens ein Spiel sind erforderlich"})
+		return
+	}
+	settings, err := queries.GetAppSettings(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Einstellungen konnten nicht geladen werden"})
+		return
+	}
+	deposit, err := validateStaffLoanDeposit(req.Deposit, settings.RequireDeposit)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	endDate, err := time.ParseInLocation("2006-01-02", req.EndDate, time.Local)
@@ -162,7 +201,7 @@ func CreateSpontaneousStaffLoan(c *gin.Context) {
 		return
 	}
 	bookingID, err := queries.CreateSpontaneousLoan(c.Request.Context(), token, id,
-		name, email, endDate, itemIDs)
+		name, email, deposit, endDate, itemIDs)
 	if err != nil {
 		if errors.Is(err, db.ErrBookingConflict) {
 			c.JSON(http.StatusConflict, gin.H{"error": "Mindestens eines der Spiele ist im Zeitraum bereits reserviert"})

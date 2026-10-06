@@ -15,12 +15,16 @@ document.addEventListener('alpine:init', () => {
         borrowerName: '',
         borrowerEmail: '',
         endDate: '',
+        issueDeposit: '',
+        spontaneousDeposit: '',
+        requireDeposit: false,
         error: '',
         message: '',
         itemWarning: '',
         busy: false,
 
         init() {
+            this.requireDeposit = this.$el.dataset.requireDeposit === 'true';
             const today = new Date();
             const returnDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7);
             this.endDate = `${returnDate.getFullYear()}-${String(returnDate.getMonth() + 1).padStart(2, '0')}-${String(returnDate.getDate()).padStart(2, '0')}`;
@@ -40,12 +44,17 @@ document.addEventListener('alpine:init', () => {
         clearSelection() {
             this.selectedBooking = null;
             this.selectedItemIDs = [];
+            this.issueDeposit = '';
             this.error = '';
             this.message = '';
         },
 
         async searchBookings(mode) {
             const query = mode === 'issue' ? this.issueSearch : this.returnSearch;
+            if (mode === 'return' && !query.trim()) {
+                this.returnBookings = [];
+                return;
+            }
             try {
                 const response = await fetch(`/admin/api/ausgabe/bookings?mode=${mode}&q=${encodeURIComponent(query)}`);
                 const data = await response.json();
@@ -68,7 +77,8 @@ document.addEventListener('alpine:init', () => {
             if (!this.selectedBooking || this.selectedItemIDs.length === 0) return;
             await this.postJSON('/admin/api/ausgabe/prebooked', {
                 booking_id: this.selectedBooking.id,
-                item_ids: this.selectedItemIDs.map(Number)
+                item_ids: this.selectedItemIDs.map(Number),
+                deposit: this.issueDeposit
             }, 'Ausgabe abgeschlossen.');
             if (!this.error) {
                 this.clearSelection();
@@ -163,12 +173,14 @@ document.addEventListener('alpine:init', () => {
                 item_ids: this.spontaneousItems.map(item => Number(item.id)),
                 name: this.borrowerName,
                 email: this.borrowerEmail,
+                deposit: this.spontaneousDeposit,
                 end_date: this.endDate
             }, 'Ausleihe wurde ausgegeben.');
             if (!this.error) {
                 this.spontaneousItems = [];
                 this.borrowerName = '';
                 this.borrowerEmail = '';
+                this.spontaneousDeposit = '';
                 await this.searchBookings('return');
             }
         },

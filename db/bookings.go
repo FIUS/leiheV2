@@ -145,6 +145,7 @@ type StaffLoanBooking struct {
 	Token      string          `json:"token"`
 	PersonName string          `json:"person_name"`
 	Email      string          `json:"email"`
+	Deposit    string          `json:"deposit"`
 	StartDate  time.Time       `json:"start_date"`
 	EndDate    time.Time       `json:"end_date"`
 	Status     string          `json:"status"`
@@ -152,6 +153,10 @@ type StaffLoanBooking struct {
 }
 
 func (q *Queries) SearchStaffLoanBookings(ctx context.Context, search, mode string) ([]StaffLoanBooking, error) {
+	search = strings.TrimSpace(search)
+	if mode == "return" && search == "" {
+		return []StaffLoanBooking{}, nil
+	}
 	statuses := []string{"pending", "confirmed"}
 	if mode == "return" {
 		statuses = []string{"active"}
@@ -163,7 +168,8 @@ func (q *Queries) SearchStaffLoanBookings(ctx context.Context, search, mode stri
 		SELECT b.id, b.public_token,
 		       COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
 		                b.guest_name, b.guest_email, 'Gast'),
-		       COALESCE(u.email, b.guest_email, ''), b.start_date, b.end_date, b.status::text
+		       COALESCE(u.email, b.guest_email, ''), COALESCE(b.deposit, ''),
+		       b.start_date, b.end_date, b.status::text
 		FROM bookings b
 		LEFT JOIN users u ON u.id = b.user_id
 		WHERE b.status::text = ANY($1::text[])
@@ -176,7 +182,7 @@ func (q *Queries) SearchStaffLoanBookings(ctx context.Context, search, mode stri
 		       OR COALESCE(b.guest_name, '') ILIKE '%' || $4 || '%')
 		ORDER BY b.start_date, b.created_at DESC
 		LIMIT 50
-	`, pq.Array(statuses), todayStart, tomorrowStart, strings.TrimSpace(search), mode)
+	`, pq.Array(statuses), todayStart, tomorrowStart, search, mode)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +191,7 @@ func (q *Queries) SearchStaffLoanBookings(ctx context.Context, search, mode stri
 	for rows.Next() {
 		var booking StaffLoanBooking
 		if err := rows.Scan(&booking.ID, &booking.Token, &booking.PersonName, &booking.Email,
-			&booking.StartDate, &booking.EndDate, &booking.Status); err != nil {
+			&booking.Deposit, &booking.StartDate, &booking.EndDate, &booking.Status); err != nil {
 			return nil, err
 		}
 		items, err := q.db.QueryContext(ctx, `
@@ -286,7 +292,7 @@ func (q *Queries) SearchStaffLoanItems(ctx context.Context, search string, endDa
 	return items, rows.Err()
 }
 
-func (q *Queries) CreateSpontaneousLoan(ctx context.Context, token string, staffID int32, guestName, guestEmail string, endDate time.Time, itemIDs []int32) (int32, error) {
+func (q *Queries) CreateSpontaneousLoan(ctx context.Context, token string, staffID int32, guestName, guestEmail, deposit string, endDate time.Time, itemIDs []int32) (int32, error) {
 	var bookingID int32
 	err := q.InTx(ctx, func(tx *Queries) error {
 		if len(itemIDs) == 0 {
@@ -328,6 +334,9 @@ func (q *Queries) CreateSpontaneousLoan(ctx context.Context, token string, staff
 			return err
 		}
 		bookingID = booking.ID
+		if _, err := tx.db.ExecContext(ctx, `UPDATE bookings SET deposit = NULLIF($2, '') WHERE id = $1`, booking.ID, strings.TrimSpace(deposit)); err != nil {
+			return err
+		}
 		for _, itemID := range itemIDs {
 			if err := tx.AddBookingItem(ctx, AddBookingItemParams{BookingID: booking.ID, ItemID: itemID}); err != nil {
 				return err
@@ -338,7 +347,7 @@ func (q *Queries) CreateSpontaneousLoan(ctx context.Context, token string, staff
 	return bookingID, err
 }
 
-func (q *Queries) IssuePrebookedLoan(ctx context.Context, bookingID int32, itemIDs []int32) error {
+func (q *Queries) IssuePrebookedLoan(ctx context.Context, bookingID int32, itemIDs []int32, deposit string) error {
 	return q.InTx(ctx, func(tx *Queries) error {
 		var status string
 		if err := tx.db.QueryRowContext(ctx, `
@@ -396,10 +405,11 @@ func (q *Queries) IssuePrebookedLoan(ctx context.Context, bookingID int32, itemI
 		_, err = tx.db.ExecContext(ctx, `
 			UPDATE bookings
 			SET status = 'active',
+			    deposit = NULLIF($2, ''),
 			    start_date = CURRENT_DATE,
 			    end_date = GREATEST(end_date, CURRENT_DATE)
 			WHERE id = $1
-		`, bookingID)
+		`, bookingID, strings.TrimSpace(deposit))
 		return err
 	})
 }

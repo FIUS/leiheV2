@@ -1,5 +1,5 @@
 {{ template "header" . }}
-<main id="staff-loans" x-data="staffLoans" class="mx-auto max-w-5xl">
+<main id="staff-loans" x-data="staffLoans" data-require-deposit="{{ .RequireDeposit }}" class="mx-auto max-w-5xl">
     <div class="mb-6">
         <h1 class="text-3xl font-bold text-white">Buchungen</h1>
         <p class="mt-2 text-sm text-theme-muted">Ausgaben verwalten und Spiele zurücknehmen.</p>
@@ -68,7 +68,10 @@
                         </template>
                     </div>
                     <p class="mt-3 text-xs text-theme-muted">Abgewählte Spiele werden aus dieser Buchung entfernt, zum Beispiel bei einem Defekt.</p>
-                    <button type="button" @click="issueSelectedBooking()" :disabled="busy || selectedItemIDs.length === 0"
+                    <label class="mt-4 block text-xs font-semibold uppercase text-theme-muted">Abgegebenes Pfand <span x-show="requireDeposit" class="text-red-300">*</span>
+                        <input x-model="issueDeposit" :required="requireDeposit" maxlength="1000" class="mt-1 w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm normal-case text-white" placeholder="z. B. Studierendenausweis">
+                    </label>
+                    <button type="button" @click="issueSelectedBooking()" :disabled="busy || selectedItemIDs.length === 0 || (requireDeposit && !issueDeposit.trim())"
                             class="mt-5 w-full rounded-lg bg-green-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50">
                         <span x-text="busy ? 'Wird ausgegeben …' : 'Ausgabe abschließen'"></span>
                     </button>
@@ -130,10 +133,13 @@
                         <input x-model="borrowerEmail" type="email" class="mt-1 w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm normal-case text-white" placeholder="name@example.org">
                     </label>
                 </div>
+                <label class="mt-4 block text-xs font-semibold uppercase text-theme-muted">Abgegebenes Pfand <span x-show="requireDeposit" class="text-red-300">*</span>
+                    <input x-model="spontaneousDeposit" :required="requireDeposit" maxlength="1000" class="mt-1 w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm normal-case text-white" placeholder="z. B. Studierendenausweis">
+                </label>
                 <label class="mt-4 block text-xs font-semibold uppercase text-theme-muted">Voraussichtliche Rückgabe
                     <input x-model="endDate" @change="refreshAvailability()" type="date" required class="mt-1 w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white sm:max-w-xs">
                 </label>
-                <button type="button" @click="createSpontaneousLoan()" :disabled="busy || spontaneousItems.length === 0 || spontaneousItems.some(item => !item.available)"
+                <button type="button" @click="createSpontaneousLoan()" :disabled="busy || spontaneousItems.length === 0 || spontaneousItems.some(item => !item.available) || (requireDeposit && !spontaneousDeposit.trim())"
                         class="mt-5 w-full rounded-lg bg-green-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50">
                     <span x-text="busy ? 'Wird gespeichert …' : 'Jetzt ausleihen'"></span>
                 </button>
@@ -155,6 +161,7 @@
                             <h2 class="font-semibold text-white" x-text="booking.person_name"></h2>
                             <p class="mt-1 text-xs text-theme-muted" x-text="booking.token + ' · ' + booking.email"></p>
                             <p class="mt-1 text-xs text-theme-muted" x-text="booking.start_date.substring(0, 10) + ' – ' + booking.end_date.substring(0, 10)"></p>
+                            <p class="mt-2 text-sm text-gray-200"><span class="font-semibold">Pfand abgegeben:</span> <span x-text="booking.deposit || 'Kein Pfand erfasst'"></span></p>
                             <p class="mt-3 text-sm font-semibold text-white">Spiele zurück ins Regal</p>
                             <div class="mt-2 overflow-x-auto">
                                 <table class="w-full text-left text-sm">
@@ -182,5 +189,5 @@
         </div>
     </section>
 </main>
-<script src="/static/js/staff_loans.js?v=1"></script>
+<script src="/static/js/staff_loans.js?v=3"></script>
 {{ template "footer" . }}

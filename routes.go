@@ -49,6 +49,7 @@ func SetupRoutes(r *gin.Engine) {
 
 		admin.GET("/users", handlers.RequireRole("admin"), handlers.RenderAdminUsers)
 		admin.GET("/settings", handlers.RequireRole("admin"), handlers.RenderAdminSettings)
+		admin.POST("/settings", handlers.RequireRole("admin"), handlers.UpdateAdminSettings)
 	}
 
 	// API: Items

@@ -1,11 +1,36 @@
 {{ template "header" . }}
-<div class="flex flex-col min-h-[85vh] bg-theme-bg text-gray-100 border border-theme-border rounded-xl shadow-lg mt-4 overflow-hidden">
+<div class="mx-auto mt-4 flex min-h-[85vh] w-full max-w-full min-w-0 flex-col overflow-hidden rounded-xl border border-theme-border bg-theme-bg text-gray-100 shadow-lg">
     {{ template "admin_nav" . }}
-    <main class="flex-1 p-4 md:p-8 bg-[#0B101A] overflow-y-auto">
-        <h1 class="text-3xl font-bold text-white mb-6">Einstellungen</h1>
-        <div class="bg-theme-card p-6 rounded-xl border border-theme-border text-theme-muted text-sm">
-            Globale Einstellungen (Ausleihfristen, E-Mail-Konfiguration).
-        </div>
+    <main class="min-w-0 flex-1 overflow-y-auto bg-[#0B101A] p-4 md:p-8">
+        <h1 class="mb-6 text-3xl font-bold text-white">Einstellungen</h1>
+
+        {{ if .Success }}
+        <div class="mb-5 rounded-lg border border-green-800 bg-green-950 p-4 text-sm text-green-200">Einstellungen wurden gespeichert.</div>
+        {{ end }}
+        {{ if .Error }}
+        <div class="mb-5 rounded-lg border border-red-800 bg-red-950 p-4 text-sm text-red-200">Die Einstellung konnte nicht gespeichert werden. Bitte Eingabe prüfen.</div>
+        {{ end }}
+
+        <section class="w-full max-w-3xl min-w-0 rounded-xl border border-theme-border bg-theme-card p-4 sm:p-6">
+            <h2 class="text-lg font-bold text-white">Ausleihe</h2>
+            <p class="mt-1 text-sm text-theme-muted">Regeln für die Ausgabe und Rücknahme von Spielen.</p>
+
+            <form method="POST" action="/admin/settings" class="mt-6 min-w-0">
+                <div class="flex min-w-0 items-start gap-3 rounded-lg border border-theme-border bg-theme-bg p-4">
+                    <input type="checkbox" name="require_deposit" value="true" {{ if .Settings.RequireDeposit }}checked{{ end }}
+                           class="mt-1 h-4 w-4 shrink-0 accent-blue-500">
+                    <span class="min-w-0">
+                        <span class="block text-sm font-semibold text-white">Pfand bei jeder Ausgabe erforderlich</span>
+                        <span class="mt-1 block break-words text-sm text-theme-muted">Mitarbeitende müssen bei der Ausgabe erfassen, was als Pfand abgegeben wurde. Die Angabe wird bei der Rücknahme angezeigt.</span>
+                    </span>
+                </div>
+                <input type="hidden" name="require_deposit" value="false">
+                <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="min-w-0 text-xs text-theme-muted">Änderungen gelten sofort für neue Ausgaben.</p>
+                    <button type="submit" class="w-full shrink-0 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-500 sm:w-auto">Speichern</button>
+                </div>
+            </form>
+        </section>
     </main>
 </div>
 <style> [x-cloak] { display: none !important; } </style>

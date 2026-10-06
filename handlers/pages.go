@@ -152,8 +152,16 @@ func RenderAdminBookings(c *gin.Context) {
 }
 
 func RenderAdminSettings(c *gin.Context) {
+	settings, err := queries.GetAppSettings(c.Request.Context())
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Einstellungen konnten nicht geladen werden")
+		return
+	}
 	c.HTML(http.StatusOK, "admin_settings.html", pageData(c, gin.H{
 		"ActiveTab": "settings",
+		"Settings":  settings,
+		"Success":   c.Query("success"),
+		"Error":     c.Query("error"),
 	}))
 }
 

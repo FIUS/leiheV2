@@ -66,11 +66,19 @@ CREATE TABLE bookings (
                           created_by_user_id INT REFERENCES users(id) ON DELETE SET NULL,
                           guest_name VARCHAR(255),
                           guest_email VARCHAR(255),
+                          deposit TEXT,
                           start_date TIMESTAMPTZ NOT NULL,
                           end_date TIMESTAMPTZ NOT NULL,
                           status booking_status NOT NULL DEFAULT 'pending',
                           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE app_settings (
+    id SMALLINT PRIMARY KEY CHECK (id = 1),
+    require_deposit BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+INSERT INTO app_settings (id, require_deposit) VALUES (1, FALSE);
 
 -- BOOKING_ITEMS (Der Korb-Inhalt)
 CREATE TABLE booking_items (

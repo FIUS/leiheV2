@@ -224,12 +224,13 @@ func TestStaffLoansTemplateRendersIssueAndReturnFlows(t *testing.T) {
 	}
 	var output bytes.Buffer
 	if err := tmpl.ExecuteTemplate(&output, "staff_loans.html", map[string]interface{}{
-		"UserRole": "maintainer",
-		"UserName": "Staff",
+		"UserRole":       "maintainer",
+		"UserName":       "Staff",
+		"RequireDeposit": true,
 	}); err != nil {
 		t.Fatalf("Failed to execute staff_loans.html: %v", err)
 	}
-	for _, expected := range []string{"Buchungen", "Ausgeben", "Zurücknehmen", "Vorbestellung", "Jetzt ausleihen", "Nach Spielnamen suchen", "Barcode / System-ID eingeben", "System-ID", "Lagerort", "Bitte die Spiele gleich wieder an ihren Lagerort aufräumen", "Aktive Ausleihe suchen"} {
+	for _, expected := range []string{"Buchungen", "Ausgeben", "Zurücknehmen", "Vorbestellung", "Jetzt ausleihen", "Nach Spielnamen suchen", "Barcode / System-ID eingeben", "System-ID", "Lagerort", "Bitte die Spiele gleich wieder an ihren Lagerort aufräumen", "Aktive Ausleihe suchen", "Abgegebenes Pfand", "booking.deposit || 'Kein Pfand erfasst'", "data-require-deposit=\"true\""} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected staff lending page to contain %q", expected)
 		}
@@ -237,6 +238,26 @@ func TestStaffLoansTemplateRendersIssueAndReturnFlows(t *testing.T) {
 
 	if bytes.Contains(output.Bytes(), []byte("Kamera")) {
 		t.Error("staff lending page should not render camera scanning controls")
+	}
+}
+
+func TestAdminSettingsTemplateRendersDepositSettingWithoutOverflow(t *testing.T) {
+	tmpl, err := template.ParseGlob("../templates/*.html")
+	if err != nil {
+		t.Fatalf("Failed to parse templates: %v", err)
+	}
+	var output bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&output, "admin_settings.html", map[string]interface{}{
+		"UserRole":  "admin",
+		"ActiveTab": "settings",
+		"Settings":  db.AppSettings{RequireDeposit: true},
+	}); err != nil {
+		t.Fatalf("Failed to execute admin_settings.html: %v", err)
+	}
+	for _, expected := range []string{"Pfand bei jeder Ausgabe erforderlich", `name="require_deposit" value="true" checked`, "max-w-full min-w-0", `action="/admin/settings"`} {
+		if !bytes.Contains(output.Bytes(), []byte(expected)) {
+			t.Errorf("Expected admin settings output to contain %q", expected)
+		}
 	}
 }
 
