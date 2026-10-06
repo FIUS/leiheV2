@@ -1,27 +1,27 @@
 {{ template "header" . }}
 
 <main class="relative z-10 w-full min-h-[70vh] flex items-center justify-center py-12 px-4">
-    <div class="w-full max-w-2xl bg-fius-card border border-fius-border rounded-2xl shadow-2xl p-6 md:p-8"
+    <div class="w-full max-w-2xl bg-theme-card border border-theme-border rounded-2xl shadow-2xl p-6 md:p-8"
          id="checkout-root"
          data-user-role="{{ .UserRole }}"
          x-data="checkoutFlow">
 
         <!-- Kopfzeile -->
-        <div class="border-b border-fius-border pb-4 mb-6 flex justify-between items-center">
+        <div class="border-b border-theme-border pb-4 mb-6 flex justify-between items-center">
             <h1 class="text-xl font-bold text-white">Ausleihe abschließen</h1>
-            <span class="text-xs font-mono text-fius-muted" x-text="'Schritt ' + checkoutStep + ' von 3'"></span>
+            <span class="text-xs font-mono text-theme-muted" x-text="'Schritt ' + checkoutStep + ' von 3'"></span>
         </div>
 
         <!-- Übersicht der gewählten Spiele -->
-        <div x-show="checkoutStep < 3 && cartItems.length > 0" class="mb-6 bg-fius-bg border border-fius-border rounded-xl overflow-hidden">
-            <div class="px-4 py-3 border-b border-fius-border flex items-center justify-between">
-                <span class="text-[10px] uppercase font-bold text-fius-muted">Ausgewählte Spiele</span>
-                <span class="text-xs text-fius-muted" x-text="cartItems.length + (cartItems.length === 1 ? ' Spiel' : ' Spiele')"></span>
+        <div x-show="checkoutStep < 3 && cartItems.length > 0" class="mb-6 bg-theme-bg border border-theme-border rounded-xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-theme-border flex items-center justify-between">
+                <span class="text-[10px] uppercase font-bold text-theme-muted">Ausgewählte Spiele</span>
+                <span class="text-xs text-theme-muted" x-text="cartItems.length + (cartItems.length === 1 ? ' Spiel' : ' Spiele')"></span>
             </div>
-            <div class="divide-y divide-fius-border">
+            <div class="divide-y divide-theme-border">
                 <template x-for="item in cartItems" :key="item.id">
                     <div class="flex items-center gap-3 px-4 py-3">
-                        <div class="w-10 h-10 rounded-lg bg-[#1E2532] border border-fius-border overflow-hidden shrink-0">
+                        <div class="w-10 h-10 rounded-lg bg-[#1E2532] border border-theme-border overflow-hidden shrink-0">
                             <img :src="item.image || '/static/images/image-placeholder.svg'" :alt="item.name" onerror="this.onerror=null; this.src='/static/images/image-placeholder.svg';" class="w-full h-full object-cover">
                         </div>
                         <span class="min-w-0 flex-1 truncate text-sm text-gray-200" :title="item.name" x-text="item.name"></span>
@@ -46,10 +46,10 @@
         <div x-show="checkoutStep === 1" x-cloak class="flex flex-col items-center text-center space-y-6 py-6">
             <div>
                 <h3 class="text-xl font-bold text-white mb-2">Wie möchtest du ausleihen?</h3>
-                <p class="text-sm text-fius-muted max-w-md">Logge dich mit deinem Account ein oder fahre als Gast fort.</p>
+                <p class="text-sm text-theme-muted max-w-md">Logge dich mit deinem Account ein oder fahre als Gast fort.</p>
             </div>
             <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md pt-2">
-                <a href="/login" class="flex-1 text-center bg-fius-bg border border-fius-border hover:border-blue-500 text-white font-bold py-3 rounded-xl transition">
+                <a href="/login" class="flex-1 text-center bg-theme-bg border border-theme-border hover:border-blue-500 text-white font-bold py-3 rounded-xl transition">
                     Einloggen
                 </a>
                 <button type="button" @click="checkoutStep = 2" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-600/20 transition">
@@ -62,26 +62,26 @@
         <div x-show="checkoutStep === 2" x-cloak class="space-y-6">
 
             <div class="flex gap-4">
-                <div class="flex-1 bg-fius-bg border border-fius-border rounded-xl p-4 text-center transition" :class="!checkoutData.startDate ? 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : ''">
-                    <span class="text-[10px] text-fius-muted uppercase font-bold block mb-1">Abholung</span>
+                <div class="flex-1 bg-theme-bg border border-theme-border rounded-xl p-4 text-center transition" :class="!checkoutData.startDate ? 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : ''">
+                    <span class="text-[10px] text-theme-muted uppercase font-bold block mb-1">Abholung</span>
                     <span class="text-white font-bold" x-text="formatDate(checkoutData.startDate)"></span>
                 </div>
-                <div class="flex-1 bg-fius-bg border border-fius-border rounded-xl p-4 text-center transition" :class="checkoutData.startDate && !checkoutData.endDate ? 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : ''">
-                    <span class="text-[10px] text-fius-muted uppercase font-bold block mb-1">Rückgabe</span>
+                <div class="flex-1 bg-theme-bg border border-theme-border rounded-xl p-4 text-center transition" :class="checkoutData.startDate && !checkoutData.endDate ? 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : ''">
+                    <span class="text-[10px] text-theme-muted uppercase font-bold block mb-1">Rückgabe</span>
                     <span class="text-white font-bold" x-text="formatDate(checkoutData.endDate)"></span>
                 </div>
             </div>
 
             <!-- Interaktiver Kalender, zentriert auf Desktop -->
             <div class="max-w-sm mx-auto">
-                <div class="bg-fius-bg border border-fius-border rounded-xl p-5 select-none" @mouseleave="calendar.hoverDate = null">
+                <div class="bg-theme-bg border border-theme-border rounded-xl p-5 select-none" @mouseleave="calendar.hoverDate = null">
                     <div class="flex justify-between items-center mb-6">
-                        <button type="button" @click="if(calendar.month === 0) { calendar.month = 11; calendar.year--; } else { calendar.month--; }" class="text-fius-muted hover:text-white p-2 rounded-lg hover:bg-[#1E2532] transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+                        <button type="button" @click="if(calendar.month === 0) { calendar.month = 11; calendar.year--; } else { calendar.month--; }" class="text-theme-muted hover:text-white p-2 rounded-lg hover:bg-[#1E2532] transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
                         <span class="text-white font-bold text-sm uppercase tracking-widest" x-text="new Date(calendar.year, calendar.month).toLocaleString('de-DE', { month: 'long', year: 'numeric' })"></span>
-                        <button type="button" @click="if(calendar.month === 11) { calendar.month = 0; calendar.year++; } else { calendar.month++; }" class="text-fius-muted hover:text-white p-2 rounded-lg hover:bg-[#1E2532] transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                        <button type="button" @click="if(calendar.month === 11) { calendar.month = 0; calendar.year++; } else { calendar.month++; }" class="text-theme-muted hover:text-white p-2 rounded-lg hover:bg-[#1E2532] transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
                     </div>
                     <div class="grid grid-cols-7 gap-1 mb-2 text-center">
-                        <template x-for="day in ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']"><div class="text-[10px] font-bold text-fius-muted uppercase" x-text="day"></div></template>
+                        <template x-for="day in ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']"><div class="text-[10px] font-bold text-theme-muted uppercase" x-text="day"></div></template>
                     </div>
                     <div class="grid grid-cols-7 gap-y-2 gap-x-0 relative">
                         <template x-for="blank in checkoutBlankDays"><div class="aspect-square"></div></template>
@@ -101,7 +101,7 @@
                                      :class="{
                                         'opacity-30 cursor-not-allowed': isPast(day),
                                         'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 cursor-not-allowed': !isPast(day) && isDayBlocked(day) && !isDateSelected(day),
-                                        'bg-[#1E2532] text-gray-300 border-fius-border hover:border-blue-500': !isPast(day) && !isDateSelected(day) && !isDayBlocked(day),
+                                        'bg-[#1E2532] text-gray-300 border-theme-border hover:border-blue-500': !isPast(day) && !isDateSelected(day) && !isDayBlocked(day),
                                         'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-110': isDateSelected(day) && conflictingGameIds.length === 0,
                                         'bg-red-500 text-white shadow-lg shadow-red-500/30 scale-110': isDateSelected(day) && conflictingGameIds.length > 0
                                      }">
@@ -121,20 +121,20 @@
 
             <!-- Gast Daten Formular -->
             <template x-if="'{{ .UserRole }}' === 'guest' || '{{ .UserRole }}' === ''">
-                <div class="space-y-4 pt-4 border-t border-fius-border">
+                <div class="space-y-4 pt-4 border-t border-theme-border">
                     <div>
-                        <label class="block text-xs font-bold text-fius-muted uppercase mb-1">Name</label>
-                        <input type="text" x-model="checkoutData.guestName" placeholder="Vor- und Nachname" class="w-full bg-fius-bg border border-fius-border rounded-lg p-2.5 text-white text-sm focus:border-blue-500 outline-none">
+                        <label class="block text-xs font-bold text-theme-muted uppercase mb-1">Name</label>
+                        <input type="text" x-model="checkoutData.guestName" placeholder="Vor- und Nachname" class="w-full bg-theme-bg border border-theme-border rounded-lg p-2.5 text-white text-sm focus:border-blue-500 outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-fius-muted uppercase mb-1">E-Mail</label>
-                        <input type="email" x-model="checkoutData.guestEmail" placeholder="name@beispiel.de" class="w-full bg-fius-bg border border-fius-border rounded-lg p-2.5 text-white text-sm focus:border-blue-500 outline-none">
+                        <label class="block text-xs font-bold text-theme-muted uppercase mb-1">E-Mail</label>
+                        <input type="email" x-model="checkoutData.guestEmail" placeholder="name@beispiel.de" class="w-full bg-theme-bg border border-theme-border rounded-lg p-2.5 text-white text-sm focus:border-blue-500 outline-none">
                     </div>
                 </div>
             </template>
 
             <div class="pt-4 flex items-center justify-between gap-4">
-                <button type="button" x-show="'{{ .UserRole }}' === 'guest' || '{{ .UserRole }}' === ''" @click="checkoutStep = 1" class="text-sm text-fius-muted hover:text-white">Zurück</button>
+                <button type="button" x-show="'{{ .UserRole }}' === 'guest' || '{{ .UserRole }}' === ''" @click="checkoutStep = 1" class="text-sm text-theme-muted hover:text-white">Zurück</button>
                 <button type="button" @click="submitCheckout()" :disabled="isLoading" class="ml-auto bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition">
                     <span x-show="!isLoading">Verbindlich reservieren</span>
                     <span x-show="isLoading" x-cloak>Wird geprüft...</span>
@@ -148,9 +148,9 @@
                 <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
             </div>
             <h3 class="text-2xl font-bold text-white">Reservierung erfolgreich!</h3>
-            <p class="text-sm text-fius-muted max-w-md">Deine Buchung wurde angelegt. Notiere dir deinen Buchungs-Code:</p>
-            <div class="my-4 bg-fius-bg border border-fius-border px-6 py-4 rounded-xl w-full max-w-xs">
-                <span class="block text-[10px] text-fius-muted uppercase font-bold mb-1">Buchungs-Token</span>
+            <p class="text-sm text-theme-muted max-w-md">Deine Buchung wurde angelegt. Notiere dir deinen Buchungs-Code:</p>
+            <div class="my-4 bg-theme-bg border border-theme-border px-6 py-4 rounded-xl w-full max-w-xs">
+                <span class="block text-[10px] text-theme-muted uppercase font-bold mb-1">Buchungs-Token</span>
                 <span class="text-xl font-mono text-white font-bold tracking-widest" x-text="bookingToken"></span>
             </div>
             <a href="/games" class="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-6 rounded-xl transition">Zurück zum Spielekatalog</a>

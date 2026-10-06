@@ -60,7 +60,7 @@ func main() {
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
-	r.Use(sessions.Sessions("fius_session", store))
+	r.Use(sessions.Sessions("app_session", store))
 
 	r.Static("/static", "./static")
 	r.LoadHTMLGlob("templates/*.html")
@@ -68,7 +68,7 @@ func main() {
 	// Lade alle Routen aus routes.go
 	SetupRoutes(r)
 
-	log.Println("🚀 FIUS Verleih-Backend startet auf http://localhost:8080")
+	log.Println("Leih-Backend startet auf http://localhost:8080")
 	r.Run(":8080")
 }
 

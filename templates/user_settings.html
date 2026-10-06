@@ -1,8 +1,8 @@
 {{ template "header" . }}
 <main class="max-w-2xl mx-auto">
-    <div class="bg-fius-card border border-fius-border rounded-2xl shadow-2xl p-6 md:p-8">
+    <div class="bg-theme-card border border-theme-border rounded-2xl shadow-2xl p-6 md:p-8">
         <h1 class="text-2xl font-bold text-white mb-2">Benutzereinstellungen</h1>
-        <p class="text-sm text-fius-muted mb-6">Verwalte die Daten deines Kontos.</p>
+        <p class="text-sm text-theme-muted mb-6">Verwalte die Daten deines Kontos.</p>
 
         {{ if .Success }}<div class="mb-6 rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-sm text-green-400">{{ .Success }}</div>{{ end }}
         {{ if .Error }}<div class="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">{{ .Error }}</div>{{ end }}
@@ -15,19 +15,19 @@
 
         <form method="POST" action="/api/user/settings" class="space-y-5">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label class="block text-xs font-bold text-fius-muted uppercase">Vorname
-                    <input name="first_name" value="{{ .User.FirstName }}" {{ if .CurrentUserIsOIDC }}disabled{{ end }} required class="mt-1 w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded-lg disabled:opacity-60">
+                <label class="block text-xs font-bold text-theme-muted uppercase">Vorname
+                    <input name="first_name" value="{{ .User.FirstName }}" {{ if .CurrentUserIsOIDC }}disabled{{ end }} required class="mt-1 w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded-lg disabled:opacity-60">
                 </label>
-                <label class="block text-xs font-bold text-fius-muted uppercase">Nachname
-                    <input name="last_name" value="{{ .User.LastName }}" {{ if .CurrentUserIsOIDC }}disabled{{ end }} required class="mt-1 w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded-lg disabled:opacity-60">
+                <label class="block text-xs font-bold text-theme-muted uppercase">Nachname
+                    <input name="last_name" value="{{ .User.LastName }}" {{ if .CurrentUserIsOIDC }}disabled{{ end }} required class="mt-1 w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded-lg disabled:opacity-60">
                 </label>
             </div>
-            <label class="block text-xs font-bold text-fius-muted uppercase">E-Mail
-                <input type="email" name="email" value="{{ .User.Email }}" {{ if .CurrentUserIsOIDC }}disabled{{ end }} required class="mt-1 w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded-lg disabled:opacity-60">
+            <label class="block text-xs font-bold text-theme-muted uppercase">E-Mail
+                <input type="email" name="email" value="{{ .User.Email }}" {{ if .CurrentUserIsOIDC }}disabled{{ end }} required class="mt-1 w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded-lg disabled:opacity-60">
             </label>
             <div>
-                <span class="block text-xs font-bold text-fius-muted uppercase mb-1">Rolle</span>
-                <span class="inline-flex rounded-lg border border-fius-border bg-fius-bg px-3 py-2 text-sm text-blue-300 uppercase">{{ .User.Role }}</span>
+                <span class="block text-xs font-bold text-theme-muted uppercase mb-1">Rolle</span>
+                <span class="inline-flex rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-sm text-blue-300 uppercase">{{ .User.Role }}</span>
             </div>
             {{ if not .CurrentUserIsOIDC }}<button class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-6 rounded-lg transition">Speichern</button>{{ end }}
         </form>

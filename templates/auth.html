@@ -1,31 +1,31 @@
 {{ template "header" . }}
 <main class="min-h-[70vh] flex items-center justify-center px-4 py-12">
-    <div class="w-full max-w-md bg-fius-card border border-fius-border rounded-2xl shadow-2xl p-6 md:p-8">
+    <div class="w-full max-w-md bg-theme-card border border-theme-border rounded-2xl shadow-2xl p-6 md:p-8">
         <h1 class="text-2xl font-bold text-white mb-6">{{ if .Register }}Registrieren{{ else }}Anmelden{{ end }}</h1>
         {{ if .Error }}
         <div class="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">{{ .Error }}</div>
         {{ end }}
         {{ if .Register }}
         <form method="POST" action="/auth/local/register" class="space-y-4">
-            <input type="text" name="first_name" required placeholder="Vorname" class="w-full bg-fius-bg border border-fius-border text-white p-3 rounded-lg">
-            <input type="text" name="last_name" required placeholder="Nachname" class="w-full bg-fius-bg border border-fius-border text-white p-3 rounded-lg">
-            <input type="email" name="email" required placeholder="E-Mail" class="w-full bg-fius-bg border border-fius-border text-white p-3 rounded-lg">
-            <input type="password" name="password" required minlength="8" placeholder="Passwort (mindestens 8 Zeichen)" class="w-full bg-fius-bg border border-fius-border text-white p-3 rounded-lg">
+            <input type="text" name="first_name" required placeholder="Vorname" class="w-full bg-theme-bg border border-theme-border text-white p-3 rounded-lg">
+            <input type="text" name="last_name" required placeholder="Nachname" class="w-full bg-theme-bg border border-theme-border text-white p-3 rounded-lg">
+            <input type="email" name="email" required placeholder="E-Mail" class="w-full bg-theme-bg border border-theme-border text-white p-3 rounded-lg">
+            <input type="password" name="password" required minlength="8" placeholder="Passwort (mindestens 8 Zeichen)" class="w-full bg-theme-bg border border-theme-border text-white p-3 rounded-lg">
             <button class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition">Konto erstellen</button>
         </form>
-        <p class="mt-5 text-sm text-fius-muted text-center">Bereits registriert? <a href="/login" class="text-blue-400 hover:text-blue-300">Anmelden</a></p>
+        <p class="mt-5 text-sm text-theme-muted text-center">Bereits registriert? <a href="/login" class="text-blue-400 hover:text-blue-300">Anmelden</a></p>
         {{ else }}
         {{ if .OIDCEnabled }}
         <a href="/auth/stuvus/login" class="block w-full text-center bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition">Mit stuvus SSO anmelden</a>
         {{ end }}
         {{ if .LocalAuth }}
-        {{ if .OIDCEnabled }}<div class="my-6 flex items-center gap-3 text-xs text-fius-muted"><span class="h-px flex-1 bg-fius-border"></span>oder<span class="h-px flex-1 bg-fius-border"></span></div>{{ end }}
+        {{ if .OIDCEnabled }}<div class="my-6 flex items-center gap-3 text-xs text-theme-muted"><span class="h-px flex-1 bg-theme-border"></span>oder<span class="h-px flex-1 bg-theme-border"></span></div>{{ end }}
         <form method="POST" action="/auth/local/login" class="space-y-4">
-            <input type="email" name="email" required placeholder="E-Mail" class="w-full bg-fius-bg border border-fius-border text-white p-3 rounded-lg">
-            <input type="password" name="password" required placeholder="Passwort" class="w-full bg-fius-bg border border-fius-border text-white p-3 rounded-lg">
-            <button class="w-full bg-fius-blue border border-fius-border hover:border-blue-500 text-white font-bold py-3 rounded-xl transition">Mit E-Mail anmelden</button>
+            <input type="email" name="email" required placeholder="E-Mail" class="w-full bg-theme-bg border border-theme-border text-white p-3 rounded-lg">
+            <input type="password" name="password" required placeholder="Passwort" class="w-full bg-theme-bg border border-theme-border text-white p-3 rounded-lg">
+            <button class="w-full bg-theme-blue border border-theme-border hover:border-blue-500 text-white font-bold py-3 rounded-xl transition">Mit E-Mail anmelden</button>
         </form>
-        <p class="mt-5 text-sm text-fius-muted text-center">Noch kein Konto? <a href="/register" class="text-blue-400 hover:text-blue-300">Registrieren</a></p>
+        <p class="mt-5 text-sm text-theme-muted text-center">Noch kein Konto? <a href="/register" class="text-blue-400 hover:text-blue-300">Registrieren</a></p>
         {{ end }}
         {{ end }}
     </div>

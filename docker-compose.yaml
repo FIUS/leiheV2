@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: fius-verleih-db
+    container_name: leih-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set in .env}
@@ -15,7 +15,7 @@ services:
       - ./db/migrations/001_auth.sql:/docker-entrypoint-initdb.d/2_auth.sql
       - ./db/migrations/002_item_expansion.sql:/docker-entrypoint-initdb.d/3_item_expansion.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fius -d verleih"]
+      test: ["CMD-SHELL", "pg_isready -U leih -d verleih"]
       interval: 5s
       timeout: 5s
       retries: 10

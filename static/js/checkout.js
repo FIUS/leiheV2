@@ -15,7 +15,7 @@ document.addEventListener('alpine:init', () => {
         conflictWarning: '',
 
         init() {
-            const saved = localStorage.getItem('fius_cart');
+            const saved = localStorage.getItem('cart');
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
@@ -51,7 +51,7 @@ document.addEventListener('alpine:init', () => {
         removeFromCart(itemID) {
             this.cartItems = this.cartItems.filter(item => Number(item.id) !== Number(itemID));
             this.cart = this.cart.filter(id => Number(id) !== Number(itemID));
-            localStorage.setItem('fius_cart', JSON.stringify(this.cartItems));
+            localStorage.setItem('cart', JSON.stringify(this.cartItems));
 
             this.blockedPeriods = this.blockedPeriods.filter(period => Number(period.gameId) !== Number(itemID));
             this.checkConflicts();
@@ -226,7 +226,7 @@ document.addEventListener('alpine:init', () => {
                 if (res.ok) {
                     this.bookingToken = data.token;
                     this.checkoutStep = 3;
-                    localStorage.removeItem('fius_cart');
+                    localStorage.removeItem('cart');
                 } else if (res.status === 409 && data.conflicts) {
                     this.errorMessage = data.error + ' Betroffen: ' + data.conflicts.join(', ');
                 } else {

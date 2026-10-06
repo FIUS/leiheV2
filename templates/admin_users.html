@@ -1,5 +1,5 @@
 {{ template "header" . }}
-<div class="flex flex-col min-h-[85vh] bg-fius-bg text-gray-100 border border-fius-border rounded-xl shadow-lg mt-4 overflow-hidden">
+<div class="flex flex-col min-h-[85vh] bg-theme-bg text-gray-100 border border-theme-border rounded-xl shadow-lg mt-4 overflow-hidden">
     {{ template "admin_nav" . }}
     <main class="flex-1 p-4 md:p-8 bg-[#0B101A] overflow-y-auto">
 <div x-data="adminUsersManagement">
@@ -9,30 +9,30 @@
 
     <!-- Akkordeon: Nutzer anlegen -->
     <div class="mb-8">
-        <button @click="showAddUserForm = !showAddUserForm" class="w-full bg-fius-card hover:bg-[#1E2532] border border-fius-border p-4 rounded-xl flex justify-between items-center transition">
+        <button @click="showAddUserForm = !showAddUserForm" class="w-full bg-theme-card hover:bg-[#1E2532] border border-theme-border p-4 rounded-xl flex justify-between items-center transition">
             <span class="font-bold text-lg text-white" x-text="showAddUserForm ? 'Formular schließen' : '+ Neuen Nutzer anlegen'"></span>
-            <svg class="w-6 h-6 text-fius-muted transform transition-transform" :class="showAddUserForm ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            <svg class="w-6 h-6 text-theme-muted transform transition-transform" :class="showAddUserForm ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </button>
 
-        <div x-show="showAddUserForm" x-cloak class="bg-fius-card border-x border-b border-fius-border p-6 rounded-b-xl shadow-md mt-[-8px] pt-8">
+        <div x-show="showAddUserForm" x-cloak class="bg-theme-card border-x border-b border-theme-border p-6 rounded-b-xl shadow-md mt-[-8px] pt-8">
             <form method="POST" action="/api/users" class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Vorname *</label><input type="text" name="first_name" required class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Nachname *</label><input type="text" name="last_name" required class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">E-Mail *</label><input type="email" name="email" required class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                    <div><label class="block text-xs font-bold text-theme-muted uppercase mb-1">Vorname *</label><input type="text" name="first_name" required class="w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded"></div>
+                    <div><label class="block text-xs font-bold text-theme-muted uppercase mb-1">Nachname *</label><input type="text" name="last_name" required class="w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded"></div>
+                    <div><label class="block text-xs font-bold text-theme-muted uppercase mb-1">E-Mail *</label><input type="email" name="email" required class="w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded"></div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-fius-muted uppercase mb-1">Rolle *</label>
-                        <select name="role" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded">
+                        <label class="block text-xs font-bold text-theme-muted uppercase mb-1">Rolle *</label>
+                        <select name="role" class="w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded">
                             <option value="user">User</option>
                             <option value="maintainer">Maintainer</option>
                             <option value="admin">Admin</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-fius-muted uppercase mb-1">OIDC Sub</label>
-                        <input type="text" name="oidc_sub" placeholder="Optional" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded">
+                        <label class="block text-xs font-bold text-theme-muted uppercase mb-1">OIDC Sub</label>
+                        <input type="text" name="oidc_sub" placeholder="Optional" class="w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded">
                     </div>
                 </div>
                 <div class="pt-4 flex justify-end">
@@ -43,9 +43,9 @@
     </div>
 
     <!-- Nutzer Tabelle -->
-    <div class="bg-fius-card border border-fius-border rounded-xl shadow-sm overflow-hidden">
-        <table class="min-w-full divide-y divide-fius-border text-sm">
-            <thead class="bg-fius-bg text-fius-muted text-left font-semibold uppercase tracking-wider text-[10px]">
+    <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-hidden">
+        <table class="min-w-full divide-y divide-theme-border text-sm">
+            <thead class="bg-theme-bg text-theme-muted text-left font-semibold uppercase tracking-wider text-[10px]">
             <tr>
                 <th class="py-3 px-5">ID</th>
                 <th class="py-3 px-5">Name</th>
@@ -54,12 +54,12 @@
                 <th class="py-3 px-5 text-right">Aktion</th>
             </tr>
             </thead>
-            <tbody class="divide-y divide-fius-border text-gray-200">
+            <tbody class="divide-y divide-theme-border text-gray-200">
             {{ range .Users }}
             <tr class="hover:bg-[#1E2532] transition">
-                <td class="py-3 px-5 font-mono text-xs text-fius-muted">{{ .ID }}</td>
+                <td class="py-3 px-5 font-mono text-xs text-theme-muted">{{ .ID }}</td>
                 <td class="py-3 px-5 font-bold text-white">{{ .FirstName }} {{ .LastName }}</td>
-                <td class="py-3 px-5 text-fius-muted">{{ .Email }}</td>
+                <td class="py-3 px-5 text-theme-muted">{{ .Email }}</td>
                 <td class="py-3 px-5"><span class="px-2 py-1 bg-blue-900/30 text-blue-400 rounded text-xs uppercase font-bold">{{ .Role }}</span></td>
                 <td class="py-3 px-5 text-right flex justify-end gap-2" x-data="{ menuOpen: false, deleteModalOpen: false, typedName: '', targetName: '{{ .FirstName }} {{ .LastName }}' }">
                     <button @click="openEditUser($el.dataset)" data-id="{{ .ID }}" data-first-name="{{ .FirstName }}" data-last-name="{{ .LastName }}" data-email="{{ .Email }}" data-role="{{ .Role }}" data-oidc-sub="{{ .OidcSub }}" class="text-xs text-blue-400 hover:underline">Bearbeiten</button>
@@ -67,15 +67,15 @@
 
                     <!-- Delete Modal -->
                     <div x-show="deleteModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm text-left">
-                        <div @click.away="deleteModalOpen = false" class="bg-fius-card border border-fius-border p-6 rounded-xl shadow-2xl w-full max-w-md">
+                        <div @click.away="deleteModalOpen = false" class="bg-theme-card border border-theme-border p-6 rounded-xl shadow-2xl w-full max-w-md">
                             <h3 class="text-lg font-bold text-white mb-2">Nutzer löschen?</h3>
-                            <p class="text-sm text-fius-muted mb-4">Tippe <strong class="text-white">{{ .FirstName }} {{ .LastName }}</strong> ein:</p>
+                            <p class="text-sm text-theme-muted mb-4">Tippe <strong class="text-white">{{ .FirstName }} {{ .LastName }}</strong> ein:</p>
                             <form action="/api/users/delete" method="POST" class="space-y-4">
                                 <input type="hidden" name="id" value="{{ .ID }}">
                                 <input type="hidden" name="real_name" value="{{ .FirstName }} {{ .LastName }}">
-                                <input type="text" x-model="typedName" name="confirm_name" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded">
+                                <input type="text" x-model="typedName" name="confirm_name" class="w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded">
                                 <div class="flex justify-end gap-2">
-                                    <button type="button" @click="deleteModalOpen = false" class="bg-fius-bg border border-fius-border text-white text-xs font-bold py-2 px-4 rounded-lg">Abbrechen</button>
+                                    <button type="button" @click="deleteModalOpen = false" class="bg-theme-bg border border-theme-border text-white text-xs font-bold py-2 px-4 rounded-lg">Abbrechen</button>
                                     <button type="submit" :disabled="typedName !== targetName" :class="typedName === targetName ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-600/30 text-gray-400 cursor-not-allowed'" class="text-xs font-bold py-2 px-4 rounded-lg">Löschen</button>
                                 </div>
                             </form>
@@ -90,28 +90,28 @@
 
     <!-- Edit User Modal -->
     <div x-show="editUserModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div @click.away="editUserModalOpen = false" class="bg-fius-card border border-fius-border p-6 rounded-xl shadow-2xl w-full max-w-2xl">
-            <h3 class="text-xl font-bold text-white mb-4 border-b border-fius-border pb-3">Nutzer bearbeiten</h3>
+        <div @click.away="editUserModalOpen = false" class="bg-theme-card border border-theme-border p-6 rounded-xl shadow-2xl w-full max-w-2xl">
+            <h3 class="text-xl font-bold text-white mb-4 border-b border-theme-border pb-3">Nutzer bearbeiten</h3>
             <form method="POST" action="/api/users/update" class="space-y-4">
                 <input type="hidden" name="id" :value="editUser.id">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Vorname *</label><input type="text" name="first_name" :value="editUser.first_name" required class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">Nachname *</label><input type="text" name="last_name" :value="editUser.last_name" required class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">E-Mail *</label><input type="email" name="email" :value="editUser.email" required class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                    <div><label class="block text-xs font-bold text-theme-muted uppercase mb-1">Vorname *</label><input type="text" name="first_name" :value="editUser.first_name" required class="w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded"></div>
+                    <div><label class="block text-xs font-bold text-theme-muted uppercase mb-1">Nachname *</label><input type="text" name="last_name" :value="editUser.last_name" required class="w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded"></div>
+                    <div><label class="block text-xs font-bold text-theme-muted uppercase mb-1">E-Mail *</label><input type="email" name="email" :value="editUser.email" required class="w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded"></div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-fius-muted uppercase mb-1">Rolle *</label>
-                        <select name="role" x-model="editUser.role" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded">
+                        <label class="block text-xs font-bold text-theme-muted uppercase mb-1">Rolle *</label>
+                        <select name="role" x-model="editUser.role" class="w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded">
                             <option value="user">User</option>
                             <option value="maintainer">Maintainer</option>
                             <option value="admin">Admin</option>
                         </select>
                     </div>
-                    <div><label class="block text-xs font-bold text-fius-muted uppercase mb-1">OIDC Sub</label><input type="text" name="oidc_sub" :value="editUser.oidc_sub" class="w-full bg-fius-bg border border-fius-border text-white p-2.5 rounded"></div>
+                    <div><label class="block text-xs font-bold text-theme-muted uppercase mb-1">OIDC Sub</label><input type="text" name="oidc_sub" :value="editUser.oidc_sub" class="w-full bg-theme-bg border border-theme-border text-white p-2.5 rounded"></div>
                 </div>
                 <div class="pt-6 flex justify-end gap-3">
-                    <button type="button" @click="editUserModalOpen = false" class="bg-fius-bg border border-fius-border text-white font-bold py-2.5 px-6 rounded-lg">Abbrechen</button>
+                    <button type="button" @click="editUserModalOpen = false" class="bg-theme-bg border border-theme-border text-white font-bold py-2.5 px-6 rounded-lg">Abbrechen</button>
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition">Speichern</button>
                 </div>
             </form>

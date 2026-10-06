@@ -21,7 +21,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             // Korb aus dem LocalStorage laden & alte kaputte Daten rausfiltern
-            const saved = localStorage.getItem('fius_cart');
+            const saved = localStorage.getItem('cart');
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
@@ -50,17 +50,17 @@ document.addEventListener('alpine:init', () => {
         addToCart(id, name, image) {
             if (!this.isInCart(id)) {
                 this.cart.push({ id: id, name: name, image: image || '' });
-                localStorage.setItem('fius_cart', JSON.stringify(this.cart));
+                localStorage.setItem('cart', JSON.stringify(this.cart));
             }
         },
 
         removeFromCart(id) {
             this.cart = this.cart.filter(item => item.id !== id);
-            localStorage.setItem('fius_cart', JSON.stringify(this.cart));
+            localStorage.setItem('cart', JSON.stringify(this.cart));
         },
 
         proceedToCheckout() {
-            localStorage.setItem('fius_cart', JSON.stringify(this.cart));
+            localStorage.setItem('cart', JSON.stringify(this.cart));
             window.location.href = '/checkout';
         },
 

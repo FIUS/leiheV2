@@ -35,7 +35,7 @@ func newBGGRequest(method, requestURL string) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "FIUS-LeiheV2/1.0 (University of Stuttgart)")
+	req.Header.Set("User-Agent", "LeiheV2/1.0")
 	if token := strings.TrimSpace(os.Getenv("BGG_API_TOKEN")); token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
