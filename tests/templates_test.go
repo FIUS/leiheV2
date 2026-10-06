@@ -234,7 +234,36 @@ func TestStaffLoansTemplateRendersIssueAndReturnFlows(t *testing.T) {
 			t.Errorf("Expected staff lending page to contain %q", expected)
 		}
 	}
+
 	if bytes.Contains(output.Bytes(), []byte("Kamera")) {
 		t.Error("staff lending page should not render camera scanning controls")
+	}
+}
+
+func TestGamesTemplateRendersStoredBGGRatingAndCategoryTags(t *testing.T) {
+	tmpl, err := template.ParseGlob("../templates/*.html")
+	if err != nil {
+		t.Fatalf("Failed to parse templates: %v", err)
+	}
+	var output bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&output, "games.html", map[string]interface{}{
+		"UserRole": "guest",
+		"Games": []db.ListItemsWithCategoriesRow{{
+			ID: 1, Name: "Test Game", MinPlayers: 2, MaxPlayers: 4,
+			BGGRating:     sql.NullFloat64{Float64: 8.1, Valid: true},
+			CategoryNames: "Strategy,Cooperative",
+			Status:        "available",
+		}},
+		"Categories": []db.Category{},
+	}); err != nil {
+		t.Fatalf("Failed to execute games.html: %v", err)
+	}
+	for _, expected := range []string{`data-rating="8.1"`, `data-categories="Strategy,Cooperative"`, "rating / 2", "tags.slice(0, 2)"} {
+		if !bytes.Contains(output.Bytes(), []byte(expected)) {
+			t.Errorf("Expected games output to contain %q", expected)
+		}
+	}
+	if bytes.Contains(output.Bytes(), []byte(`>8.1 / 10</span>`)) {
+		t.Error("games cards should display the mapped five-star rating rather than a hard-coded ten-star rating")
 	}
 }

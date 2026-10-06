@@ -183,7 +183,7 @@ document.addEventListener('alpine:init', () => {
                         ? maxPlaytime >= this.minDurationFilter
                         : minPlaytime <= this.maxDurationFilter && maxPlaytime >= this.minDurationFilter) &&
                     (!this.selectedCategories.length || this.selectedCategories.some((category) => categories.includes(category))) &&
-                    this.minRatingFilter === 0;
+                    (this.minRatingFilter === 0 || Number(data.rating) >= Number(this.minRatingFilter) * 2);
             }).map((game) => ({
                 id: Number(game.dataset.gameId),
                 name: game.dataset.name,

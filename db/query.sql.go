@@ -149,10 +149,10 @@ func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (B
 const createItem = `-- name: CreateItem :one
 INSERT INTO items (
     name, isbn, description, image_url, custom_image_url,
-    min_players, max_players, min_playtime, max_playtime, status, room, shelf, is_expansion
+    min_players, max_players, min_playtime, max_playtime, status, room, shelf, is_expansion, bgg_rating
 ) VALUES (
-             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
-         ) RETURNING id, name, isbn, description, image_url, custom_image_url, room, shelf, min_players, max_players, min_playtime, max_playtime, status, is_expansion
+             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+         ) RETURNING id, name, isbn, description, image_url, custom_image_url, room, shelf, min_players, max_players, min_playtime, max_playtime, bgg_rating, status, is_expansion
 `
 
 type CreateItemParams struct {
@@ -165,6 +165,7 @@ type CreateItemParams struct {
 	MaxPlayers     int32
 	MinPlaytime    int32
 	MaxPlaytime    int32
+	BGGRating      sql.NullFloat64
 	Status         ItemStatus
 	Room           sql.NullString
 	Shelf          sql.NullString
@@ -186,6 +187,7 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 		arg.Room,
 		arg.Shelf,
 		arg.IsExpansion,
+		arg.BGGRating,
 	)
 	var i Item
 	err := row.Scan(
@@ -201,6 +203,7 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 		&i.MaxPlayers,
 		&i.MinPlaytime,
 		&i.MaxPlaytime,
+		&i.BGGRating,
 		&i.Status,
 		&i.IsExpansion,
 	)
@@ -339,7 +342,7 @@ func (q *Queries) GetBookingByToken(ctx context.Context, publicToken string) (Bo
 }
 
 const getItem = `-- name: GetItem :one
-SELECT id, name, isbn, description, image_url, custom_image_url, room, shelf, min_players, max_players, min_playtime, max_playtime, status, is_expansion FROM items WHERE id = $1 LIMIT 1
+SELECT id, name, isbn, description, image_url, custom_image_url, room, shelf, min_players, max_players, min_playtime, max_playtime, bgg_rating, status, is_expansion FROM items WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetItem(ctx context.Context, id int32) (Item, error) {
@@ -358,6 +361,7 @@ func (q *Queries) GetItem(ctx context.Context, id int32) (Item, error) {
 		&i.MaxPlayers,
 		&i.MinPlaytime,
 		&i.MaxPlaytime,
+		&i.BGGRating,
 		&i.Status,
 		&i.IsExpansion,
 	)
@@ -417,7 +421,7 @@ func (q *Queries) GetItemHistory(ctx context.Context, itemID int32) ([]GetItemHi
 }
 
 const getItemsForBooking = `-- name: GetItemsForBooking :many
-SELECT i.id, i.name, i.isbn, i.description, i.image_url, i.custom_image_url, i.room, i.shelf, i.min_players, i.max_players, i.min_playtime, i.max_playtime, i.status, i.is_expansion FROM items i
+SELECT i.id, i.name, i.isbn, i.description, i.image_url, i.custom_image_url, i.room, i.shelf, i.min_players, i.max_players, i.min_playtime, i.max_playtime, i.bgg_rating, i.status, i.is_expansion FROM items i
                     JOIN booking_items bi ON i.id = bi.item_id
 WHERE bi.booking_id = $1
 `
@@ -444,6 +448,7 @@ func (q *Queries) GetItemsForBooking(ctx context.Context, bookingID int32) ([]It
 			&i.MaxPlayers,
 			&i.MinPlaytime,
 			&i.MaxPlaytime,
+			&i.BGGRating,
 			&i.Status,
 			&i.IsExpansion,
 		); err != nil {
@@ -583,7 +588,7 @@ func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
 }
 
 const listItems = `-- name: ListItems :many
-SELECT id, name, isbn, description, image_url, custom_image_url, room, shelf, min_players, max_players, min_playtime, max_playtime, status, is_expansion FROM items ORDER BY name
+SELECT id, name, isbn, description, image_url, custom_image_url, room, shelf, min_players, max_players, min_playtime, max_playtime, bgg_rating, status, is_expansion FROM items ORDER BY name
 `
 
 func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
@@ -608,6 +613,7 @@ func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
 			&i.MaxPlayers,
 			&i.MinPlaytime,
 			&i.MaxPlaytime,
+			&i.BGGRating,
 			&i.Status,
 			&i.IsExpansion,
 		); err != nil {
@@ -625,7 +631,7 @@ func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
 }
 
 const listItemsWithCategories = `-- name: ListItemsWithCategories :many
-SELECT items.id, items.name, items.isbn, items.description, items.image_url, items.custom_image_url, items.room, items.shelf, items.min_players, items.max_players, items.min_playtime, items.max_playtime, items.status, items.is_expansion, COALESCE(string_agg(categories.name, ','), '')::text AS category_names
+SELECT items.id, items.name, items.isbn, items.description, items.image_url, items.custom_image_url, items.room, items.shelf, items.min_players, items.max_players, items.min_playtime, items.max_playtime, items.bgg_rating, items.status, items.is_expansion, COALESCE(string_agg(categories.name, ','), '')::text AS category_names
 FROM items
          LEFT JOIN item_categories ON items.id = item_categories.item_id
          LEFT JOIN categories ON item_categories.category_id = categories.id
@@ -646,6 +652,7 @@ type ListItemsWithCategoriesRow struct {
 	MaxPlayers     int32
 	MinPlaytime    int32
 	MaxPlaytime    int32
+	BGGRating      sql.NullFloat64
 	Status         ItemStatus
 	IsExpansion    bool
 	CategoryNames  string
@@ -673,6 +680,7 @@ func (q *Queries) ListItemsWithCategories(ctx context.Context) ([]ListItemsWithC
 			&i.MaxPlayers,
 			&i.MinPlaytime,
 			&i.MaxPlaytime,
+			&i.BGGRating,
 			&i.Status,
 			&i.IsExpansion,
 			&i.CategoryNames,
@@ -756,7 +764,7 @@ func (q *Queries) UpdateBookingStatus(ctx context.Context, arg UpdateBookingStat
 
 const updateItem = `-- name: UpdateItem :exec
 UPDATE items
-SET name = $2, image_url = $3, min_players = $4, max_players = $5, min_playtime = $6, max_playtime = $7, room = $8, shelf = $9, is_expansion = $10
+SET name = $2, image_url = $3, min_players = $4, max_players = $5, min_playtime = $6, max_playtime = $7, room = $8, shelf = $9, is_expansion = $10, bgg_rating = COALESCE($11, bgg_rating)
 WHERE id = $1
 `
 
@@ -771,6 +779,7 @@ type UpdateItemParams struct {
 	Room        sql.NullString
 	Shelf       sql.NullString
 	IsExpansion bool
+	BGGRating   sql.NullFloat64
 }
 
 func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) error {
@@ -785,6 +794,7 @@ func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) error {
 		arg.Room,
 		arg.Shelf,
 		arg.IsExpansion,
+		arg.BGGRating,
 	)
 	return err
 }

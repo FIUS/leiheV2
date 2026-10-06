@@ -46,6 +46,7 @@ CREATE TABLE items (
                        max_players INT NOT NULL DEFAULT 0,
                        min_playtime INT NOT NULL DEFAULT 0,
                        max_playtime INT NOT NULL DEFAULT 0,
+                       bgg_rating NUMERIC(3,1) CHECK (bgg_rating IS NULL OR bgg_rating BETWEEN 1 AND 10),
                        status item_status NOT NULL DEFAULT 'available',
                        is_expansion BOOLEAN NOT NULL DEFAULT FALSE
 );

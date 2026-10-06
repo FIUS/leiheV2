@@ -123,11 +123,12 @@
             <div id="games-container" class="catalog-game-grid" :class="viewMode === 'grid' ? '' : 'catalog-game-list'">
 
                 {{ range .Games }}
-                <div data-name="{{ .Name }}" data-duration="{{ .MinPlaytime }}" data-players="{{ .MinPlayers }}" data-rating="8.1"
+                <div data-name="{{ .Name }}" data-duration="{{ .MinPlaytime }}" data-players="{{ .MinPlayers }}" data-rating="{{ if .BGGRating.Valid }}{{ .BGGRating.Float64 }}{{ else }}0{{ end }}"
                      data-game-id="{{ .ID }}" data-game-name="{{ .Name }}" data-min-players="{{ .MinPlayers }}"
                      data-max-players="{{ .MaxPlayers }}" data-min-playtime="{{ .MinPlaytime }}"
                      data-max-playtime="{{ .MaxPlaytime }}" data-categories="{{ .CategoryNames }}"
                      data-game-image="{{ if .CustomImageUrl.Valid }}{{ .CustomImageUrl.String }}{{ else if .ImageUrl.Valid }}{{ .ImageUrl.String }}{{ else }}/static/images/image-placeholder.svg{{ end }}"
+                     x-data="{ tags: [], rating: 0 }" x-init="rating = Number($el.dataset.rating); tags = $el.dataset.categories.split(',').map(tag => tag.trim()).filter(Boolean)"
                      x-show="isGameVisible({{ .ID }})"
                      class=" rounded-xl border shadow-md overflow-hidden flex transition duration-300 hover:border-blue-500 group"
                      :class="viewMode === 'grid' ? 'flex-col h-full' : 'flex-row items-center'">
@@ -166,6 +167,20 @@
                                     {{ else if gt .MinPlaytime 0 }}{{ .MinPlaytime }} Min.
                                     {{ else }}k.A.{{ end }}
                                 </span>
+                            </div>
+                            <div x-show="rating > 0 || tags.length > 0" class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                                <span x-show="rating > 0" class="inline-flex items-center gap-1 text-xs text-amber-300" :title="`BGG Bewertung ${((rating / 2).toFixed(1))} von 5 Sternen`">
+                                    <span aria-hidden="true" class="tracking-tight">
+                                        <template x-for="star in [1, 2, 3, 4, 5]" :key="star"><span :class="rating / 2 >= star ? 'text-amber-300' : 'text-gray-600'">★</span></template>
+                                    </span>
+                                    <span x-text="`${(rating / 2).toFixed(1)} / 5`"></span>
+                                </span>
+                                <div x-show="tags.length > 0" class="flex min-w-0 flex-wrap gap-1">
+                                    <template x-for="tag in tags.slice(0, 2)" :key="tag">
+                                        <span class="max-w-28 truncate rounded border border-theme-border bg-theme-bg px-1.5 py-0.5 text-[10px] text-theme-muted" x-text="tag"></span>
+                                    </template>
+                                    <span x-show="tags.length > 2" class="self-center text-[10px] text-theme-muted" x-text="`+${tags.length - 2}`"></span>
+                                </div>
                             </div>
                         </div>
 
@@ -290,15 +305,11 @@
                                 <span class="inline-flex shrink-0 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap" :class="activeItem?.status === 'available' ? 'bg-green-950 text-green-200 border border-green-800' : 'bg-yellow-950 text-yellow-200 border border-yellow-800'" x-text="activeItem?.status === 'available' ? 'Verfügbar' : 'Ausgeliehen'"></span>
                             </div>
                             <div class="flex items-center flex-wrap gap-4 mt-2">
-                                <div class="flex items-center gap-1.5" title="BGG Rating">
-                                    <div class="flex text-amber-400 text-sm">
-                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                                        <svg class="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                                    </div>
-                                    <span class="text-xs text-theme-muted font-bold mt-0.5">8.1 / 10</span>
+                                    <div x-show="Number(activeItem?.bgg_rating) > 0" class="flex items-center gap-1.5" title="BGG Bewertung">
+                                        <div class="text-sm tracking-tight">
+                                            <template x-for="star in [1, 2, 3, 4, 5]" :key="star"><span :class="Number(activeItem?.bgg_rating) / 2 >= star ? 'text-amber-300' : 'text-gray-600'">★</span></template>
+                                        </div>
+                                        <span class="text-xs text-theme-muted font-bold mt-0.5" x-text="`${(Number(activeItem?.bgg_rating) / 2).toFixed(1)} / 5`"></span>
                                 </div>
                                 <span class="text-theme-border hidden md:inline">|</span>
                                 <a :href="activeItem?.bgg_id ? `https://boardgamegeek.com/boardgame/${activeItem.bgg_id}` : `https://boardgamegeek.com/geeksearch.php?action=search&objecttype=boardgame&q=${encodeURIComponent(activeItem?.name)}`" target="_blank" class="text-xs text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 transition">Auf BoardGameGeek ansehen <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></a>

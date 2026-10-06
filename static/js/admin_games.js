@@ -27,6 +27,7 @@ document.addEventListener('alpine:init', () => {
                 max_players: dataset.maxPlayers,
                 min_playtime: dataset.minPlaytime,
                 max_playtime: dataset.maxPlaytime,
+                bgg_rating: dataset.bggRating || '',
                 room: dataset.room,
                 shelf: dataset.shelf,
                 categories: dataset.categories ? dataset.categories.split(',').map(value => value.trim()).filter(Boolean) : []
@@ -118,6 +119,7 @@ document.addEventListener('alpine:init', () => {
                     this.editGame.max_players = data.max_players;
                     this.editGame.min_playtime = data.min_playtime;
                     this.editGame.max_playtime = data.max_playtime;
+                    this.editGame.bgg_rating = data.bgg_rating ?? '';
                     this.bggModalOpen = false;
                     this.editModalOpen = true;
                 } else {

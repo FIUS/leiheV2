@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"leiheV2/db"
+	"leiheV2/internal/bggutil"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,6 +25,7 @@ type CreateItemRequest struct {
 	Shelf       string   `form:"shelf"`
 	Categories  []string `form:"categories"`
 	IsExpansion bool     `form:"is_expansion"`
+	BGGRating   string   `form:"bgg_rating"`
 }
 
 type UpdateItemRequest struct {
@@ -38,6 +40,19 @@ type UpdateItemRequest struct {
 	Shelf       string   `form:"shelf"`
 	Categories  []string `form:"categories"`
 	IsExpansion bool     `form:"is_expansion"`
+	BGGRating   string   `form:"bgg_rating"`
+}
+
+func parseBGGRating(value string) (sql.NullFloat64, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return sql.NullFloat64{}, nil
+	}
+	rating, ok := bggutil.ParseRating(value)
+	if !ok {
+		return sql.NullFloat64{}, fmt.Errorf("BGG-Bewertung muss zwischen 1 und 10 liegen")
+	}
+	return sql.NullFloat64{Float64: rating, Valid: true}, nil
 }
 
 func validateItemDimensions(minPlayers, maxPlayers, minPlaytime, maxPlaytime int32) error {
@@ -116,8 +131,13 @@ func CreateItem(c *gin.Context) {
 		renderAdminGamesError(c, http.StatusBadRequest, err.Error())
 		return
 	}
+	bggRating, err := parseBGGRating(req.BGGRating)
+	if err != nil {
+		renderAdminGamesError(c, http.StatusBadRequest, err.Error())
+		return
+	}
 
-	err := queries.InTx(context.Background(), func(qTx *db.Queries) error {
+	err = queries.InTx(context.Background(), func(qTx *db.Queries) error {
 		item, err := qTx.CreateItem(context.Background(), db.CreateItemParams{
 			Name:        req.Name,
 			ImageUrl:    sql.NullString{String: strings.TrimSpace(req.ImageURL), Valid: strings.TrimSpace(req.ImageURL) != ""},
@@ -129,6 +149,7 @@ func CreateItem(c *gin.Context) {
 			Room:        sql.NullString{String: req.Room, Valid: req.Room != ""},
 			Shelf:       sql.NullString{String: req.Shelf, Valid: req.Shelf != ""},
 			IsExpansion: req.IsExpansion,
+			BGGRating:   bggRating,
 		})
 		if err != nil {
 			return err
@@ -152,8 +173,13 @@ func UpdateItem(c *gin.Context) {
 		renderAdminGamesError(c, http.StatusBadRequest, err.Error())
 		return
 	}
+	bggRating, err := parseBGGRating(req.BGGRating)
+	if err != nil {
+		renderAdminGamesError(c, http.StatusBadRequest, err.Error())
+		return
+	}
 
-	err := queries.InTx(context.Background(), func(qTx *db.Queries) error {
+	err = queries.InTx(context.Background(), func(qTx *db.Queries) error {
 		if err := qTx.UpdateItem(context.Background(), db.UpdateItemParams{
 			ID:          req.ID,
 			Name:        req.Name,
@@ -165,6 +191,7 @@ func UpdateItem(c *gin.Context) {
 			Room:        sql.NullString{String: req.Room, Valid: req.Room != ""},
 			Shelf:       sql.NullString{String: req.Shelf, Valid: req.Shelf != ""},
 			IsExpansion: req.IsExpansion,
+			BGGRating:   bggRating,
 		}); err != nil {
 			return err
 		}
@@ -262,6 +289,11 @@ func GetItemDetails(c *gin.Context) {
 		images = append(images, "/static/images/image-placeholder.svg")
 	}
 
+	var bggRating *float64
+	if item.BGGRating.Valid {
+		rating := item.BGGRating.Float64
+		bggRating = &rating
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"id":           item.ID,
 		"name":         item.Name,
@@ -275,6 +307,7 @@ func GetItemDetails(c *gin.Context) {
 		"bookings":     bookings,
 		"room":         item.Room.String,
 		"shelf":        item.Shelf.String,
+		"bgg_rating":   bggRating,
 	})
 }
 

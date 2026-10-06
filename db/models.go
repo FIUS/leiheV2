@@ -185,6 +185,7 @@ type Item struct {
 	MaxPlayers     int32
 	MinPlaytime    int32
 	MaxPlaytime    int32
+	BGGRating      sql.NullFloat64
 	Status         ItemStatus
 	IsExpansion    bool
 }

@@ -11,6 +11,8 @@ import (
 	"time"
 	"unicode"
 
+	"leiheV2/internal/bggutil"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -95,6 +97,13 @@ type BGGThingResponse struct {
 			Type  string `xml:"type,attr"`
 			Value string `xml:"value,attr"`
 		} `xml:"link"`
+		Statistics struct {
+			Ratings struct {
+				Average struct {
+					Value string `xml:"value,attr"`
+				} `xml:"average"`
+			} `xml:"ratings"`
+		} `xml:"statistics"`
 	} `xml:"item"`
 }
 
@@ -163,7 +172,7 @@ func GetBGGDetails(c *gin.Context) {
 		return
 	}
 
-	bggURL := "https://boardgamegeek.com/xmlapi2/thing?id=" + id
+	bggURL := "https://boardgamegeek.com/xmlapi2/thing?id=" + url.QueryEscape(id) + "&stats=1"
 	enforceBGGCooldown()
 
 	req, err := newBGGRequest(http.MethodGet, bggURL)
@@ -212,6 +221,10 @@ func GetBGGDetails(c *gin.Context) {
 		}
 	}
 
+	var rating any
+	if parsedRating, ok := bggutil.ParseRating(item.Statistics.Ratings.Average.Value); ok {
+		rating = parsedRating
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"bgg_id":       item.ID,
 		"name":         name,
@@ -220,6 +233,7 @@ func GetBGGDetails(c *gin.Context) {
 		"max_players":  item.MaxPlayers.Value,
 		"min_playtime": item.MinPlaytime.Value,
 		"max_playtime": item.MaxPlaytime.Value,
+		"bgg_rating":   rating,
 		"categories":   categories,
 		"is_expansion": isExpansion,
 	})
