@@ -188,43 +188,46 @@ func SearchBGG(c *gin.Context) {
 			ids = append(ids, item.ID)
 			namesByID[item.ID] = item.Name.Value
 		}
-		thingsURL := "https://boardgamegeek.com/xmlapi2/thing?id=" + url.QueryEscape(strings.Join(ids, ",")) + "&versions=1"
-		enforceBGGCooldown()
-		thingsReq, err := newBGGRequest(http.MethodGet, thingsURL)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "BGG Bildanfrage konnte nicht erstellt werden"})
-			return
-		}
-		thingsResp, err := client.Do(thingsReq)
-		if err != nil || thingsResp.StatusCode != http.StatusOK {
-			if thingsResp != nil {
-				defer thingsResp.Body.Close()
+		imagesByID := make(map[string]string, len(ids))
+		for start := 0; start < len(ids); start += 20 {
+			end := min(start+20, len(ids))
+			thingsURL := "https://boardgamegeek.com/xmlapi2/thing?id=" + url.QueryEscape(strings.Join(ids[start:end], ",")) + "&versions=1"
+			enforceBGGCooldown()
+			thingsReq, err := newBGGRequest(http.MethodGet, thingsURL)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "BGG Bildanfrage konnte nicht erstellt werden"})
+				return
 			}
-			respondWithBGGError(c, thingsResp, err)
-			return
-		}
-		defer thingsResp.Body.Close()
-		thingsBody, err := io.ReadAll(thingsResp.Body)
-		if err != nil {
-			c.JSON(http.StatusBadGateway, gin.H{"error": "BGG Bilder konnten nicht gelesen werden"})
-			return
-		}
-		var things BGGThingResponse
-		if err := xml.Unmarshal(thingsBody, &things); err != nil {
-			c.JSON(http.StatusBadGateway, gin.H{"error": "BGG Bilddaten konnten nicht verarbeitet werden"})
-			return
-		}
-		imagesByID := make(map[string]string, len(things.Items))
-		for _, item := range things.Items {
-			version := selectBGGVersion(item, namesByID[item.ID])
-			thumbnail := version.Thumbnail
-			if thumbnail == "" {
-				thumbnail = version.Image
+			thingsResp, err := client.Do(thingsReq)
+			if err != nil || thingsResp.StatusCode != http.StatusOK {
+				if thingsResp != nil {
+					defer thingsResp.Body.Close()
+				}
+				respondWithBGGError(c, thingsResp, err)
+				return
 			}
-			if thumbnail == "" {
-				thumbnail = item.Thumbnail
+			thingsBody, err := io.ReadAll(thingsResp.Body)
+			thingsResp.Body.Close()
+			if err != nil {
+				c.JSON(http.StatusBadGateway, gin.H{"error": "BGG Bilder konnten nicht gelesen werden"})
+				return
 			}
-			imagesByID[item.ID] = thumbnail
+			var things BGGThingResponse
+			if err := xml.Unmarshal(thingsBody, &things); err != nil {
+				c.JSON(http.StatusBadGateway, gin.H{"error": "BGG Bilddaten konnten nicht verarbeitet werden"})
+				return
+			}
+			for _, item := range things.Items {
+				version := selectBGGVersion(item, namesByID[item.ID])
+				thumbnail := version.Thumbnail
+				if thumbnail == "" {
+					thumbnail = version.Image
+				}
+				if thumbnail == "" {
+					thumbnail = item.Thumbnail
+				}
+				imagesByID[item.ID] = thumbnail
+			}
 		}
 		for i := range bggResult.Items {
 			bggResult.Items[i].Thumbnail = imagesByID[bggResult.Items[i].ID]

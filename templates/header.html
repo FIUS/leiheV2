@@ -16,23 +16,21 @@
 </head>
 <body class="bg-theme-bg text-gray-100 min-h-screen">
 
-<nav class="border-b border-theme-border p-4">
-    <div class="container mx-auto flex justify-between items-center">
-        <!-- Link zurück zur Startseite -->
-        <a href="/" class="flex items-center gap-2 text-2xl font-bold text-white">
-            <img src="/static/images/fius-logo-white.svg" alt="FIUS Logo" class="h-12 w-auto">
+<nav class="relative border-b border-theme-border p-3 sm:p-4" x-data="{ open: false, mobileMenuOpen: false }">
+    <div class="container mx-auto flex min-w-0 items-center justify-between gap-3">
+        <a href="/" class="flex min-w-0 shrink items-center gap-2 text-lg font-bold text-white sm:text-2xl">
+            <img src="/static/images/fius-logo-white.svg" alt="FIUS Logo" class="h-9 w-auto shrink-0 sm:h-12">
             <span class="text-theme-blue">Verleih</span>
         </a>
 
-        <div class="flex items-center gap-4 relative" x-data="{ open: false }" @click.outside="open = false">
-
+        <div class="hidden items-center gap-4 md:flex">
             {{ if and .UserRole (ne .UserRole "guest") }}
             {{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }}
             <div class="relative" x-data="{ loanActionsOpen: false }" @click.outside="loanActionsOpen = false">
                 <button type="button" @click="loanActionsOpen = !loanActionsOpen" :aria-expanded="loanActionsOpen"
                         class="inline-flex items-center gap-2 rounded-lg border border-theme-border px-3 py-2 text-sm font-semibold text-gray-200 transition hover:border-blue-500 hover:text-white">
                     <svg class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                    <span class="hidden sm:inline">Buchungen</span>
+                    <span>Buchungen</span>
                     <svg class="h-4 w-4 text-theme-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/></svg>
                 </button>
                 <div x-show="loanActionsOpen" x-cloak class="absolute right-0 z-50 mt-2 w-52 rounded-xl border border-theme-border bg-theme-bg py-2 shadow-xl">
@@ -43,36 +41,55 @@
                 </div>
             </div>
             {{ end }}
-            <!-- EINGELOGGT -->
-            <button @click="open = !open" class="flex items-center gap-2 px-3 py-2 border border-theme-border rounded-lg hover:border-blue-500 transition cursor-pointer">
-                <div class="w-7 h-7 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center font-bold text-xs uppercase">
-                    {{ if .UserName }}{{ slice .UserName 0 1 }}{{ else }}?{{ end }}
+            <div class="relative" @click.outside="open = false">
+                <button type="button" @click="open = !open" :aria-expanded="open" class="flex items-center gap-2 rounded-lg border border-theme-border px-3 py-2 transition hover:border-blue-500">
+                    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500/20 text-xs font-bold uppercase text-blue-500">{{ if .UserName }}{{ slice .UserName 0 1 }}{{ else }}?{{ end }}</span>
+                    <span class="text-sm font-medium text-gray-200">{{ if .UserName }}{{ .UserName }}{{ else }}Konto{{ end }}</span>
+                    <svg class="h-4 w-4 text-theme-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div x-show="open" x-cloak class="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-theme-border bg-theme-bg py-2 shadow-lg">
+                    <a href="/settings" class="block px-4 py-2 text-sm text-gray-200 transition hover:bg-theme-card hover:text-blue-500">Benutzereinstellungen</a>
+                    <a href="/bookings" class="block px-4 py-2 text-sm text-gray-200 transition hover:bg-theme-card hover:text-blue-500">Ausleihen</a>
+                    {{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }}
+                    <a href="/admin" class="block px-4 py-2 text-sm text-gray-200 transition hover:bg-theme-card hover:text-blue-500">Admin Panel</a>
+                    {{ end }}
+                    <div class="my-1 border-t border-theme-border"></div>
+                    <a href="/logout" class="block px-4 py-2 text-sm text-red-400 transition hover:bg-theme-card hover:text-red-300">Logout</a>
                 </div>
-                <span class="text-sm text-gray-200 font-medium">{{ if .UserName }}{{ .UserName }}{{ else }}Konto{{ end }}</span>
-                <svg class="w-4 h-4 text-theme-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-            </button>
-
-            <!-- Dropdown Menü -->
-            <div x-show="open" class="absolute top-12 right-0 w-56 border border-theme-border rounded-xl shadow-lg py-2 z-50 bg-theme-bg" style="display: none;">
-                <a href="/settings" class="block px-4 py-2 text-sm text-gray-200 hover:bg-theme-bg hover:text-blue-500 transition">Benutzereinstellungen</a>
-                <a href="/bookings" class="block px-4 py-2 text-sm text-gray-200 hover:bg-theme-bg hover:text-blue-500 transition">Ausleihen</a>
-                {{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }}
-                <a href="/admin" class="block px-4 py-2 text-sm text-gray-200 hover:bg-theme-bg hover:text-blue-500 transition">Admin Panel</a>
-                <div class="border-t border-theme-border my-1"></div>
-                {{ end }}
-
-                <a href="/logout" class="block px-4 py-2 text-sm text-red-400 hover:bg-theme-bg hover:text-red-300 transition">Logout</a>
             </div>
             {{ else }}
-            <!-- AUSGELOGGT / GAST -->
-            <div class="flex items-center gap-2">
-                <a href="/login" class="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition">Anmelden</a>
-            </div>
+            <a href="/login" class="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-500">Anmelden</a>
             {{ end }}
-
         </div>
+
+        <button type="button" @click="mobileMenuOpen = !mobileMenuOpen" :aria-expanded="mobileMenuOpen" aria-label="Menü öffnen"
+                class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-theme-border text-gray-200 transition hover:border-blue-500 md:hidden">
+            <svg x-show="!mobileMenuOpen" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            <svg x-show="mobileMenuOpen" x-cloak class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+    </div>
+
+    <div x-show="mobileMenuOpen" x-cloak @click.outside="mobileMenuOpen = false"
+         class="absolute left-0 right-0 top-full z-[100] border-b border-theme-border bg-theme-bg px-4 pb-4 pt-2 shadow-xl md:hidden">
+        {{ if and .UserRole (ne .UserRole "guest") }}
+        {{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }}
+        <p class="px-3 pb-1 pt-2 text-xs font-bold uppercase tracking-wider text-theme-muted">Leihschalter</p>
+        <a @click="mobileMenuOpen = false" href="/admin/ausgabe#issue" class="block rounded-lg px-3 py-3 text-sm font-semibold text-gray-200 hover:bg-theme-card">Ausgeben</a>
+        <a @click="mobileMenuOpen = false" href="/admin/ausgabe#return" class="block rounded-lg px-3 py-3 text-sm font-semibold text-gray-200 hover:bg-theme-card">Zurücknehmen</a>
+        <a @click="mobileMenuOpen = false" href="/admin/bookings" class="block rounded-lg px-3 py-3 text-sm text-theme-muted hover:bg-theme-card">Buchungsübersicht</a>
+        {{ end }}
+        <p class="px-3 pb-1 pt-3 text-xs font-bold uppercase tracking-wider text-theme-muted">{{ if .UserName }}{{ .UserName }}{{ else }}Konto{{ end }}</p>
+        <a @click="mobileMenuOpen = false" href="/settings" class="block rounded-lg px-3 py-3 text-sm text-gray-200 hover:bg-theme-card">Benutzereinstellungen</a>
+        <a @click="mobileMenuOpen = false" href="/bookings" class="block rounded-lg px-3 py-3 text-sm text-gray-200 hover:bg-theme-card">Ausleihen</a>
+        {{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }}
+        <a @click="mobileMenuOpen = false" href="/admin" class="block rounded-lg px-3 py-3 text-sm text-gray-200 hover:bg-theme-card">Admin Panel</a>
+        {{ end }}
+        <a @click="mobileMenuOpen = false" href="/logout" class="mt-1 block rounded-lg border-t border-theme-border px-3 py-3 text-sm text-red-400">Logout</a>
+        {{ else }}
+        <a @click="mobileMenuOpen = false" href="/login" class="block rounded-lg px-3 py-3 text-sm font-semibold text-white hover:bg-theme-card">Anmelden</a>
+        {{ end }}
     </div>
 </nav>
 
 <main class="container mx-auto p-4 mt-4">
-    {{ end }}
+{{ end }}
