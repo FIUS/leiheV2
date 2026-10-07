@@ -342,26 +342,7 @@ func (q *Queries) GetBookingByToken(ctx context.Context, publicToken string) (Bo
 }
 
 const getItem = `-- name: GetItem :one
-SELECT
-    items.id, items.name, items.isbn, items.description, items.image_url,
-    items.custom_image_url, items.room, items.shelf, items.min_players,
-    items.max_players, items.min_playtime, items.max_playtime, items.bgg_rating,
-    CASE
-        WHEN items.status = 'available' AND EXISTS (
-            SELECT 1
-            FROM booking_items bi
-                     JOIN bookings b ON b.id = bi.booking_id
-            WHERE bi.item_id = items.id
-              AND b.status IN ('confirmed', 'active')
-              AND b.start_date::date <= CURRENT_DATE
-              AND b.end_date::date >= CURRENT_DATE
-        ) THEN 'rented'::item_status
-        ELSE items.status
-    END AS status,
-    items.is_expansion
-FROM items
-WHERE items.id = $1
-LIMIT 1
+SELECT id, name, isbn, description, image_url, custom_image_url, room, shelf, min_players, max_players, min_playtime, max_playtime, bgg_rating, status, is_expansion FROM items WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetItem(ctx context.Context, id int32) (Item, error) {
@@ -654,8 +635,9 @@ SELECT
     items.id, items.name, items.isbn, items.description, items.image_url,
     items.custom_image_url, items.room, items.shelf, items.min_players,
     items.max_players, items.min_playtime, items.max_playtime, items.bgg_rating,
-    CASE
-        WHEN items.status = 'available' AND EXISTS (
+    items.status,
+    items.is_expansion,
+    EXISTS (
             SELECT 1
             FROM booking_items bi
                      JOIN bookings b ON b.id = bi.booking_id
@@ -663,10 +645,7 @@ SELECT
               AND b.status IN ('confirmed', 'active')
               AND b.start_date::date <= CURRENT_DATE
               AND b.end_date::date >= CURRENT_DATE
-        ) THEN 'rented'::item_status
-        ELSE items.status
-    END AS status,
-    items.is_expansion,
+        ) AS has_booking_today,
     COALESCE(string_agg(categories.name, ','), '')::text AS category_names
 FROM items
          LEFT JOIN item_categories ON items.id = item_categories.item_id
@@ -676,22 +655,23 @@ ORDER BY items.name
 `
 
 type ListItemsWithCategoriesRow struct {
-	ID             int32
-	Name           string
-	Isbn           sql.NullString
-	Description    sql.NullString
-	ImageUrl       sql.NullString
-	CustomImageUrl sql.NullString
-	Room           sql.NullString
-	Shelf          sql.NullString
-	MinPlayers     int32
-	MaxPlayers     int32
-	MinPlaytime    int32
-	MaxPlaytime    int32
-	BGGRating      sql.NullFloat64
-	Status         ItemStatus
-	IsExpansion    bool
-	CategoryNames  string
+	ID              int32
+	Name            string
+	Isbn            sql.NullString
+	Description     sql.NullString
+	ImageUrl        sql.NullString
+	CustomImageUrl  sql.NullString
+	Room            sql.NullString
+	Shelf           sql.NullString
+	MinPlayers      int32
+	MaxPlayers      int32
+	MinPlaytime     int32
+	MaxPlaytime     int32
+	BGGRating       sql.NullFloat64
+	Status          ItemStatus
+	IsExpansion     bool
+	HasBookingToday bool
+	CategoryNames   string
 }
 
 func (q *Queries) ListItemsWithCategories(ctx context.Context) ([]ListItemsWithCategoriesRow, error) {
@@ -719,6 +699,7 @@ func (q *Queries) ListItemsWithCategories(ctx context.Context) ([]ListItemsWithC
 			&i.BGGRating,
 			&i.Status,
 			&i.IsExpansion,
+			&i.HasBookingToday,
 			&i.CategoryNames,
 		); err != nil {
 			return nil, err

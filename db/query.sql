@@ -2,26 +2,7 @@
 SELECT * FROM items ORDER BY name;
 
 -- name: GetItem :one
-SELECT
-    items.id, items.name, items.isbn, items.description, items.image_url,
-    items.custom_image_url, items.room, items.shelf, items.min_players,
-    items.max_players, items.min_playtime, items.max_playtime, items.bgg_rating,
-    CASE
-        WHEN items.status = 'available' AND EXISTS (
-            SELECT 1
-            FROM booking_items bi
-                     JOIN bookings b ON b.id = bi.booking_id
-            WHERE bi.item_id = items.id
-              AND b.status IN ('confirmed', 'active')
-              AND b.start_date::date <= CURRENT_DATE
-              AND b.end_date::date >= CURRENT_DATE
-        ) THEN 'rented'::item_status
-        ELSE items.status
-    END AS status,
-    items.is_expansion
-FROM items
-WHERE items.id = $1
-LIMIT 1;
+SELECT * FROM items WHERE id = $1 LIMIT 1;
 
 -- name: CreateItem :one
 INSERT INTO items (
@@ -70,8 +51,9 @@ SELECT
     items.id, items.name, items.isbn, items.description, items.image_url,
     items.custom_image_url, items.room, items.shelf, items.min_players,
     items.max_players, items.min_playtime, items.max_playtime, items.bgg_rating,
-    CASE
-        WHEN items.status = 'available' AND EXISTS (
+    items.status,
+    items.is_expansion,
+    EXISTS (
             SELECT 1
             FROM booking_items bi
                      JOIN bookings b ON b.id = bi.booking_id
@@ -79,10 +61,7 @@ SELECT
               AND b.status IN ('confirmed', 'active')
               AND b.start_date::date <= CURRENT_DATE
               AND b.end_date::date >= CURRENT_DATE
-        ) THEN 'rented'::item_status
-        ELSE items.status
-    END AS status,
-    items.is_expansion,
+        ) AS has_booking_today,
     COALESCE(string_agg(categories.name, ','), '')::text AS category_names
 FROM items
          LEFT JOIN item_categories ON items.id = item_categories.item_id

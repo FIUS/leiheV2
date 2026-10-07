@@ -276,6 +276,11 @@ func GetItemDetails(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Buchungen konnten nicht geladen werden"})
 		return
 	}
+	hasBookingToday, err := queries.HasBookingToday(c.Request.Context(), int32(itemID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Heutiger Buchungsstatus konnte nicht geladen werden"})
+		return
+	}
 	categories, err := queries.GetItemCategories(c.Request.Context(), int32(itemID))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Kategorien konnten nicht geladen werden"})
@@ -305,6 +310,7 @@ func GetItemDetails(c *gin.Context) {
 		"min_playtime": item.MinPlaytime,
 		"max_playtime": item.MaxPlaytime,
 		"status":       item.Status,
+		"booked_today": hasBookingToday,
 		"images":       images,
 		"bookings":     bookings,
 		"room":         item.Room.String,

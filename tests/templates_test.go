@@ -319,10 +319,11 @@ func TestGamesTemplateRendersStoredBGGRatingAndCategoryTags(t *testing.T) {
 			{
 				ID: 1, Name: "Test Game", MinPlayers: 2, MaxPlayers: 4,
 				MinPlaytime: 45, MaxPlaytime: 45,
-				ImageUrl:      sql.NullString{String: "https://cf.geekdo-images.com/test.jpg", Valid: true},
-				BGGRating:     sql.NullFloat64{Float64: 7.8, Valid: true},
-				CategoryNames: "Strategy,Cooperative",
-				Status:        "available",
+				ImageUrl:        sql.NullString{String: "https://cf.geekdo-images.com/test.jpg", Valid: true},
+				BGGRating:       sql.NullFloat64{Float64: 7.8, Valid: true},
+				CategoryNames:   "Strategy,Cooperative",
+				Status:          "available",
+				HasBookingToday: true,
 			},
 			{ID: 2, Name: "Maintenance Game", Status: db.ItemStatusMaintenance},
 		},
@@ -334,6 +335,12 @@ func TestGamesTemplateRendersStoredBGGRatingAndCategoryTags(t *testing.T) {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected games output to contain %q", expected)
 		}
+	}
+	if !bytes.Contains(output.Bytes(), []byte("Heute ausgeliehen")) {
+		t.Error("games cards should visually identify items with a confirmed or active booking today")
+	}
+	if !bytes.Contains(output.Bytes(), []byte("addToCart(1")) {
+		t.Error("a booking today should not prevent adding an otherwise available game to the cart")
 	}
 	if bytes.Contains(output.Bytes(), []byte("45 - 45 Min.")) {
 		t.Error("games cards should display equal minimum and maximum playtimes only once")
