@@ -284,12 +284,10 @@ func GetItemDetails(c *gin.Context) {
 		return
 	}
 
-	var images []string
-	if item.CustomImageUrl.Valid && item.CustomImageUrl.String != "" {
-		images = append(images, item.CustomImageUrl.String)
-	}
-	if item.ImageUrl.Valid && item.ImageUrl.String != "" {
-		images = append(images, item.ImageUrl.String)
+	imageSources := itemImageSources(item)
+	images := make([]string, 0, len(imageSources))
+	for index := range imageSources {
+		images = append(images, fmt.Sprintf("/api/items/thumbnail?id=%d&source=%d", item.ID, index))
 	}
 	if len(images) == 0 {
 		images = append(images, "/static/images/image-placeholder.svg")

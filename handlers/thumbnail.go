@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"leiheV2/db"
 	"leiheV2/internal/imageutil"
 
 	"github.com/gin-gonic/gin"
@@ -57,16 +58,20 @@ func GetItemThumbnail(c *gin.Context) {
 		return
 	}
 
-	imageURL := ""
-	if item.CustomImageUrl.Valid && item.CustomImageUrl.String != "" {
-		imageURL = item.CustomImageUrl.String
-	} else if item.ImageUrl.Valid {
-		imageURL = item.ImageUrl.String
+	sources := itemImageSources(item)
+	sourceIndex := 0
+	if rawSource := c.Query("source"); rawSource != "" {
+		sourceIndex, err = strconv.Atoi(rawSource)
+		if err != nil || sourceIndex < 0 {
+			c.Status(http.StatusBadRequest)
+			return
+		}
 	}
-	if imageURL == "" {
+	if sourceIndex >= len(sources) {
 		c.Status(http.StatusNotFound)
 		return
 	}
+	imageURL := sources[sourceIndex]
 
 	cacheKey := fmt.Sprintf("%d:%s", item.ID, imageURL)
 	thumbnailCacheMu.Lock()
@@ -115,6 +120,17 @@ func GetItemThumbnail(c *gin.Context) {
 		return
 	}
 	c.Data(http.StatusOK, "image/jpeg", thumbnail)
+}
+
+func itemImageSources(item db.Item) []string {
+	sources := make([]string, 0, 2)
+	if item.CustomImageUrl.Valid && item.CustomImageUrl.String != "" {
+		sources = append(sources, item.CustomImageUrl.String)
+	}
+	if item.ImageUrl.Valid && item.ImageUrl.String != "" {
+		sources = append(sources, item.ImageUrl.String)
+	}
+	return sources
 }
 
 func readGameImage(imageURL string) ([]byte, error) {
