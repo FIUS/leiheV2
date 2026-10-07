@@ -88,7 +88,10 @@ document.addEventListener('alpine:init', () => {
                 try {
                     const parsed = JSON.parse(saved);
                     if (Array.isArray(parsed)) {
-                        this.cart = parsed.map(item => {
+                        this.cart = parsed.filter(item => {
+                            const catalogItem = document.querySelector(`#games-container [data-game-id="${Number(item?.id)}"]`);
+                            return item && Number.isInteger(Number(item.id)) && catalogItem?.dataset.status === 'available';
+                        }).map(item => {
                             // Nur gültige Objekte übernehmen
                             if (typeof item === 'object' && item !== null && item.id) return item;
                             return null;
@@ -109,8 +112,12 @@ document.addEventListener('alpine:init', () => {
             return this.cart.some(item => item.id === id);
         },
 
-        addToCart(id, name, image) {
-            if (!this.isInCart(id)) {
+        addToCart(id, name, image, status = null) {
+            const activeItemStatus = this.activeItem?.id === id ? this.activeItem.status : null;
+            const catalogItem = Array.from(document.querySelectorAll('#games-container [data-game-id]'))
+                .find(item => Number(item.dataset.gameId) === Number(id));
+            const currentStatus = status || activeItemStatus || catalogItem?.dataset.status;
+            if (currentStatus === 'available' && !this.isInCart(id)) {
                 this.cart.push({ id: id, name: name, image: image || '' });
                 localStorage.setItem('cart', JSON.stringify(this.cart));
             }

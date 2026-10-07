@@ -6,11 +6,70 @@ import (
 	"mime"
 	"mime/quotedprintable"
 	netmail "net/mail"
+	"os"
 	"strings"
 	"testing"
+	"text/template"
 
 	"leiheV2/internal/mailutil"
 )
+
+func TestBookingReviewEmailTemplatesIncludeRelevantInstructions(t *testing.T) {
+	data := struct {
+		FirstName    string
+		BookingToken string
+		StartDate    string
+		EndDate      string
+		Items        []string
+	}{
+		FirstName: "Erika", BookingToken: "ABC123",
+		StartDate: "07.10.2026", EndDate: "10.10.2026",
+		Items: []string{"Testspiel"},
+	}
+	tests := []struct {
+		file     string
+		contains []string
+	}{
+		{
+			file: "booking_confirmed.txt",
+			contains: []string{
+				"V38.0.001", "Abholtag: 07.10.2026",
+				"verfällt die Buchung", "Buchungsnummer bereit",
+			},
+		},
+		{
+			file:     "booking_rejected.txt",
+			contains: []string{"abgelehnt und storniert", "fs@fius.de"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.file, func(t *testing.T) {
+			content, err := os.ReadFile("../templates/" + test.file)
+			if err != nil {
+				t.Fatalf("read template: %v", err)
+			}
+			tmpl, err := template.New(test.file).Parse(string(content))
+			if err != nil {
+				t.Fatalf("parse template: %v", err)
+			}
+			var output strings.Builder
+			if err := tmpl.Execute(&output, data); err != nil {
+				t.Fatalf("execute template: %v", err)
+			}
+			for _, expected := range test.contains {
+				if !strings.Contains(output.String(), expected) {
+					t.Errorf("rendered %s does not contain %q", test.file, expected)
+				}
+			}
+			for _, expected := range []string{"Erika", "ABC123", "Testspiel"} {
+				if !strings.Contains(output.String(), expected) {
+					t.Errorf("rendered %s does not contain booking data %q", test.file, expected)
+				}
+			}
+		})
+	}
+}
 
 func TestFormatMailMessageEncodesUTF8HeadersAndBody(t *testing.T) {
 	message, recipient, err := mailutil.FormatMessage(

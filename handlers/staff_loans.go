@@ -204,7 +204,7 @@ func CreateSpontaneousStaffLoan(c *gin.Context) {
 		name, email, deposit, endDate, itemIDs)
 	if err != nil {
 		if errors.Is(err, db.ErrBookingConflict) {
-			c.JSON(http.StatusConflict, gin.H{"error": "Mindestens eines der Spiele ist im Zeitraum bereits reserviert"})
+			c.JSON(http.StatusConflict, gin.H{"error": "Mindestens eines der Spiele ist nicht verfügbar oder im Zeitraum bereits reserviert"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Spontane Ausgabe konnte nicht gespeichert werden"})

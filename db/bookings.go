@@ -13,7 +13,22 @@ import (
 var (
 	ErrBookingNotEditable = errors.New("booking is not editable")
 	ErrBookingConflict    = errors.New("booking conflict")
+	ErrItemUnavailable    = errors.New("one or more items are unavailable")
 )
+
+func (q *Queries) EnsureItemsAvailable(ctx context.Context, itemIDs []int32) error {
+	var availableCount int
+	if err := q.db.QueryRowContext(ctx, `
+		SELECT COUNT(DISTINCT id) FROM items
+		WHERE id = ANY($1::int[]) AND status = 'available'
+	`, pq.Array(itemIDs)).Scan(&availableCount); err != nil {
+		return err
+	}
+	if availableCount != len(itemIDs) {
+		return ErrItemUnavailable
+	}
+	return nil
+}
 
 type UserBooking struct {
 	ID        int32
@@ -311,15 +326,11 @@ func (q *Queries) CreateSpontaneousLoan(ctx context.Context, token string, staff
 		if len(conflicts) > 0 {
 			return ErrBookingConflict
 		}
-		var availableCount int
-		if err := tx.db.QueryRowContext(ctx, `
-			SELECT COUNT(DISTINCT id) FROM items
-			WHERE id = ANY($1::int[]) AND status = 'available'
-		`, pq.Array(itemIDs)).Scan(&availableCount); err != nil {
+		if err := tx.EnsureItemsAvailable(ctx, itemIDs); err != nil {
+			if errors.Is(err, ErrItemUnavailable) {
+				return ErrBookingConflict
+			}
 			return err
-		}
-		if availableCount != len(itemIDs) {
-			return ErrBookingConflict
 		}
 		userID := sql.NullInt32{}
 		guestNameValue := sql.NullString{String: strings.TrimSpace(guestName), Valid: strings.TrimSpace(guestName) != ""}

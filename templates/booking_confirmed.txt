@@ -1,0 +1,15 @@
+Hallo {{ .FirstName }},
+
+deine Ausleihe wurde bestätigt.
+
+Buchungsnummer: {{ .BookingToken }}
+Abholtag: {{ .StartDate }}
+
+Reservierte Spiele:
+{{ range .Items }}- {{ . }}
+{{ end }}
+
+Bitte hole die Spiele am gebuchten Abholtag im Raum V38.0.001 ab und halte dafür deine Buchungsnummer bereit. Werden die Spiele nicht am richtigen Tag abgeholt, verfällt die Buchung.
+
+Viele Grüße
+FIUS Verleih

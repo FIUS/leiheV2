@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"leiheV2/db"
@@ -78,6 +79,13 @@ func HandleCreateBooking(c *gin.Context) {
 		}
 		recipientEmail = user.Email
 		recipientName = user.FirstName
+	} else {
+		name := strings.TrimSpace(req.GuestName)
+		email := strings.TrimSpace(req.GuestEmail)
+		guestName = sql.NullString{String: name, Valid: name != ""}
+		guestEmail = sql.NullString{String: email, Valid: email != ""}
+		recipientEmail = email
+		recipientName = name
 	}
 
 	// Sperren, prüfen und speichern müssen in derselben Transaktion erfolgen,
@@ -86,6 +94,9 @@ func HandleCreateBooking(c *gin.Context) {
 	var collisions []db.CheckItemCollisionsRow
 	err = queries.InTx(ctx, func(qTx *db.Queries) error {
 		if err := qTx.LockItemsForBooking(ctx, req.Games); err != nil {
+			return err
+		}
+		if err := qTx.EnsureItemsAvailable(ctx, req.Games); err != nil {
 			return err
 		}
 
@@ -131,13 +142,13 @@ func HandleCreateBooking(c *gin.Context) {
 	})
 
 	if err != nil {
-		if errors.Is(err, errBookingConflict) {
+		if errors.Is(err, errBookingConflict) || errors.Is(err, db.ErrItemUnavailable) {
 			var conflictNames []string
 			for _, col := range collisions {
 				conflictNames = append(conflictNames, col.Name)
 			}
 			c.JSON(http.StatusConflict, gin.H{
-				"error":     "Ein oder mehrere Spiele sind im gewählten Zeitraum bereits reserviert.",
+				"error":     "Ein oder mehrere Spiele sind nicht verfügbar oder im gewählten Zeitraum bereits reserviert.",
 				"conflicts": conflictNames,
 			})
 			return

@@ -137,11 +137,7 @@ func ReviewPendingBooking(c *gin.Context) {
 		return
 	}
 	if details.Email.Valid {
-		change := "bestätigt"
-		if status == "cancelled" {
-			change = "abgelehnt und storniert"
-		}
-		if err := sendBookingUpdateEmail(details, change); err != nil {
+		if err := sendBookingReviewEmail(details, status == "confirmed"); err != nil {
 			logMailError("booking review", err)
 			c.Redirect(http.StatusFound, "/admin/bookings?error=email-failed")
 			return

@@ -204,7 +204,7 @@ func TestAdminBookingsRendersAllBookingStatesAndOrigins(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Failed to execute admin_bookings.html: %v", err)
 	}
-	for _, expected := range []string{"Zu bearbeitende Buchungen", "Alle Buchungen", "PENDING1", "CONFIRM1", "CANCELLED1", "Ausstehend", "Bestätigt", "Storniert", "Erstellt durch Team", `action="/admin/bookings/review"`, "Bestätigen", "Ablehnen", `action="/admin/bookings/confirmed/cancel"`} {
+	for _, expected := range []string{"Zu bearbeitende Buchungen", "Alle Buchungen", "Buchungsnummer, Name oder E-Mail suchen", "matchesBooking", "PENDING1", "CONFIRM1", "CANCELLED1", "Ausstehend", "Bestätigt", "Storniert", "Erstellt durch Team", `action="/admin/bookings/review"`, "Bestätigen", "Ablehnen", `action="/admin/bookings/confirmed/cancel"`} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected admin bookings output to contain %q", expected)
 		}
@@ -315,18 +315,21 @@ func TestGamesTemplateRendersStoredBGGRatingAndCategoryTags(t *testing.T) {
 	var output bytes.Buffer
 	if err := tmpl.ExecuteTemplate(&output, "games.html", map[string]interface{}{
 		"UserRole": "guest",
-		"Games": []db.ListItemsWithCategoriesRow{{
-			ID: 1, Name: "Test Game", MinPlayers: 2, MaxPlayers: 4,
-			MinPlaytime: 45, MaxPlaytime: 45,
-			BGGRating:     sql.NullFloat64{Float64: 7.8, Valid: true},
-			CategoryNames: "Strategy,Cooperative",
-			Status:        "available",
-		}},
+		"Games": []db.ListItemsWithCategoriesRow{
+			{
+				ID: 1, Name: "Test Game", MinPlayers: 2, MaxPlayers: 4,
+				MinPlaytime: 45, MaxPlaytime: 45,
+				BGGRating:     sql.NullFloat64{Float64: 7.8, Valid: true},
+				CategoryNames: "Strategy,Cooperative",
+				Status:        "available",
+			},
+			{ID: 2, Name: "Maintenance Game", Status: db.ItemStatusMaintenance},
+		},
 		"Categories": []db.Category{},
 	}); err != nil {
 		t.Fatalf("Failed to execute games.html: %v", err)
 	}
-	for _, expected := range []string{`data-rating="7.8"`, `data-categories="Strategy,Cooperative"`, "activeItem?.categories?.length > 0", "categories || []", `aria-label="Vorheriges Bild"`, `aria-label="Nächstes Bild"`, "previousImage()", "nextImage()", "rating / 2", "Math.max(0, Math.min(100", "tags.slice(0, 2)", "45 Min."} {
+	for _, expected := range []string{`data-rating="7.8"`, `data-categories="Strategy,Cooperative"`, `data-status="maintenance"`, "Nicht verfügbar", "activeItem?.categories?.length > 0", "categories || []", `aria-label="Vorheriges Bild"`, `aria-label="Nächstes Bild"`, "previousImage()", "nextImage()", "rating / 2", "Math.max(0, Math.min(100", "tags.slice(0, 2)", "45 Min."} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected games output to contain %q", expected)
 		}

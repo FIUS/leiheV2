@@ -44,13 +44,33 @@
             {{ end }}
         </section>
 
+        <section x-data="{
+            bookingSearch: '',
+            normalize(value) { return (value || '').trim().toLocaleLowerCase('de'); },
+            matchesBooking(name, email, token) {
+                const query = this.normalize(this.bookingSearch);
+                return !query || [name, email, token].some(value => this.normalize(value).includes(query));
+            },
+            hasMatchingBookings() {
+                return Array.from(this.$el.querySelectorAll('[data-booking-card]'))
+                    .some(card => this.matchesBooking(card.dataset.name, card.dataset.email, card.dataset.token));
+            }
+        }">
         <h2 class="mb-4 text-xl font-bold text-white">Alle Buchungen</h2>
+        {{ if .Bookings }}
+        <label for="booking-search" class="sr-only">Buchungen nach Buchungsnummer, Name oder E-Mail durchsuchen</label>
+        <input id="booking-search" type="search" x-model="bookingSearch"
+               placeholder="Buchungsnummer, Name oder E-Mail suchen …"
+               class="mb-4 w-full rounded-xl border border-theme-border bg-theme-card px-4 py-3 text-sm text-white placeholder:text-theme-muted outline-none transition focus:border-blue-500">
+        {{ end }}
         {{ if not .Bookings }}
         <div class="rounded-xl border border-theme-border bg-theme-card p-6 text-sm text-theme-muted">Keine Buchungen vorhanden.</div>
         {{ else }}
-        <div class="space-y-4">
+        <div id="all-bookings-list" class="space-y-4">
             {{ range .Bookings }}
-            <article class="rounded-xl border border-theme-border bg-theme-card p-5">
+            <article data-booking-card data-name="{{ .PersonName }}" data-email="{{ .Email.String }}" data-token="{{ .Token }}"
+                     x-show="matchesBooking($el.dataset.name, $el.dataset.email, $el.dataset.token)"
+                     class="rounded-xl border border-theme-border bg-theme-card p-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div class="min-w-0">
                         <h2 class="font-bold text-white">{{ range $index, $name := .ItemNames }}{{ if $index }}, {{ end }}{{ $name }}{{ end }}</h2>
@@ -72,7 +92,9 @@
             </article>
             {{ end }}
         </div>
+        <p x-show="!hasMatchingBookings()" x-cloak class="rounded-xl border border-theme-border bg-theme-card p-6 text-sm text-theme-muted">Keine passenden Buchungen gefunden.</p>
         {{ end }}
+        </section>
     </main>
 </div>
 <style> [x-cloak] { display: none !important; } </style>

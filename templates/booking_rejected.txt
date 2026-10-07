@@ -1,0 +1,15 @@
+Hallo {{ .FirstName }},
+
+deine Reservierungsanfrage wurde abgelehnt und storniert.
+
+Buchungsnummer: {{ .BookingToken }}
+Zeitraum: {{ .StartDate }} bis {{ .EndDate }}
+
+Reservierte Spiele:
+{{ range .Items }}- {{ . }}
+{{ end }}
+
+Bei Rückfragen kannst du uns unter fs@fius.de kontaktieren.
+
+Viele Grüße
+FIUS Verleih

@@ -195,6 +195,32 @@ func sendBookingUpdateEmail(details db.BookingEmailDetails, change string) error
 	return sendMail(details.Email.String, subject, body)
 }
 
+func sendBookingReviewEmail(details db.BookingEmailDetails, approved bool) error {
+	templatePath := "templates/booking_rejected.txt"
+	subject := "Reservierungsanfrage abgelehnt"
+	if approved {
+		templatePath = "templates/booking_confirmed.txt"
+		subject = "Ausleihe bestätigt"
+	}
+	body, err := renderMailTemplate(templatePath, struct {
+		FirstName    string
+		BookingToken string
+		StartDate    string
+		EndDate      string
+		Items        []string
+	}{
+		FirstName:    details.FirstName,
+		BookingToken: details.Token,
+		StartDate:    details.StartDate.Format("02.01.2006"),
+		EndDate:      details.EndDate.Format("02.01.2006"),
+		Items:        details.ItemNames,
+	})
+	if err != nil {
+		return err
+	}
+	return sendMail(details.Email.String, subject, body)
+}
+
 func bookingStatusLabel(status string) string {
 	switch status {
 	case "pending":
