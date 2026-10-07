@@ -124,11 +124,11 @@ func GetItemThumbnail(c *gin.Context) {
 
 func itemImageSources(item db.Item) []string {
 	sources := make([]string, 0, 2)
-	if item.CustomImageUrl.Valid && item.CustomImageUrl.String != "" {
-		sources = append(sources, item.CustomImageUrl.String)
-	}
 	if item.ImageUrl.Valid && item.ImageUrl.String != "" {
 		sources = append(sources, item.ImageUrl.String)
+	}
+	if item.CustomImageUrl.Valid && item.CustomImageUrl.String != "" {
+		sources = append(sources, item.CustomImageUrl.String)
 	}
 	return sources
 }
