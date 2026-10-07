@@ -322,6 +322,11 @@
                                         </div>
                                         <span class="text-xs text-theme-muted font-bold mt-0.5" x-text="`${(Number(activeItem?.bgg_rating) / 2).toFixed(1)} / 5`"></span>
                                 </div>
+                                <div x-show="activeItem?.categories?.length > 0" class="flex min-w-0 flex-wrap gap-1.5">
+                                    <template x-for="category in activeItem?.categories || []" :key="category">
+                                        <span class="max-w-40 truncate rounded-md border border-theme-border bg-theme-card px-2 py-1 text-[10px] font-medium text-theme-muted" x-text="category"></span>
+                                    </template>
+                                </div>
                                 <span class="text-theme-border hidden md:inline">|</span>
                                 <a :href="activeItem?.bgg_id ? `https://boardgamegeek.com/boardgame/${activeItem.bgg_id}` : `https://boardgamegeek.com/geeksearch.php?action=search&objecttype=boardgame&q=${encodeURIComponent(activeItem?.name)}`" target="_blank" class="text-xs text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 transition">Auf BoardGameGeek ansehen <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></a>
                             </div>

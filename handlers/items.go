@@ -275,7 +275,13 @@ func GetItemDetails(c *gin.Context) {
 
 	bookings, err := queries.GetUpcomingBookingsForItem(context.Background(), int32(itemID))
 	if err != nil {
-		bookings = []db.GetUpcomingBookingsForItemRow{}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Buchungen konnten nicht geladen werden"})
+		return
+	}
+	categories, err := queries.GetItemCategories(c.Request.Context(), int32(itemID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Kategorien konnten nicht geladen werden"})
+		return
 	}
 
 	var images []string
@@ -308,6 +314,7 @@ func GetItemDetails(c *gin.Context) {
 		"room":         item.Room.String,
 		"shelf":        item.Shelf.String,
 		"bgg_rating":   bggRating,
+		"categories":   categories,
 	})
 }
 

@@ -285,7 +285,7 @@ func TestGamesTemplateRendersStoredBGGRatingAndCategoryTags(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Failed to execute games.html: %v", err)
 	}
-	for _, expected := range []string{`data-rating="7.8"`, `data-categories="Strategy,Cooperative"`, "rating / 2", "Math.max(0, Math.min(100", "tags.slice(0, 2)", "45 Min."} {
+	for _, expected := range []string{`data-rating="7.8"`, `data-categories="Strategy,Cooperative"`, "activeItem?.categories?.length > 0", "categories || []", "rating / 2", "Math.max(0, Math.min(100", "tags.slice(0, 2)", "45 Min."} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected games output to contain %q", expected)
 		}
