@@ -71,7 +71,10 @@ func TestTemplatesParseAndExecute(t *testing.T) {
 	if !bytes.Contains([]byte(output), []byte("Nutzerverwaltung")) {
 		t.Errorf("Expected output to contain 'Nutzerverwaltung'")
 	}
-	for _, expected := range []string{`aria-label="Menü öffnen"`, `md:hidden`, `/admin/ausgabe#issue`, `/admin/ausgabe#return`} {
+	for _, expected := range []string{
+		`aria-label="Menü öffnen"`, `lg:hidden`, `/admin/ausgabe#issue`, `/admin/ausgabe#return`,
+		`Buchungen`, `Nutzerkonto`, `Meine Buchungen`,
+	} {
 		if !bytes.Contains([]byte(output), []byte(expected)) {
 			t.Errorf("Expected responsive header output to contain %q", expected)
 		}

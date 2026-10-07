@@ -101,8 +101,6 @@ document.addEventListener('alpine:init', () => {
 
             ['search', 'sortBy', 'playersFilter', 'minDurationFilter', 'maxDurationFilter', 'selectedCategories', 'minRatingFilter', 'pageSize']
                 .forEach((filter) => this.$watch(filter, () => { this.currentPage = 1; }));
-            this.$watch('sortBy', () => this.$nextTick(() => this.sortItems()));
-            this.$nextTick(() => this.sortItems());
         },
 
         // --- Korb-Logik ---
@@ -167,7 +165,7 @@ document.addEventListener('alpine:init', () => {
             if (key === filteredGamesCacheKey) return filteredGamesCache;
 
             const container = document.getElementById("games-container");
-            const games = container ? Array.from(container.children) : [];
+            const games = container ? Array.from(container.querySelectorAll("[data-game-id]")) : [];
             const search = this.search.trim().toLowerCase();
             filteredGamesCache = games.filter((game) => {
                 const data = game.dataset;
@@ -204,21 +202,6 @@ document.addEventListener('alpine:init', () => {
             return filteredGamesCache;
         },
 
-        sortItems() {
-            const container = document.getElementById("games-container");
-            if (!container) return;
-            const items = Array.from(container.children);
-            items.sort((a, b) => {
-                const aValue = Number(a.dataset[this.sortBy]);
-                const bValue = Number(b.dataset[this.sortBy]);
-                if (this.sortBy === "name") return a.dataset.name.localeCompare(b.dataset.name);
-                if (this.sortBy === "rating") return bValue - aValue;
-                return aValue - bValue;
-            });
-            items.forEach((item) => container.appendChild(item));
-            filteredGamesCacheKey = "";
-        },
-
         isGameVisible(id) {
             const games = this.getFilteredGames();
             const index = filteredGamePositions.get(Number(id));
@@ -226,6 +209,11 @@ document.addEventListener('alpine:init', () => {
             const pageSize = this.pageSize === "all" ? games.length : Number(this.pageSize);
             return index >= (this.currentPage - 1) * pageSize &&
                 index < this.currentPage * pageSize;
+        },
+
+        gameOrder(id) {
+            this.getFilteredGames();
+            return filteredGamePositions.get(Number(id)) ?? 0;
         },
 
         get totalPages() {

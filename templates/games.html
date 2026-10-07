@@ -130,6 +130,7 @@
                      data-game-image="{{ if .CustomImageUrl.Valid }}{{ .CustomImageUrl.String }}{{ else if .ImageUrl.Valid }}{{ .ImageUrl.String }}{{ else }}/static/images/image-placeholder.svg{{ end }}"
                      x-data="{ tags: [], rating: 0 }" x-init="rating = Number($el.dataset.rating); tags = $el.dataset.categories.split(',').map(tag => tag.trim()).filter(Boolean)"
                      x-show="isGameVisible({{ .ID }})"
+                     :style="`order: ${gameOrder({{ .ID }})}`"
                      class=" rounded-xl border shadow-md overflow-hidden flex transition duration-300 hover:border-blue-500 group"
                      :class="viewMode === 'grid' ? 'flex-col h-full' : 'flex-row items-center'">
 
