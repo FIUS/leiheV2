@@ -324,6 +324,7 @@ func TestBarcodeDesignerTemplateAndAdminNavigation(t *testing.T) {
 		"Etiketten-Designer", "barcodeDesigner",
 		"Endlosband", "Einzel-Etikett", "Code-128", "URL-Template", "Alle angezeigten auswählen",
 		"Manifest JSON", "qrcode-generator.js", "JsBarcode.all.min.js", "jszip.min.js", "/static/js/label_designer.js",
+		`x-model="bandWidth"`, `x-model="dieCutSize"`, `placeholder="z. B. 29 x 90 oder 50 × 30"`,
 	} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected barcode designer output to contain %q", expected)

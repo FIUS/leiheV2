@@ -22,13 +22,11 @@
                                 <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="rollType === 'diecut' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input class="mr-2 accent-blue-500" type="radio" value="diecut" x-model="rollType">Einzel-Etikett</label>
                             </div>
                         </fieldset>
-                        <label class="block text-xs font-semibold uppercase tracking-wide text-theme-muted">Bandbreite
-                            <select x-model.number="bandWidth" class="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2.5 text-sm text-white">
-                                <option value="12">12 mm</option><option value="29">29 mm</option><option value="38">38 mm</option><option value="50">50 mm</option><option value="62">62 mm</option>
-                            </select>
-                        </label>
                         <template x-if="rollType === 'continuous'">
                             <div class="space-y-3">
+                                <label class="block text-xs font-semibold uppercase tracking-wide text-theme-muted">Bandbreite in mm
+                                    <input type="text" inputmode="decimal" x-model="bandWidth" placeholder="z. B. 29 oder 12,7" class="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2.5 text-sm text-white">
+                                </label>
                                 <fieldset>
                                     <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-theme-muted">Etikettenlänge</legend>
                                     <label class="mr-4 inline-flex items-center gap-2 text-sm text-gray-200"><input type="radio" value="dynamic" x-model="lengthMode" class="accent-blue-500">Dynamisch</label>
@@ -39,10 +37,9 @@
                                 </label>
                             </div>
                         </template>
-                        <label x-show="rollType === 'diecut'" class="block text-xs font-semibold uppercase tracking-wide text-theme-muted">Etikettengröße
-                            <select x-model="dieCutSize" class="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2.5 text-sm text-white">
-                                <option value="29x90">29 × 90 mm</option><option value="38x90">38 × 90 mm</option><option value="62x100">62 × 100 mm</option>
-                            </select>
+                        <label x-show="rollType === 'diecut'" class="block text-xs font-semibold uppercase tracking-wide text-theme-muted">Etikettengröße (Breite × Höhe in mm)
+                            <input type="text" x-model="dieCutSize" placeholder="z. B. 29 x 90 oder 50 × 30" class="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2.5 text-sm text-white">
+                            <span class="mt-1 block normal-case text-theme-muted">Maße sind nicht auf Brother-Formate beschränkt.</span>
                         </label>
                     </div>
                 </section>

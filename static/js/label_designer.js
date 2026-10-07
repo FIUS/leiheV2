@@ -1,6 +1,25 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const LABEL_MARGIN_MM = 1.5;
 
+function parseLabelMillimeters(value, fieldName) {
+    const parsed = Number(String(value).trim().replace(',', '.'));
+    if (!Number.isFinite(parsed) || parsed <= 3 || parsed > 1000) {
+        throw new Error(`${fieldName} muss größer als 3 mm und höchstens 1000 mm sein (inklusive 1,5 mm Sicherheitsrand je Seite).`);
+    }
+    return parsed;
+}
+
+function parseLabelSize(value) {
+    const match = String(value).trim().match(/^(\d+(?:[.,]\d+)?)\s*(?:mm)?\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(?:mm)?$/i);
+    if (!match) {
+        throw new Error('Etikettengröße bitte als „Breite x Höhe“ in mm eingeben, zum Beispiel 50 x 30.');
+    }
+    return {
+        width: parseLabelMillimeters(match[1], 'Etikettenbreite'),
+        height: parseLabelMillimeters(match[2], 'Etikettenhöhe')
+    };
+}
+
 function labelSvgElement(name, attributes = {}) {
     const element = document.createElementNS(SVG_NS, name);
     Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, String(value)));
@@ -65,7 +84,7 @@ function appendLabelText(parent, value, x, y, maxWidth, options = {}) {
 document.addEventListener('alpine:init', () => {
     Alpine.data('barcodeDesigner', () => ({
         rollType: 'continuous',
-        bandWidth: 29,
+        bandWidth: '29',
         lengthMode: 'dynamic',
         fixedLength: 60,
         dieCutSize: '29x90',
@@ -134,17 +153,20 @@ document.addEventListener('alpine:init', () => {
 
         get labelDimensions() {
             const item = this.previewItem || { id: 0, name: '' };
-            return this.dimensionsForItem(item);
+            try {
+                return this.dimensionsForItem(item);
+            } catch {
+                return { width: '—', height: '—' };
+            }
         },
 
         dimensionsForItem(item) {
             if (this.rollType === 'diecut') {
-                const [width, height] = this.dieCutSize.split('x').map(Number);
-                return { width, height };
+                return parseLabelSize(this.dieCutSize);
             }
-            const width = Number(this.bandWidth);
+            const width = parseLabelMillimeters(this.bandWidth, 'Bandbreite');
             if (this.lengthMode === 'fixed') {
-                return { width, height: Math.max(20, Math.min(500, Number(this.fixedLength) || 60)) };
+                return { width, height: parseLabelMillimeters(this.fixedLength, 'Etikettenlänge') };
             }
             const titleLines = this.showTitle ? wrapLabelText(item.name || '', Math.max(4, Math.floor((width - 3) / 2))).length : 0;
             const textHeight = (this.showBrand ? 6 : 0) + (this.showID ? 6 : 0) + titleLines * 4 + 4;
@@ -281,8 +303,9 @@ document.addEventListener('alpine:init', () => {
             if (!this.$refs.preview) return;
             this.$refs.preview.replaceChildren();
             this.error = '';
-            if (!this.previewItem) return;
             try {
+                this.dimensionsForItem(this.previewItem || { id: 0, name: '' });
+                if (!this.previewItem) return;
                 this.$refs.preview.appendChild(this.createLabelSVG(this.previewItem));
             } catch (error) {
                 this.error = error.message || 'Vorschau konnte nicht erstellt werden.';
@@ -319,10 +342,12 @@ document.addEventListener('alpine:init', () => {
         exportSettings() {
             return {
                 rollType: this.rollType,
-                bandWidthMm: Number(this.bandWidth),
+                bandWidthMm: this.rollType === 'continuous' ? parseLabelMillimeters(this.bandWidth, 'Bandbreite') : null,
                 lengthMode: this.lengthMode,
-                fixedLengthMm: Number(this.fixedLength),
-                dieCutSize: this.dieCutSize,
+                fixedLengthMm: this.rollType === 'continuous' && this.lengthMode === 'fixed'
+                    ? parseLabelMillimeters(this.fixedLength, 'Etikettenlänge')
+                    : null,
+                dieCutSize: this.rollType === 'diecut' ? this.dieCutSize : null,
                 codeType: this.codeType,
                 payloadMode: this.payloadMode,
                 urlTemplate: this.urlTemplate,
