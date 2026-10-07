@@ -321,11 +321,31 @@ func (q *Queries) CreateSpontaneousLoan(ctx context.Context, token string, staff
 		if availableCount != len(itemIDs) {
 			return ErrBookingConflict
 		}
+		userID := sql.NullInt32{}
+		guestNameValue := sql.NullString{String: strings.TrimSpace(guestName), Valid: strings.TrimSpace(guestName) != ""}
+		guestEmailValue := sql.NullString{String: strings.TrimSpace(guestEmail), Valid: strings.TrimSpace(guestEmail) != ""}
+		if guestEmailValue.Valid {
+			err := tx.db.QueryRowContext(ctx, `
+				SELECT CASE WHEN COUNT(*) = 1 THEN MIN(id) END
+				FROM users
+				WHERE LOWER(BTRIM(email)) = LOWER(BTRIM($1))
+				  AND LOWER(REGEXP_REPLACE(BTRIM(CONCAT_WS(' ', first_name, last_name)), '\s+', ' ', 'g')) =
+				      LOWER(REGEXP_REPLACE(BTRIM($2), '\s+', ' ', 'g'))
+			`, guestEmailValue.String, guestNameValue.String).Scan(&userID)
+			if err != nil {
+				return err
+			}
+			if userID.Valid {
+				guestNameValue = sql.NullString{}
+				guestEmailValue = sql.NullString{}
+			}
+		}
 		booking, err := tx.CreateBooking(ctx, CreateBookingParams{
 			PublicToken:     token,
+			UserID:          userID,
 			CreatedByUserID: sql.NullInt32{Int32: staffID, Valid: true},
-			GuestName:       sql.NullString{String: strings.TrimSpace(guestName), Valid: strings.TrimSpace(guestName) != ""},
-			GuestEmail:      sql.NullString{String: strings.TrimSpace(guestEmail), Valid: strings.TrimSpace(guestEmail) != ""},
+			GuestName:       guestNameValue,
+			GuestEmail:      guestEmailValue,
 			StartDate:       startDate,
 			EndDate:         endDate,
 			Status:          BookingStatusActive,
