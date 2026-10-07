@@ -6,27 +6,27 @@
      data-user-role="{{ .UserRole }}"
      data-games='{{ printf "%s" .GamesJSON }}'
      x-data="gamesCatalog">
-    <div class=" p-4 rounded-xl shadow-sm border flex flex-col lg:flex-row justify-between items-center gap-4 mt-4">
+    <div class="rounded-xl border p-3 shadow-sm sm:p-4">
 
         <!-- Suche -->
-        <div class="w-full lg:flex-1 max-w-md relative">
-            <input type="text" x-model="search" placeholder="Durchsuchen..." class="w-full pl-10 pr-4 py-2 bg-theme-bg border rounded-md text-gray-100 text-sm focus:outline-none focus:border-blue-500">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center text-theme-muted">
+        <div class="relative w-full">
+            <input type="search" x-model="search" aria-label="Spiele durchsuchen" placeholder="Spiele durchsuchen …" class="w-full rounded-lg border border-theme-border bg-theme-bg py-2.5 pl-10 pr-10 text-sm text-gray-100 placeholder:text-theme-muted focus:border-blue-500 focus:outline-none">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-theme-muted">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
         </div>
 
         <!-- View Modes & Leihkorb -->
-        <div class="flex items-center gap-4 w-full justify-between lg:w-auto lg:justify-end">
+        <div class="mt-3 flex w-full items-center justify-between gap-3 sm:mt-3">
             <!-- View Modes -->
-            <div class="inline-flex rounded-md shadow-sm border p-0.5 bg-theme-bg">
+            <div class="inline-flex rounded-lg border border-theme-border bg-theme-bg p-0.5 shadow-sm">
                 <button @click="viewMode = 'grid'" title="Kacheln" :class="viewMode === 'grid' ? 'text-blue-500 shadow-sm' : 'text-theme-muted'" class="p-1.5 rounded transition-colors"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg></button>
                 <button @click="viewMode = 'list-img'" title="Liste mit Bild" :class="viewMode === 'list-img' ?  'text-blue-500 shadow-sm' : 'text-theme-muted'" class="p-1.5 rounded transition-colors"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16M4 6v4h4V6H4z"></path></svg></button>
                 <button @click="viewMode = 'list'" title="Liste pur" :class="viewMode === 'list' ? 'text-blue-500 shadow-sm' : 'text-theme-muted'" class="p-1.5 rounded transition-colors"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
             </div>
 
             <!-- Leihkorb Icon mit Zähler-Badge -->
-            <button @click="cartOpen = true" class="relative inline-flex items-center p-2 text-sm text-gray-100 bg-theme-bg border rounded-lg transition hover:border-blue-500 cursor-pointer shadow-sm">
+            <button @click="cartOpen = true" aria-label="Leihkorb öffnen" class="relative inline-flex items-center rounded-lg border border-theme-border bg-theme-bg p-2 text-sm text-gray-100 shadow-sm transition hover:border-blue-500">
                 <svg class="w-6 h-6 text-theme-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                 <span x-show="cart.length > 0" x-text="cart.length" style="display: none;" class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow"></span>
             </button>
@@ -129,8 +129,7 @@
                      data-max-playtime="{{ .MaxPlaytime }}" data-categories="{{ .CategoryNames }}"
                      data-game-image="{{ if .CustomImageUrl.Valid }}{{ .CustomImageUrl.String }}{{ else if .ImageUrl.Valid }}{{ .ImageUrl.String }}{{ else }}/static/images/image-placeholder.svg{{ end }}"
                      x-data="{ tags: [], rating: 0 }" x-init="rating = Number($el.dataset.rating); tags = $el.dataset.categories.split(',').map(tag => tag.trim()).filter(Boolean)"
-                     x-show="isGameVisible({{ .ID }})"
-                     :style="`order: ${gameOrder({{ .ID }})}`"
+                     :style="{ order: gameOrder({{ .ID }}), display: isGameVisible({{ .ID }}) ? 'flex' : 'none' }"
                      class=" rounded-xl border shadow-md overflow-hidden flex transition duration-300 hover:border-blue-500 group"
                      :class="viewMode === 'grid' ? 'flex-col h-full' : 'flex-row items-center'">
 
@@ -147,21 +146,19 @@
 
                     <!-- Content Area -->
                     <div class="flex-1 flex min-w-0"
-                         :class="{
-                            'flex-col p-5 h-full justify-between': viewMode === 'grid',
-                            'flex-col p-4 justify-between h-full': viewMode === 'list-img',
-                            'flex-col sm:flex-row sm:items-center p-3 sm:px-5 gap-4': viewMode === 'list'
-                         }">
+                         :class="viewMode === 'list'
+                            ? 'grid grid-cols-1 gap-y-1 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_8rem_9rem] sm:items-center sm:gap-x-4 sm:px-5'
+                            : (viewMode === 'grid' ? 'flex-col p-5 h-full justify-between' : 'flex-col p-4 justify-between h-full')">
 
                         <!-- Title & Stats -->
-                        <div class="flex-1 flex min-w-0" :class="viewMode === 'list' ? 'flex-col sm:flex-row sm:items-center gap-2 sm:gap-6' : 'flex-col gap-3'">
+                        <div class="flex min-w-0 flex-col gap-3" :class="viewMode === 'list' ? 'contents sm:contents' : 'flex-1'">
                             <h3 @click="openDetails({{ .ID }})" title="{{ .Name }}"
-                                class="text-lg font-bold text-white hover:text-blue-500 transition cursor-pointer line-clamp-1">
+                                class="min-w-0 truncate text-lg font-bold text-white transition hover:text-blue-500 cursor-pointer">
                                 {{ .Name }}
                             </h3>
-                            <div class="flex text-sm text-gray-300" :class="viewMode === 'list' ? 'flex-row gap-4 sm:gap-6 shrink-0' : 'flex-col gap-1'">
-                                <span :class="viewMode === 'list' ? 'w-32 shrink-0 whitespace-nowrap' : ''"><strong class="text-theme-muted">Spieler:</strong> {{ .MinPlayers }} - {{ .MaxPlayers }}</span>
-                                <span :class="viewMode === 'list' ? 'w-40 shrink-0 whitespace-nowrap' : ''">
+                            <div class="flex text-sm text-gray-300" :class="viewMode === 'list' ? 'contents' : 'flex-col gap-1'">
+                                <span class="whitespace-nowrap text-sm"><strong class="text-theme-muted">Spieler:</strong> {{ .MinPlayers }} - {{ .MaxPlayers }}</span>
+                                <span class="whitespace-nowrap text-sm">
                                     <strong class="text-theme-muted">Dauer:</strong>
                                     {{ if and (gt .MinPlaytime 0) (eq .MinPlaytime .MaxPlaytime) }}{{ .MinPlaytime }} Min.
                                     {{ else if and (gt .MinPlaytime 0) (gt .MaxPlaytime 0) }}{{ .MinPlaytime }} - {{ .MaxPlaytime }} Min.

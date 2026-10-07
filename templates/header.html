@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="/static/css/tailwind.css?v=5">
     <script defer src="/static/js/alpine.min.js"></script>
 </head>
-<body class="bg-theme-bg text-gray-100 min-h-screen">
+<body class="bg-theme-bg text-gray-100 min-h-screen flex flex-col">
 
 <nav class="relative border-b border-theme-border p-3 sm:p-4" x-data="{ open: false, mobileMenuOpen: false }">
     <div class="container mx-auto flex min-w-0 items-center justify-between gap-3">
@@ -25,10 +25,9 @@
             </a>
             {{ if and .UserRole (ne .UserRole "guest") }}
             {{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }}
-            <div class="hidden items-center gap-2 lg:flex">
-                <a href="/admin/ausgabe#issue" class="inline-flex h-11 items-center rounded-lg border border-theme-border px-4 text-sm font-semibold text-gray-200 transition hover:border-blue-500 hover:text-white">Ausgeben</a>
-                <a href="/admin/ausgabe#return" class="inline-flex h-11 items-center rounded-lg border border-theme-border px-4 text-sm font-semibold text-gray-200 transition hover:border-blue-500 hover:text-white">Zurücknehmen</a>
-                <a href="/admin/bookings" class="inline-flex h-11 items-center rounded-lg border border-theme-border px-4 text-sm font-semibold text-gray-200 transition hover:border-blue-500 hover:text-white">Buchungsübersicht</a>
+            <div class="hidden items-center gap-2 lg:ml-4 lg:flex">
+                <a href="/admin/ausgabe" class="inline-flex h-10 items-center rounded-lg border border-theme-border px-2.5 text-xs font-semibold text-gray-200 transition hover:border-blue-500 hover:text-white lg:px-3 lg:text-sm">Ausgabe &amp; Rücknahme</a>
+                <a href="/admin/bookings" class="inline-flex h-10 items-center rounded-lg border border-theme-border px-2.5 text-xs font-semibold text-gray-200 transition hover:border-blue-500 hover:text-white lg:px-3 lg:text-sm">Buchungen</a>
             </div>
             {{ end }}
             {{ end }}
@@ -64,7 +63,8 @@
     </div>
 
     <div x-show="mobileMenuOpen" x-cloak @click.outside="mobileMenuOpen = false"
-         class="absolute left-0 right-0 top-full z-[100] border-b border-theme-border bg-theme-bg px-4 pb-4 pt-2 shadow-xl lg:hidden">
+         class="absolute left-0 right-0 top-full z-[100] border-b border-theme-border bg-theme-bg shadow-xl lg:hidden">
+        <div class="container mx-auto px-4 pb-4 pt-2">
         {{ if and .UserRole (ne .UserRole "guest") }}
         {{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }}
         <section class="rounded-xl border border-theme-border bg-theme-card/50 p-2">
@@ -86,8 +86,9 @@
         {{ else }}
         <a @click="mobileMenuOpen = false" href="/login" class="block rounded-lg px-3 py-3 text-sm font-semibold text-white hover:bg-theme-card">Anmelden</a>
         {{ end }}
+        </div>
     </div>
 </nav>
 
-<main class="container mx-auto p-4 mt-4">
+<main class="container mx-auto mt-4 flex w-full flex-1 flex-col p-4">
 {{ end }}
