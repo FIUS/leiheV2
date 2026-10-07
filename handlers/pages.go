@@ -32,9 +32,14 @@ func RenderIndex(c *gin.Context) {
 		return
 	}
 
+	otherItemsCount := len(items)
+	if otherItemsCount > 0 {
+		otherItemsCount--
+	}
+
 	c.HTML(http.StatusOK, "index.html", pageData(c, gin.H{
-		"TotalItems": len(items),
-		"GameNames":  template.JS(namesJSON),
+		"OtherItemsCount": otherItemsCount,
+		"GameNames":       template.JS(namesJSON),
 	}))
 }
 
