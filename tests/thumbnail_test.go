@@ -5,10 +5,48 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
+	"path/filepath"
 	"testing"
 
 	"leiheV2/internal/imageutil"
 )
+
+func TestThumbnailCachePersistsAcrossInstances(t *testing.T) {
+	cacheDir := filepath.Join(t.TempDir(), "cache")
+	first := imageutil.NewThumbnailCache(cacheDir)
+	key := "42:https://cf.geekdo-images.com/game.jpg"
+	var encoded bytes.Buffer
+	if err := jpeg.Encode(&encoded, image.NewRGBA(image.Rect(0, 0, 1, 1)), nil); err != nil {
+		t.Fatalf("encode thumbnail: %v", err)
+	}
+	expected := encoded.Bytes()
+
+	if _, found, err := first.Get(key); err != nil || found {
+		t.Fatalf("initial cache lookup = (found %v, err %v), want (false, nil)", found, err)
+	}
+	if err := first.Put(key, expected); err != nil {
+		t.Fatalf("persist thumbnail: %v", err)
+	}
+
+	reopened := imageutil.NewThumbnailCache(cacheDir)
+	got, found, err := reopened.Get(key)
+	if err != nil {
+		t.Fatalf("read persisted thumbnail: %v", err)
+	}
+	if !found {
+		t.Fatal("expected a persisted thumbnail to be found by a new cache instance")
+	}
+	if !bytes.Equal(got, expected) {
+		t.Fatal("persisted thumbnail bytes differ from the stored bytes")
+	}
+	files, err := filepath.Glob(filepath.Join(cacheDir, "*.jpg"))
+	if err != nil || len(files) != 1 {
+		t.Fatalf("expected one hashed cache file, found %d (err %v)", len(files), err)
+	}
+	if filepath.Base(files[0]) == key+".jpg" {
+		t.Fatal("cache filename should not contain the raw key")
+	}
+}
 
 func TestCompressThumbnailResizesAndEncodesJPEG(t *testing.T) {
 	source := image.NewRGBA(image.Rect(0, 0, 1200, 800))

@@ -23,15 +23,17 @@ import (
 )
 
 const (
-	maxImageBytes = 8 << 20
-	maxThumbCache = 256
+	maxImageBytes     = 8 << 20
+	maxThumbCache     = 256
+	thumbnailCacheDir = "image_cache"
 )
 
 var (
-	thumbnailCacheMu sync.Mutex
-	thumbnailCache   = make(map[string][]byte)
-	thumbnailCacheID []string
-	thumbnailClient  = &http.Client{
+	thumbnailCacheMu     sync.Mutex
+	thumbnailCache       = make(map[string][]byte)
+	thumbnailCacheID     []string
+	persistentThumbnails = imageutil.NewThumbnailCache(thumbnailCacheDir)
+	thumbnailClient      = &http.Client{
 		Timeout: 8 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 || req.URL.Scheme != "https" || !allowedImagePort(req.URL.Port()) || !imageutil.IsAllowedHost(req.URL.Hostname()) {
@@ -71,25 +73,36 @@ func GetItemThumbnail(c *gin.Context) {
 	thumbnail, cached := thumbnailCache[cacheKey]
 	thumbnailCacheMu.Unlock()
 	if !cached {
-		source, err := readGameImage(imageURL)
+		thumbnail, cached, err = persistentThumbnails.Get(cacheKey)
 		if err != nil {
-			log.Printf("Could not read image for game %d: %v", item.ID, err)
-			c.Status(http.StatusBadGateway)
-			return
+			log.Printf("Could not read persistent thumbnail cache for game %d: %v", item.ID, err)
 		}
-		thumbnail, err = imageutil.CompressThumbnail(source)
-		if err != nil {
-			log.Printf("Could not create thumbnail for game %d: %v", item.ID, err)
-			c.Status(http.StatusUnsupportedMediaType)
-			return
+		if !cached {
+			source, err := readGameImage(imageURL)
+			if err != nil {
+				log.Printf("Could not read image for game %d: %v", item.ID, err)
+				c.Status(http.StatusBadGateway)
+				return
+			}
+			thumbnail, err = imageutil.CompressThumbnail(source)
+			if err != nil {
+				log.Printf("Could not create thumbnail for game %d: %v", item.ID, err)
+				c.Status(http.StatusUnsupportedMediaType)
+				return
+			}
+			if err := persistentThumbnails.Put(cacheKey, thumbnail); err != nil {
+				log.Printf("Could not persist thumbnail for game %d: %v", item.ID, err)
+			}
 		}
 		thumbnailCacheMu.Lock()
-		if len(thumbnailCacheID) >= maxThumbCache {
-			delete(thumbnailCache, thumbnailCacheID[0])
-			thumbnailCacheID = thumbnailCacheID[1:]
+		if _, exists := thumbnailCache[cacheKey]; !exists {
+			if len(thumbnailCacheID) >= maxThumbCache {
+				delete(thumbnailCache, thumbnailCacheID[0])
+				thumbnailCacheID = thumbnailCacheID[1:]
+			}
+			thumbnailCache[cacheKey] = thumbnail
+			thumbnailCacheID = append(thumbnailCacheID, cacheKey)
 		}
-		thumbnailCache[cacheKey] = thumbnail
-		thumbnailCacheID = append(thumbnailCacheID, cacheKey)
 		thumbnailCacheMu.Unlock()
 	}
 

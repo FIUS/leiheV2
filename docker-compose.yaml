@@ -36,9 +36,11 @@ services:
         required: true
     volumes:
       - ./static/custom_images:/app/static/custom_images
+      - thumbnail_cache:/app/image_cache
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   postgres_data:
+  thumbnail_cache:

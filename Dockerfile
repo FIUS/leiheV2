@@ -31,6 +31,7 @@ COPY templates ./templates
 COPY static ./static
 COPY --from=frontend /frontend/node_modules/alpinejs/dist/cdn.min.js ./static/js/alpine.min.js
 COPY --from=frontend /frontend/static/css/tailwind.css ./static/css/tailwind.css
+RUN mkdir -p /app/image_cache && chown app:app /app/image_cache
 
 USER app
 EXPOSE 8080
