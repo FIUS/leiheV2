@@ -276,7 +276,8 @@ func TestGamesTemplateRendersStoredBGGRatingAndCategoryTags(t *testing.T) {
 		"UserRole": "guest",
 		"Games": []db.ListItemsWithCategoriesRow{{
 			ID: 1, Name: "Test Game", MinPlayers: 2, MaxPlayers: 4,
-			BGGRating:     sql.NullFloat64{Float64: 8.1, Valid: true},
+			MinPlaytime: 45, MaxPlaytime: 45,
+			BGGRating:     sql.NullFloat64{Float64: 7.8, Valid: true},
 			CategoryNames: "Strategy,Cooperative",
 			Status:        "available",
 		}},
@@ -284,12 +285,15 @@ func TestGamesTemplateRendersStoredBGGRatingAndCategoryTags(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Failed to execute games.html: %v", err)
 	}
-	for _, expected := range []string{`data-rating="8.1"`, `data-categories="Strategy,Cooperative"`, "rating / 2", "tags.slice(0, 2)"} {
+	for _, expected := range []string{`data-rating="7.8"`, `data-categories="Strategy,Cooperative"`, "rating / 2", "Math.max(0, Math.min(100", "tags.slice(0, 2)", "45 Min."} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected games output to contain %q", expected)
 		}
 	}
-	if bytes.Contains(output.Bytes(), []byte(`>8.1 / 10</span>`)) {
+	if bytes.Contains(output.Bytes(), []byte("45 - 45 Min.")) {
+		t.Error("games cards should display equal minimum and maximum playtimes only once")
+	}
+	if bytes.Contains(output.Bytes(), []byte(`>7.8 / 10</span>`)) {
 		t.Error("games cards should display the mapped five-star rating rather than a hard-coded ten-star rating")
 	}
 }

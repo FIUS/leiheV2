@@ -162,7 +162,8 @@
                                 <span :class="viewMode === 'list' ? 'w-32 shrink-0 whitespace-nowrap' : ''"><strong class="text-theme-muted">Spieler:</strong> {{ .MinPlayers }} - {{ .MaxPlayers }}</span>
                                 <span :class="viewMode === 'list' ? 'w-40 shrink-0 whitespace-nowrap' : ''">
                                     <strong class="text-theme-muted">Dauer:</strong>
-                                    {{ if and (gt .MinPlaytime 0) (ne .MinPlaytime .MaxPlaytime) }}{{ .MinPlaytime }} - {{ .MaxPlaytime }} Min.
+                                    {{ if and (gt .MinPlaytime 0) (eq .MinPlaytime .MaxPlaytime) }}{{ .MinPlaytime }} Min.
+                                    {{ else if and (gt .MinPlaytime 0) (gt .MaxPlaytime 0) }}{{ .MinPlaytime }} - {{ .MaxPlaytime }} Min.
                                     {{ else if gt .MaxPlaytime 0 }}{{ .MaxPlaytime }} Min.
                                     {{ else if gt .MinPlaytime 0 }}{{ .MinPlaytime }} Min.
                                     {{ else }}k.A.{{ end }}
@@ -170,8 +171,13 @@
                             </div>
                             <div x-show="rating > 0 || tags.length > 0" class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                                 <span x-show="rating > 0" class="inline-flex items-center gap-1 text-xs text-amber-300" :title="`BGG Bewertung ${((rating / 2).toFixed(1))} von 5 Sternen`">
-                                    <span aria-hidden="true" class="tracking-tight">
-                                        <template x-for="star in [1, 2, 3, 4, 5]" :key="star"><span :class="rating / 2 >= star ? 'text-amber-300' : 'text-gray-600'">★</span></template>
+                                    <span aria-hidden="true" class="inline-flex tracking-tight">
+                                        <template x-for="star in [1, 2, 3, 4, 5]" :key="star">
+                                            <span class="relative inline-block text-gray-600">
+                                                ★
+                                                <span class="absolute inset-y-0 left-0 overflow-hidden text-amber-300" :style="`width: ${Math.max(0, Math.min(100, (rating / 2 - star + 1) * 100))}%`">★</span>
+                                            </span>
+                                        </template>
                                     </span>
                                     <span x-text="`${(rating / 2).toFixed(1)} / 5`"></span>
                                 </span>
@@ -306,8 +312,13 @@
                             </div>
                             <div class="flex items-center flex-wrap gap-4 mt-2">
                                     <div x-show="Number(activeItem?.bgg_rating) > 0" class="flex items-center gap-1.5" title="BGG Bewertung">
-                                        <div class="text-sm tracking-tight">
-                                            <template x-for="star in [1, 2, 3, 4, 5]" :key="star"><span :class="Number(activeItem?.bgg_rating) / 2 >= star ? 'text-amber-300' : 'text-gray-600'">★</span></template>
+                                        <div class="inline-flex text-sm tracking-tight">
+                                            <template x-for="star in [1, 2, 3, 4, 5]" :key="star">
+                                                <span class="relative inline-block text-gray-600">
+                                                    ★
+                                                    <span class="absolute inset-y-0 left-0 overflow-hidden text-amber-300" :style="`width: ${Math.max(0, Math.min(100, (Number(activeItem?.bgg_rating) / 2 - star + 1) * 100))}%`">★</span>
+                                                </span>
+                                            </template>
                                         </div>
                                         <span class="text-xs text-theme-muted font-bold mt-0.5" x-text="`${(Number(activeItem?.bgg_rating) / 2).toFixed(1)} / 5`"></span>
                                 </div>
