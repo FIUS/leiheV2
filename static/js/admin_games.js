@@ -1,6 +1,7 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('adminGamesManagement', () => ({
         showAddForm: false,
+        searchQuery: '',
         editModalOpen: false,
         editGame: {},
         deleteModalOpen: false,
@@ -16,6 +17,20 @@ document.addEventListener('alpine:init', () => {
         isSearching: false,
         bggError: '',
         isLoadingDetails: false,
+
+        normalizeSearch(value) {
+            return (value || '').trim().toLocaleLowerCase('de').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        },
+
+        matchesGame(name) {
+            const query = this.normalizeSearch(this.searchQuery);
+            return !query || this.normalizeSearch(name).includes(query);
+        },
+
+        hasVisibleGames() {
+            return Array.from(document.querySelectorAll('[data-admin-game-row]'))
+                .some(row => this.matchesGame(row.dataset.name));
+        },
 
         openEditGame(dataset) {
             this.editGame = {

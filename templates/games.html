@@ -169,7 +169,7 @@
                                     {{ else }}k.A.{{ end }}
                                 </span>
                             </div>
-                            <div x-show="rating > 0 || tags.length > 0" class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                            <div x-show="viewMode !== 'list' && (rating > 0 || tags.length > 0)" class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                                 <span x-show="rating > 0" class="inline-flex items-center gap-1 text-xs text-amber-300" :title="`BGG Bewertung ${((rating / 2).toFixed(1))} von 5 Sternen`">
                                     <span aria-hidden="true" class="inline-flex tracking-tight">
                                         <template x-for="star in [1, 2, 3, 4, 5]" :key="star">
@@ -191,7 +191,7 @@
                         </div>
 
                         <!-- Actions Area -->
-                        <div class="shrink-0" :class="{
+                        <div x-show="viewMode !== 'list'" class="shrink-0" :class="{
                             'w-full mt-4 pt-4 border-t flex items-center justify-between': viewMode === 'grid' || viewMode === 'list-img',
                             'flex items-center gap-4 mt-3 sm:mt-0': viewMode === 'list'
                         }">

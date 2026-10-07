@@ -65,6 +65,17 @@
             </div>
 
             <!-- Spiele Tabelle -->
+            <div class="mb-4">
+                <label for="admin-game-search" class="sr-only">Spiele suchen</label>
+                <div class="relative">
+                    <svg class="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-theme-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7" stroke-width="2"></circle>
+                        <path stroke-linecap="round" stroke-width="2" d="m20 20-4-4"></path>
+                    </svg>
+                    <input id="admin-game-search" type="search" x-model="searchQuery" placeholder="Spiel suchen …"
+                           class="w-full rounded-xl border border-theme-border bg-theme-card py-3 pl-10 pr-4 text-sm text-white placeholder:text-theme-muted outline-none transition focus:border-blue-500">
+                </div>
+            </div>
             <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-visible">
                 <table class="min-w-full divide-y divide-theme-border text-sm">
                     <thead class="bg-theme-bg text-theme-muted text-left font-semibold uppercase tracking-wider text-[10px]">
@@ -78,7 +89,7 @@
                     </thead>
                     <tbody class="divide-y divide-theme-border text-gray-200">
                     {{ range .Games }}
-                    <tr class="hover:bg-[#1E2532] transition-colors">
+                    <tr data-admin-game-row data-name="{{ .Name }}" x-show="matchesGame($el.dataset.name)" class="hover:bg-[#1E2532] transition-colors">
                         <td class="py-3 px-5 font-bold">{{ .Name }}</td>
                         <td class="py-3 px-5 text-theme-muted">{{ .MinPlayers }} - {{ .MaxPlayers }}</td>
                         <td class="py-3 px-5 text-theme-muted">{{ .MinPlaytime }} - {{ .MaxPlaytime }} Min.</td>
@@ -115,6 +126,9 @@
                         </td>
                     </tr>
                     {{ end }}
+                    <tr x-show="!hasVisibleGames()" x-cloak>
+                        <td colspan="5" class="px-5 py-8 text-center text-sm text-theme-muted">Keine passenden Spiele gefunden.</td>
+                    </tr>
                     </tbody>
                 </table>
             </div>

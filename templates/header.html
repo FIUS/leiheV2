@@ -18,22 +18,21 @@
 
 <nav class="relative border-b border-theme-border p-3 sm:p-4" x-data="{ open: false, mobileMenuOpen: false }">
     <div class="container mx-auto flex min-w-0 items-center justify-between gap-3">
-        <a href="/" class="flex min-w-0 shrink items-center gap-2 text-lg font-bold text-white sm:text-2xl">
-            <img src="/static/images/fius-logo-white.svg" alt="FIUS Logo" class="h-9 w-auto shrink-0 sm:h-12">
-            <span class="text-theme-blue">Verleih</span>
-        </a>
-
-        <div class="hidden items-center gap-4 md:flex">
+        <div class="flex min-w-0 items-center gap-3 sm:gap-5">
+            <a href="/" class="flex min-w-0 shrink items-center gap-2 text-lg font-bold text-white sm:text-2xl">
+                <img src="/static/images/fius-logo-white.svg" alt="FIUS Logo" class="h-9 w-auto shrink-0 sm:h-12">
+                <span class="text-theme-blue">Verleih</span>
+            </a>
             {{ if and .UserRole (ne .UserRole "guest") }}
             {{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }}
-            <div class="relative" x-data="{ loanActionsOpen: false }" @click.outside="loanActionsOpen = false">
+            <div class="relative hidden md:block" x-data="{ loanActionsOpen: false }" @click.outside="loanActionsOpen = false">
                 <button type="button" @click="loanActionsOpen = !loanActionsOpen" :aria-expanded="loanActionsOpen"
-                        class="inline-flex items-center gap-2 rounded-lg border border-theme-border px-3 py-2 text-sm font-semibold text-gray-200 transition hover:border-blue-500 hover:text-white">
+                        class="inline-flex h-11 min-w-40 items-center justify-center gap-2 rounded-lg border border-theme-border px-4 text-sm font-semibold text-gray-200 transition hover:border-blue-500 hover:text-white">
                     <svg class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                     <span>Buchungen</span>
                     <svg class="h-4 w-4 text-theme-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/></svg>
                 </button>
-                <div x-show="loanActionsOpen" x-cloak class="absolute right-0 z-50 mt-2 w-52 rounded-xl border border-theme-border bg-theme-bg py-2 shadow-xl">
+                <div x-show="loanActionsOpen" x-cloak class="absolute left-0 z-50 mt-2 w-52 rounded-xl border border-theme-border bg-theme-bg py-2 shadow-xl">
                     <a href="/admin/ausgabe#issue" class="block px-4 py-2.5 text-sm text-gray-200 transition hover:bg-theme-card hover:text-blue-400">Ausgeben</a>
                     <a href="/admin/ausgabe#return" class="block px-4 py-2.5 text-sm text-gray-200 transition hover:bg-theme-card hover:text-blue-400">Zurücknehmen</a>
                     <div class="my-1 border-t border-theme-border"></div>
@@ -41,11 +40,15 @@
                 </div>
             </div>
             {{ end }}
+            {{ end }}
+        </div>
+
+        <div class="hidden items-center gap-3 md:flex">
+            {{ if and .UserRole (ne .UserRole "guest") }}
             <div class="relative" @click.outside="open = false">
-                <button type="button" @click="open = !open" :aria-expanded="open" class="flex items-center gap-2 rounded-lg border border-theme-border px-3 py-2 transition hover:border-blue-500">
-                    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500/20 text-xs font-bold uppercase text-blue-500">{{ if .UserName }}{{ slice .UserName 0 1 }}{{ else }}?{{ end }}</span>
-                    <span class="text-sm font-medium text-gray-200">{{ if .UserName }}{{ .UserName }}{{ else }}Konto{{ end }}</span>
-                    <svg class="h-4 w-4 text-theme-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                <button type="button" @click="open = !open" :aria-expanded="open" aria-label="{{ if .UserName }}Konto von {{ .UserName }}{{ else }}Konto{{ end }}"
+                        class="flex h-11 w-11 items-center justify-center rounded-full border border-theme-border bg-blue-500/10 text-sm font-bold uppercase text-blue-400 transition hover:border-blue-500 hover:bg-blue-500/20">
+                    {{ if .UserName }}{{ slice .UserName 0 1 }}{{ else }}?{{ end }}
                 </button>
                 <div x-show="open" x-cloak class="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-theme-border bg-theme-bg py-2 shadow-lg">
                     <a href="/settings" class="block px-4 py-2 text-sm text-gray-200 transition hover:bg-theme-card hover:text-blue-500">Benutzereinstellungen</a>
@@ -73,7 +76,7 @@
          class="absolute left-0 right-0 top-full z-[100] border-b border-theme-border bg-theme-bg px-4 pb-4 pt-2 shadow-xl md:hidden">
         {{ if and .UserRole (ne .UserRole "guest") }}
         {{ if or (eq .UserRole "admin") (eq .UserRole "maintainer") }}
-        <p class="px-3 pb-1 pt-2 text-xs font-bold uppercase tracking-wider text-theme-muted">Leihschalter</p>
+        <p class="px-3 pb-1 pt-2 text-xs font-bold uppercase tracking-wider text-theme-muted">Buchungen</p>
         <a @click="mobileMenuOpen = false" href="/admin/ausgabe#issue" class="block rounded-lg px-3 py-3 text-sm font-semibold text-gray-200 hover:bg-theme-card">Ausgeben</a>
         <a @click="mobileMenuOpen = false" href="/admin/ausgabe#return" class="block rounded-lg px-3 py-3 text-sm font-semibold text-gray-200 hover:bg-theme-card">Zurücknehmen</a>
         <a @click="mobileMenuOpen = false" href="/admin/bookings" class="block rounded-lg px-3 py-3 text-sm text-theme-muted hover:bg-theme-card">Buchungsübersicht</a>
