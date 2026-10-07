@@ -136,7 +136,6 @@ func CreateItem(c *gin.Context) {
 		renderAdminGamesError(c, http.StatusBadRequest, err.Error())
 		return
 	}
-
 	err = queries.InTx(context.Background(), func(qTx *db.Queries) error {
 		item, err := qTx.CreateItem(context.Background(), db.CreateItemParams{
 			Name:        req.Name,
@@ -178,7 +177,6 @@ func UpdateItem(c *gin.Context) {
 		renderAdminGamesError(c, http.StatusBadRequest, err.Error())
 		return
 	}
-
 	err = queries.InTx(context.Background(), func(qTx *db.Queries) error {
 		if err := qTx.UpdateItem(context.Background(), db.UpdateItemParams{
 			ID:          req.ID,

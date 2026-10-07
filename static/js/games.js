@@ -285,6 +285,20 @@ document.addEventListener('alpine:init', () => {
             this.isLoadingDetails = false;
         },
 
+        previousImage() {
+            const imageCount = this.activeItem?.images?.length || 0;
+            if (imageCount > 1) {
+                this.activeImageIndex = (this.activeImageIndex - 1 + imageCount) % imageCount;
+            }
+        },
+
+        nextImage() {
+            const imageCount = this.activeItem?.images?.length || 0;
+            if (imageCount > 1) {
+                this.activeImageIndex = (this.activeImageIndex + 1) % imageCount;
+            }
+        },
+
         isBooked(day) {
             if (!this.activeItem || !this.activeItem.bookings) return false;
             const mStr = String(this.calendarMonth + 1).padStart(2, '0');

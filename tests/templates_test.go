@@ -103,6 +103,44 @@ func TestTemplatesParseAndExecute(t *testing.T) {
 	}
 }
 
+func TestAdminDashboardRendersMetricsAndCatalogChecks(t *testing.T) {
+	tmpl, err := template.ParseGlob("../templates/*.html")
+	if err != nil {
+		t.Fatalf("Failed to parse templates: %v", err)
+	}
+	var output bytes.Buffer
+	dashboard := db.DashboardData{
+		Metrics: db.DashboardMetrics{
+			TotalGames: 40, AvailableGames: 28, TotalUsers: 100,
+			ActiveLoans: 8, OverdueLoans: 2, PendingPickupsToday: 3,
+			ConfirmedPickupsToday: 4, TodayPickups: 7, PendingBookings: 5,
+			ReturnsToday: 2, AverageBGGRating: sql.NullFloat64{Float64: 3.9, Valid: true},
+			MostBorrowedGame: "Testspiel", MostBorrowedCount: 12,
+			GamesNeedingBGGSyncCount: 1, GamesMissingLocationCount: 1,
+			GamesMissingCustomImageCount: 1,
+		},
+		GamesNeedingBGGSync:     []db.DashboardGame{{ID: 1, Name: "BGG fehlt"}},
+		GamesMissingLocation:    []db.DashboardGame{{ID: 2, Name: "Lagerort fehlt"}},
+		GamesMissingCustomImage: []db.DashboardGame{{ID: 3, Name: "Bild fehlt"}},
+	}
+	if err := tmpl.ExecuteTemplate(&output, "admin_dashboard.html", map[string]interface{}{
+		"UserRole":  "admin",
+		"ActiveTab": "dashboard",
+		"Dashboard": dashboard,
+	}); err != nil {
+		t.Fatalf("Failed to execute admin_dashboard.html: %v", err)
+	}
+	for _, expected := range []string{
+		"Aktive Ausleihen", "Überfällige Rückgaben", "Abholung heute", "Offene Anfragen",
+		"Verfügbare Spiele", "Rückgaben heute", "3.9", "Testspiel", "BGG fehlt",
+		"Lagerort fehlt", "Bild fehlt", "/setup-bilder",
+	} {
+		if !bytes.Contains(output.Bytes(), []byte(expected)) {
+			t.Errorf("Expected dashboard output to contain %q", expected)
+		}
+	}
+}
+
 func TestAdminGamesRendersSingleDeleteDialog(t *testing.T) {
 	tmpl, err := template.ParseGlob("../templates/*.html")
 	if err != nil {
@@ -285,7 +323,7 @@ func TestGamesTemplateRendersStoredBGGRatingAndCategoryTags(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Failed to execute games.html: %v", err)
 	}
-	for _, expected := range []string{`data-rating="7.8"`, `data-categories="Strategy,Cooperative"`, "activeItem?.categories?.length > 0", "categories || []", "rating / 2", "Math.max(0, Math.min(100", "tags.slice(0, 2)", "45 Min."} {
+	for _, expected := range []string{`data-rating="7.8"`, `data-categories="Strategy,Cooperative"`, "activeItem?.categories?.length > 0", "categories || []", `aria-label="Vorheriges Bild"`, `aria-label="Nächstes Bild"`, "previousImage()", "nextImage()", "rating / 2", "Math.max(0, Math.min(100", "tags.slice(0, 2)", "45 Min."} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected games output to contain %q", expected)
 		}

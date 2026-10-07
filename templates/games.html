@@ -295,9 +295,22 @@
                      :style="activeItem?.images?.[activeImageIndex] ? `--cover-image: url('${activeItem.images[activeImageIndex]}')` : ''">
                     <template x-if="activeItem?.images?.length > 0"><img :src="activeItem.images[activeImageIndex]" class="game-image-fit drop-shadow-2xl"></template>
                     <template x-if="activeItem?.images?.length > 1">
+                        <div>
+                            <button type="button" @click.stop="previousImage()" aria-label="Vorheriges Bild" title="Vorheriges Bild"
+                                    class="absolute left-3 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white shadow-lg backdrop-blur transition hover:bg-black/85 focus:outline-none focus:ring-2 focus:ring-blue-400 sm:left-5">
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7"></path></svg>
+                            </button>
+                            <button type="button" @click.stop="nextImage()" aria-label="Nächstes Bild" title="Nächstes Bild"
+                                    class="absolute right-3 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white shadow-lg backdrop-blur transition hover:bg-black/85 focus:outline-none focus:ring-2 focus:ring-blue-400 sm:right-5">
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7"></path></svg>
+                            </button>
+                        </div>
+                    </template>
+                    <template x-if="activeItem?.images?.length > 1">
                         <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
                             <template x-for="(img, index) in activeItem.images" :key="index">
-                                <button @click="activeImageIndex = index" :class="activeImageIndex === index ? 'bg-blue-500 w-6' : 'bg-gray-500 w-2 hover:bg-gray-400'" class="h-2 rounded-full transition-all duration-300"></button>
+                                <button type="button" @click="activeImageIndex = index" :aria-label="`Bild ${index + 1} anzeigen`" :aria-current="activeImageIndex === index"
+                                        :class="activeImageIndex === index ? 'bg-blue-500 w-6' : 'bg-gray-500 w-2 hover:bg-gray-400'" class="h-2 rounded-full transition-all duration-300"></button>
                             </template>
                         </div>
                     </template>
@@ -399,6 +412,6 @@
 </div>
 
 <!-- import .js-->
-<script src="/static/js/games.js?v=4"></script>
+<script src="/static/js/games.js?v=5"></script>
 
 {{ template "footer" . }}

@@ -83,20 +83,14 @@ func RenderGamesCatalog(c *gin.Context) {
 }
 
 func RenderAdminDashboard(c *gin.Context) {
-	items, err := queries.ListItems(context.Background())
+	dashboard, err := queries.GetDashboardData(c.Request.Context())
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Datenbankfehler")
-		return
-	}
-	users, err := queries.ListUsers(context.Background())
-	if err != nil {
-		c.String(http.StatusInternalServerError, "Datenbankfehler")
+		c.String(http.StatusInternalServerError, "Dashboarddaten konnten nicht geladen werden")
 		return
 	}
 	c.HTML(http.StatusOK, "admin_dashboard.html", pageData(c, gin.H{
 		"ActiveTab": "dashboard",
-		"Games":     items,
-		"Users":     users,
+		"Dashboard": dashboard,
 	}))
 }
 
