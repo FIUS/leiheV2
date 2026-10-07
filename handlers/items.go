@@ -285,7 +285,7 @@ func GetItemDetails(c *gin.Context) {
 	imageSources := itemImageSources(item)
 	images := make([]string, 0, len(imageSources))
 	for index := range imageSources {
-		images = append(images, fmt.Sprintf("/api/items/thumbnail?id=%d&source=%d", item.ID, index))
+		images = append(images, fmt.Sprintf("/api/items/thumbnail?id=%d&source=%d&v=3", item.ID, index))
 	}
 	if len(images) == 0 {
 		images = append(images, "/static/images/image-placeholder.svg")

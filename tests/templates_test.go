@@ -319,6 +319,7 @@ func TestGamesTemplateRendersStoredBGGRatingAndCategoryTags(t *testing.T) {
 			{
 				ID: 1, Name: "Test Game", MinPlayers: 2, MaxPlayers: 4,
 				MinPlaytime: 45, MaxPlaytime: 45,
+				ImageUrl:      sql.NullString{String: "https://cf.geekdo-images.com/test.jpg", Valid: true},
 				BGGRating:     sql.NullFloat64{Float64: 7.8, Valid: true},
 				CategoryNames: "Strategy,Cooperative",
 				Status:        "available",
@@ -329,7 +330,7 @@ func TestGamesTemplateRendersStoredBGGRatingAndCategoryTags(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Failed to execute games.html: %v", err)
 	}
-	for _, expected := range []string{`data-rating="7.8"`, `data-categories="Strategy,Cooperative"`, `data-status="maintenance"`, "Nicht verfügbar", "activeItem?.categories?.length > 0", "categories || []", `aria-label="Vorheriges Bild"`, `aria-label="Nächstes Bild"`, "previousImage()", "nextImage()", "rating / 2", "Math.max(0, Math.min(100", "tags.slice(0, 2)", "45 Min."} {
+	for _, expected := range []string{`data-rating="7.8"`, `data-categories="Strategy,Cooperative"`, `data-status="maintenance"`, `source=0`, `v=3`, "Nicht verfügbar", "activeItem?.categories?.length > 0", "categories || []", `aria-label="Vorheriges Bild"`, `aria-label="Nächstes Bild"`, "previousImage()", "nextImage()", "rating / 2", "Math.max(0, Math.min(100", "tags.slice(0, 2)", "45 Min."} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected games output to contain %q", expected)
 		}
