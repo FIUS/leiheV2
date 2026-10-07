@@ -52,9 +52,10 @@ func TestTemplatesParseAndExecute(t *testing.T) {
 
 	var buf bytes.Buffer
 	err = tmpl.ExecuteTemplate(&buf, "managment.html", map[string]interface{}{
-		"UserRole": "admin",
-		"Games":    testGames,
-		"Users":    testUsers,
+		"UserRole":              "admin",
+		"ModuleBarcodesEnabled": true,
+		"Games":                 testGames,
+		"Users":                 testUsers,
 	})
 	if err != nil {
 		t.Fatalf("Failed to execute managment.html: %v", err)
@@ -73,7 +74,7 @@ func TestTemplatesParseAndExecute(t *testing.T) {
 	}
 	for _, expected := range []string{
 		`aria-label="Menü öffnen"`, `lg:hidden`, `/admin/ausgabe#issue`, `/admin/ausgabe#return`,
-		`Buchungen`, `Nutzerkonto`, `Meine Buchungen`,
+		`Buchungen`, `Nutzerkonto`, `Meine Buchungen`, `Etiketten-Designer`,
 	} {
 		if !bytes.Contains([]byte(output), []byte(expected)) {
 			t.Errorf("Expected responsive header output to contain %q", expected)
@@ -296,14 +297,47 @@ func TestAdminSettingsTemplateRendersDepositSettingWithoutOverflow(t *testing.T)
 	if err := tmpl.ExecuteTemplate(&output, "admin_settings.html", map[string]interface{}{
 		"UserRole":  "admin",
 		"ActiveTab": "settings",
-		"Settings":  db.AppSettings{RequireDeposit: true},
+		"Settings":  db.AppSettings{RequireDeposit: true, ModuleBarcodesEnabled: true},
 	}); err != nil {
 		t.Fatalf("Failed to execute admin_settings.html: %v", err)
 	}
-	for _, expected := range []string{"Pfand bei jeder Ausgabe erforderlich", `name="require_deposit" value="true" checked`, "max-w-full min-w-0", `action="/admin/settings"`} {
+	for _, expected := range []string{"Pfand bei jeder Ausgabe erforderlich", `name="require_deposit" value="true" checked`, "Etiketten-Designer aktivieren", `name="module_barcodes_enabled" value="true" checked`, "max-w-full min-w-0", `action="/admin/settings"`} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected admin settings output to contain %q", expected)
 		}
+	}
+}
+
+func TestBarcodeDesignerTemplateAndAdminNavigation(t *testing.T) {
+	tmpl, err := template.ParseGlob("../templates/*.html")
+	if err != nil {
+		t.Fatalf("Failed to parse templates: %v", err)
+	}
+	var output bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&output, "barcode_designer.html", map[string]interface{}{
+		"UserRole": "admin", "UserName": "Admin", "ActiveTab": "barcodes",
+		"ModuleBarcodesEnabled": true,
+	}); err != nil {
+		t.Fatalf("Failed to execute barcode_designer.html: %v", err)
+	}
+	for _, expected := range []string{
+		"Etiketten-Designer", "barcodeDesigner",
+		"Endlosband", "Einzel-Etikett", "Code-128", "URL-Template", "Alle angezeigten auswählen",
+		"Manifest JSON", "qrcode-generator.js", "JsBarcode.all.min.js", "jszip.min.js", "/static/js/label_designer.js",
+	} {
+		if !bytes.Contains(output.Bytes(), []byte(expected)) {
+			t.Errorf("Expected barcode designer output to contain %q", expected)
+		}
+	}
+
+	output.Reset()
+	if err := tmpl.ExecuteTemplate(&output, "admin_nav", map[string]interface{}{
+		"UserRole": "admin", "ActiveTab": "dashboard", "ModuleBarcodesEnabled": false,
+	}); err != nil {
+		t.Fatalf("Failed to execute admin navigation: %v", err)
+	}
+	if bytes.Contains(output.Bytes(), []byte("Etiketten-Designer")) {
+		t.Error("barcode designer link must be hidden while the module is disabled")
 	}
 }
 

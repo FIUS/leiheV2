@@ -178,6 +178,23 @@ func RequireRole(allowedRoles ...string) gin.HandlerFunc {
 	}
 }
 
+func RequireBarcodesModule() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		settings, err := queries.GetAppSettings(c.Request.Context())
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Moduleinstellungen konnten nicht geladen werden")
+			c.Abort()
+			return
+		}
+		if !settings.ModuleBarcodesEnabled {
+			c.String(http.StatusNotFound, "Modul nicht aktiviert")
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
 func Login(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/auth/stuvus/login")
 }

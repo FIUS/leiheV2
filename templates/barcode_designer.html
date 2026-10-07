@@ -1,0 +1,161 @@
+{{ template "header" . }}
+<div class="mx-auto mt-4 flex min-h-[85vh] w-full max-w-full min-w-0 flex-col overflow-hidden rounded-xl border border-theme-border bg-theme-bg text-gray-100 shadow-lg">
+    {{ template "admin_nav" . }}
+    <main id="barcode-designer" x-data="barcodeDesigner" x-init="init()" class="min-w-0 flex-1 bg-[#0B101A] p-4 md:p-6">
+        <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold text-white sm:text-3xl">Etiketten-Designer</h1>
+                <p class="mt-1 text-sm text-theme-muted">Vektor-Etiketten für Brother QL-Drucker gestalten und gesammelt exportieren.</p>
+            </div>
+            <span class="rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-xs text-theme-muted">SVG · 1,5 mm Sicherheitsrand</span>
+        </div>
+
+        <div class="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(18rem,0.85fr)_minmax(0,1.6fr)]">
+            <aside class="min-w-0 space-y-4">
+                <section class="rounded-xl border border-theme-border bg-theme-card p-4 sm:p-5">
+                    <h2 class="mb-4 text-base font-bold text-white">Band &amp; Format</h2>
+                    <div class="space-y-4">
+                        <fieldset>
+                            <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-theme-muted">Rollentyp</legend>
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="rollType === 'continuous' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input class="mr-2 accent-blue-500" type="radio" value="continuous" x-model="rollType">Endlosband</label>
+                                <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="rollType === 'diecut' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input class="mr-2 accent-blue-500" type="radio" value="diecut" x-model="rollType">Einzel-Etikett</label>
+                            </div>
+                        </fieldset>
+                        <label class="block text-xs font-semibold uppercase tracking-wide text-theme-muted">Bandbreite
+                            <select x-model.number="bandWidth" class="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2.5 text-sm text-white">
+                                <option value="12">12 mm</option><option value="29">29 mm</option><option value="38">38 mm</option><option value="50">50 mm</option><option value="62">62 mm</option>
+                            </select>
+                        </label>
+                        <template x-if="rollType === 'continuous'">
+                            <div class="space-y-3">
+                                <fieldset>
+                                    <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-theme-muted">Etikettenlänge</legend>
+                                    <label class="mr-4 inline-flex items-center gap-2 text-sm text-gray-200"><input type="radio" value="dynamic" x-model="lengthMode" class="accent-blue-500">Dynamisch</label>
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-200"><input type="radio" value="fixed" x-model="lengthMode" class="accent-blue-500">Feste Länge</label>
+                                </fieldset>
+                                <label x-show="lengthMode === 'fixed'" class="block text-xs font-semibold uppercase tracking-wide text-theme-muted">Länge in mm
+                                    <input type="number" min="20" max="500" step="1" x-model.number="fixedLength" class="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2.5 text-sm text-white">
+                                </label>
+                            </div>
+                        </template>
+                        <label x-show="rollType === 'diecut'" class="block text-xs font-semibold uppercase tracking-wide text-theme-muted">Etikettengröße
+                            <select x-model="dieCutSize" class="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2.5 text-sm text-white">
+                                <option value="29x90">29 × 90 mm</option><option value="38x90">38 × 90 mm</option><option value="62x100">62 × 100 mm</option>
+                            </select>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="rounded-xl border border-theme-border bg-theme-card p-4 sm:p-5">
+                    <h2 class="mb-4 text-base font-bold text-white">Code &amp; Inhalt</h2>
+                    <fieldset>
+                        <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-theme-muted">Code-Typ</legend>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="codeType === 'qr' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input type="radio" value="qr" x-model="codeType" class="mr-2 accent-blue-500">QR-Code</label>
+                            <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="codeType === 'code128' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input type="radio" value="code128" x-model="codeType" class="mr-2 accent-blue-500">Code-128</label>
+                        </div>
+                    </fieldset>
+                    <fieldset class="mt-4">
+                        <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-theme-muted">Barcode-Inhalt</legend>
+                        <label class="mr-4 inline-flex items-center gap-2 text-sm text-gray-200"><input type="radio" value="id" x-model="payloadMode" class="accent-blue-500">Nur System-ID</label>
+                        <label class="inline-flex items-center gap-2 text-sm text-gray-200"><input type="radio" value="url" x-model="payloadMode" class="accent-blue-500">URL-Schema</label>
+                    </fieldset>
+                    <label x-show="payloadMode === 'url'" class="mt-3 block text-xs font-semibold uppercase tracking-wide text-theme-muted">URL-Template
+                        <input type="text" x-model="urlTemplate" class="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2.5 text-sm normal-case text-white">
+                    </label>
+                </section>
+
+                <section class="rounded-xl border border-theme-border bg-theme-card p-4 sm:p-5">
+                    <h2 class="mb-4 text-base font-bold text-white">Layout &amp; Text</h2>
+                    <fieldset>
+                        <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-theme-muted">Anordnung</legend>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="layout === 'vertical' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input type="radio" value="vertical" x-model="layout" class="mr-2 accent-blue-500">Vertikal</label>
+                            <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="layout === 'horizontal' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input type="radio" value="horizontal" x-model="layout" class="mr-2 accent-blue-500">Horizontal</label>
+                        </div>
+                    </fieldset>
+                    <label class="mt-4 flex items-center gap-2 text-sm text-gray-200"><input type="checkbox" x-model="showBrand" class="accent-blue-500">Kopfzeile anzeigen</label>
+                    <label x-show="showBrand" class="mt-2 block text-xs font-semibold uppercase tracking-wide text-theme-muted">Branding-Text
+                        <input type="text" x-model="brandText" class="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2.5 text-sm normal-case text-white">
+                    </label>
+                    <label class="mt-4 flex items-center gap-2 text-sm text-gray-200"><input type="checkbox" x-model="showID" class="accent-blue-500">System-ID anzeigen</label>
+                    <label x-show="showID" class="mt-2 block text-xs font-semibold uppercase tracking-wide text-theme-muted">ID-Format
+                        <input type="text" x-model="idTemplate" class="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2.5 text-sm normal-case text-white">
+                    </label>
+                    <label class="mt-4 flex items-center gap-2 text-sm text-gray-200"><input type="checkbox" x-model="showTitle" class="accent-blue-500">Spieltitel anzeigen</label>
+                </section>
+            </aside>
+
+            <section class="min-w-0 space-y-5">
+                <div class="rounded-xl border border-theme-border bg-theme-card p-4 sm:p-5">
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div><h2 class="font-bold text-white">Live-Vorschau</h2><p class="text-xs text-theme-muted" x-text="previewItem ? `${previewItem.name} · ID ${previewItem.id}` : 'Wähle ein Spiel aus der Tabelle aus.'"></p></div>
+                        <span class="rounded-md bg-theme-bg px-2 py-1 text-xs text-theme-muted" x-text="`${labelDimensions.width} × ${labelDimensions.height} mm`"></span>
+                    </div>
+                    <div class="flex min-h-64 items-center justify-center overflow-auto rounded-lg border border-dashed border-theme-border bg-[#111827] p-4">
+                        <div x-show="!previewItem" class="text-sm text-theme-muted">Noch kein Spiel ausgewählt</div>
+                        <div x-ref="preview" class="label-svg-preview max-w-full"></div>
+                    </div>
+                    <p x-show="error" x-text="error" class="mt-3 rounded-lg border border-red-800 bg-red-950/50 p-3 text-sm text-red-200"></p>
+                </div>
+
+                <div class="rounded-xl border border-theme-border bg-theme-card p-4 sm:p-5">
+                    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                        <div><h2 class="font-bold text-white">Spiele auswählen</h2><p class="text-xs text-theme-muted"><span x-text="selectedIds.length"></span> ausgewählt · <span x-text="filteredItems.length"></span> angezeigt</p></div>
+                        <div class="flex flex-wrap gap-2">
+                            <input type="search" x-model="search" placeholder="Spiel suchen …" aria-label="Spiel suchen" class="min-w-40 rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-sm text-white">
+                            <select x-model="categoryFilter" aria-label="Kategorie filtern" class="rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-sm text-white"><option value="">Alle Kategorien</option><template x-for="category in categories" :key="category"><option :value="category" x-text="category"></option></template></select>
+                        </div>
+                    </div>
+                    <label class="mb-2 flex items-center gap-2 border-b border-theme-border pb-3 text-sm font-semibold text-gray-200">
+                        <input type="checkbox" :checked="allVisibleSelected" @change="toggleVisible($event.target.checked)" class="accent-blue-500">
+                        Alle angezeigten auswählen
+                    </label>
+                    <div class="max-h-80 overflow-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="sticky top-0 bg-theme-card text-xs uppercase text-theme-muted"><tr><th class="w-10 py-2">Ausw.</th><th class="py-2">Spiel</th><th class="py-2">Kategorien</th><th class="py-2 text-right">ID</th></tr></thead>
+                            <tbody>
+                                <template x-for="item in filteredItems" :key="item.id">
+                                    <tr class="border-t border-theme-border/70 hover:bg-theme-bg/60">
+                                        <td class="py-2"><input type="checkbox" :checked="selectedIds.includes(item.id)" @change="toggleItem(item.id, $event.target.checked)" :aria-label="`Etikett für ${item.name} auswählen`" class="accent-blue-500"></td>
+                                        <td class="max-w-64 truncate py-2 font-medium text-white" x-text="item.name"></td>
+                                        <td class="max-w-48 truncate py-2 text-xs text-theme-muted" x-text="item.categories || '—'"></td>
+                                        <td class="py-2 text-right font-mono text-xs text-theme-muted" x-text="item.id"></td>
+                                    </tr>
+                                </template>
+                                <tr x-show="filteredItems.length === 0"><td colspan="4" class="py-8 text-center text-sm text-theme-muted">Keine passenden Spiele gefunden.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div x-show="selectedItems.length > 0" class="mt-3 border-t border-theme-border pt-3">
+                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-theme-muted">Ausgewählte Spiele</p>
+                        <div class="flex max-h-24 flex-wrap gap-1.5 overflow-auto">
+                            <template x-for="item in selectedItems" :key="`selected-${item.id}`">
+                                <button type="button" @click="toggleItem(item.id, false)" :aria-label="`${item.name} abwählen`" class="max-w-full truncate rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-xs text-blue-200 hover:border-red-500/50" x-text="`${item.name} ×`"></button>
+                            </template>
+                        </div>
+                    </div>
+                    <div class="mt-5 space-y-3 border-t border-theme-border pt-4">
+                        <div x-show="exporting" class="space-y-1.5">
+                            <div class="flex justify-between text-xs text-theme-muted"><span>SVG-Dateien werden erstellt …</span><span x-text="`${exportProgress}%`"></span></div>
+                            <progress class="h-2 w-full overflow-hidden rounded bg-theme-bg accent-blue-500" max="100" :value="exportProgress"></progress>
+                        </div>
+                        <div class="flex flex-col gap-2 sm:flex-row">
+                            <button type="button" @click="exportZip()" :disabled="selectedItems.length === 0 || exporting" class="flex-1 rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50" x-text="`Etiketten exportieren (${selectedItems.length} ausgewählt)`"></button>
+                            <button type="button" @click="exportManifest()" :disabled="selectedItems.length === 0" class="rounded-lg border border-theme-border px-4 py-3 text-sm font-semibold text-gray-200 transition hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50">Manifest JSON</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+<style>
+    .label-svg-preview svg { display: block; max-height: 24rem; width: auto; max-width: 100%; filter: drop-shadow(0 8px 18px rgb(0 0 0 / .35)); }
+</style>
+<script src="/static/js/vendor/qrcode-generator.js?v=1"></script>
+<script src="/static/js/vendor/JsBarcode.all.min.js?v=1"></script>
+<script src="/static/js/vendor/jszip.min.js?v=1"></script>
+<script src="/static/js/label_designer.js?v=1"></script>
+{{ template "footer" . }}

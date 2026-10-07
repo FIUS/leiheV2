@@ -1,0 +1,2 @@
+ALTER TABLE app_settings
+    ADD COLUMN IF NOT EXISTS module_barcodes_enabled BOOLEAN NOT NULL DEFAULT FALSE;

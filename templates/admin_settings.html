@@ -25,6 +25,15 @@
                     </span>
                 </div>
                 <input type="hidden" name="require_deposit" value="false">
+                <div class="mt-3 flex min-w-0 items-start gap-3 rounded-lg border border-theme-border bg-theme-bg p-4">
+                    <input type="checkbox" name="module_barcodes_enabled" value="true" {{ if .Settings.ModuleBarcodesEnabled }}checked{{ end }}
+                           class="mt-1 h-4 w-4 shrink-0 accent-blue-500">
+                    <span class="min-w-0">
+                        <span class="block text-sm font-semibold text-white">Etiketten-Designer aktivieren</span>
+                        <span class="mt-1 block break-words text-sm text-theme-muted">Schaltet den Label-Designer und seine geschützte API für Admins frei. Deaktiviert sperrt auch bereits geöffnete Designer-Seiten.</span>
+                    </span>
+                </div>
+                <input type="hidden" name="module_barcodes_enabled" value="false">
                 <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p class="min-w-0 text-xs text-theme-muted">Änderungen gelten sofort für neue Ausgaben.</p>
                     <button type="submit" class="w-full shrink-0 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-500 sm:w-auto">Speichern</button>

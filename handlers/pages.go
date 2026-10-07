@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"html/template"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -227,6 +228,15 @@ func pageData(c *gin.Context, values gin.H) gin.H {
 		userRole = "guest"
 	}
 	values["UserRole"] = userRole
+	values["ModuleBarcodesEnabled"] = false
+	if userRole == "admin" {
+		settings, err := queries.GetAppSettings(c.Request.Context())
+		if err != nil {
+			log.Printf("could not load barcode module setting for admin navigation: %v", err)
+		} else {
+			values["ModuleBarcodesEnabled"] = settings.ModuleBarcodesEnabled
+		}
+	}
 	if user, ok := currentUser(c); ok {
 		values["UserName"] = strings.TrimSpace(strings.TrimSpace(user.FirstName) + " " + strings.TrimSpace(user.LastName))
 		values["CurrentUser"] = user
@@ -236,6 +246,34 @@ func pageData(c *gin.Context, values gin.H) gin.H {
 		values["CurrentUserIsOIDC"] = false
 	}
 	return values
+}
+
+func RenderBarcodeDesigner(c *gin.Context) {
+	c.HTML(http.StatusOK, "barcode_designer.html", pageData(c, gin.H{
+		"ActiveTab": "barcodes",
+	}))
+}
+
+func ListBarcodeDesignerItems(c *gin.Context) {
+	items, err := queries.ListItemsWithCategories(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Spiele konnten nicht geladen werden"})
+		return
+	}
+	type labelItem struct {
+		ID         int32  `json:"id"`
+		Name       string `json:"name"`
+		Categories string `json:"categories"`
+	}
+	labelItems := make([]labelItem, 0, len(items))
+	for _, item := range items {
+		labelItems = append(labelItems, labelItem{
+			ID:         item.ID,
+			Name:       item.Name,
+			Categories: item.CategoryNames,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"items": labelItems})
 }
 
 func RenderSetupBilder(c *gin.Context) {

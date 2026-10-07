@@ -13,7 +13,12 @@ func UpdateAdminSettings(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/admin/settings?error=Ungueltige-Einstellung")
 		return
 	}
-	if err := queries.UpdateRequireDeposit(c.Request.Context(), requireDeposit); err != nil {
+	barcodesEnabled, err := strconv.ParseBool(c.PostForm("module_barcodes_enabled"))
+	if err != nil {
+		c.Redirect(http.StatusFound, "/admin/settings?error=Ungueltige-Einstellung")
+		return
+	}
+	if err := queries.UpdateAppSettings(c.Request.Context(), requireDeposit, barcodesEnabled); err != nil {
 		c.String(http.StatusInternalServerError, "Einstellung konnte nicht gespeichert werden")
 		return
 	}
