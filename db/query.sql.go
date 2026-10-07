@@ -342,7 +342,26 @@ func (q *Queries) GetBookingByToken(ctx context.Context, publicToken string) (Bo
 }
 
 const getItem = `-- name: GetItem :one
-SELECT id, name, isbn, description, image_url, custom_image_url, room, shelf, min_players, max_players, min_playtime, max_playtime, bgg_rating, status, is_expansion FROM items WHERE id = $1 LIMIT 1
+SELECT
+    items.id, items.name, items.isbn, items.description, items.image_url,
+    items.custom_image_url, items.room, items.shelf, items.min_players,
+    items.max_players, items.min_playtime, items.max_playtime, items.bgg_rating,
+    CASE
+        WHEN items.status = 'available' AND EXISTS (
+            SELECT 1
+            FROM booking_items bi
+                     JOIN bookings b ON b.id = bi.booking_id
+            WHERE bi.item_id = items.id
+              AND b.status IN ('confirmed', 'active')
+              AND b.start_date::date <= CURRENT_DATE
+              AND b.end_date::date >= CURRENT_DATE
+        ) THEN 'rented'::item_status
+        ELSE items.status
+    END AS status,
+    items.is_expansion
+FROM items
+WHERE items.id = $1
+LIMIT 1
 `
 
 func (q *Queries) GetItem(ctx context.Context, id int32) (Item, error) {
@@ -631,7 +650,24 @@ func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
 }
 
 const listItemsWithCategories = `-- name: ListItemsWithCategories :many
-SELECT items.id, items.name, items.isbn, items.description, items.image_url, items.custom_image_url, items.room, items.shelf, items.min_players, items.max_players, items.min_playtime, items.max_playtime, items.bgg_rating, items.status, items.is_expansion, COALESCE(string_agg(categories.name, ','), '')::text AS category_names
+SELECT
+    items.id, items.name, items.isbn, items.description, items.image_url,
+    items.custom_image_url, items.room, items.shelf, items.min_players,
+    items.max_players, items.min_playtime, items.max_playtime, items.bgg_rating,
+    CASE
+        WHEN items.status = 'available' AND EXISTS (
+            SELECT 1
+            FROM booking_items bi
+                     JOIN bookings b ON b.id = bi.booking_id
+            WHERE bi.item_id = items.id
+              AND b.status IN ('confirmed', 'active')
+              AND b.start_date::date <= CURRENT_DATE
+              AND b.end_date::date >= CURRENT_DATE
+        ) THEN 'rented'::item_status
+        ELSE items.status
+    END AS status,
+    items.is_expansion,
+    COALESCE(string_agg(categories.name, ','), '')::text AS category_names
 FROM items
          LEFT JOIN item_categories ON items.id = item_categories.item_id
          LEFT JOIN categories ON item_categories.category_id = categories.id
