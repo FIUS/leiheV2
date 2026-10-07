@@ -34,6 +34,9 @@ services:
     env_file:
       - path: .env
         required: true
+    environment:
+      GIN_MODE: release
+      GIN_TRUSTED_PROXIES: ${GIN_TRUSTED_PROXIES:-}
     volumes:
       - ./static/custom_images:/app/static/custom_images
       - thumbnail_cache:/app/image_cache

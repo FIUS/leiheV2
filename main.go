@@ -46,6 +46,15 @@ func main() {
 	}
 
 	r := gin.Default()
+	trustedProxies := make([]string, 0)
+	for _, proxy := range strings.Split(os.Getenv("GIN_TRUSTED_PROXIES"), ",") {
+		if proxy = strings.TrimSpace(proxy); proxy != "" {
+			trustedProxies = append(trustedProxies, proxy)
+		}
+	}
+	if err := r.SetTrustedProxies(trustedProxies); err != nil {
+		log.Fatal("GIN_TRUSTED_PROXIES enthält eine ungültige IP-Adresse oder ein ungültiges CIDR-Netz:", err)
+	}
 	sessionSecret := os.Getenv("SESSION_SECRET")
 	if sessionSecret == "" {
 		log.Fatal("SESSION_SECRET muss gesetzt sein")
