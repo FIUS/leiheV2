@@ -50,21 +50,10 @@
         if (!error) return;
         error.textContent = message;
         error.classList.remove('hidden');
-        const status = document.getElementById('scanner-status');
-        if (status) status.classList.add('hidden');
     }
 
     function clearError() {
         document.getElementById('scanner-error')?.classList.add('hidden');
-        document.getElementById('scanner-status')?.classList.remove('hidden');
-    }
-
-    function showStatus(message) {
-        const status = document.getElementById('scanner-status');
-        if (status) {
-            status.textContent = message;
-            status.classList.remove('hidden');
-        }
     }
 
     function createScannerModal() {
@@ -88,11 +77,10 @@
                 </div>
                 <div class="relative min-h-[260px] bg-black">
                     <div id="scanner-reader" class="min-h-[260px]"></div>
-                    <div id="scanner-status" role="status" class="absolute inset-x-4 bottom-4 rounded-xl bg-black/75 p-2 text-center text-xs text-white">Kamera wird gestartet …</div>
                     <div id="scanner-error" class="absolute inset-x-4 top-4 hidden rounded-xl border border-red-800 bg-red-950/90 p-3 text-center text-xs text-red-200"></div>
                 </div>
                 <div class="flex flex-col gap-2 border-t border-theme-border bg-theme-bg p-3.5">
-                    <p class="text-center text-xs text-theme-muted">Barcode oder QR-Code vor die Kamera halten</p>
+                    <p class="text-center text-xs text-theme-muted">Code in den markierten Bereich halten</p>
                     <form id="scanner-manual-form" class="mt-1 flex gap-2">
                         <input type="text" id="scanner-manual-input" placeholder="Oder Code manuell eingeben …" class="min-w-0 flex-1 rounded-lg border border-theme-border bg-theme-card px-3 py-2 text-xs text-white placeholder:text-theme-muted outline-none focus:border-blue-500">
                         <button type="submit" class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500">Übernehmen</button>
@@ -197,7 +185,6 @@
                 await stopAndClear(newScanner);
                 return;
             }
-            showStatus('Kamera läuft (Scanner v4) — Code ins Bild halten.');
         } catch (error) {
             if (expectedSessionID !== sessionID) return;
             console.error('Kamerafehler:', error);
@@ -214,7 +201,6 @@
 
         scanHandled = true;
         playScanBeep();
-        showStatus('Code erkannt.');
         const callback = activeCallback;
         closeCameraScanner();
         callback?.(gameID, decodedText);
