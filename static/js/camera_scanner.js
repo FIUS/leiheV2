@@ -140,7 +140,7 @@
             formats.UPC_A,
             formats.UPC_E,
             formats.ITF,
-        ].filter(Boolean);
+        ].filter(format => format !== undefined);
     }
 
     async function startScanner(expectedSessionID, cameraID = null) {
