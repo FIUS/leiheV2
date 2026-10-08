@@ -95,14 +95,11 @@
                     <fieldset class="mt-4 border-t border-theme-border pt-4">
                         <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-theme-muted">Lagerort am Etikettenende</legend>
                         <label class="flex items-center gap-2 text-sm text-gray-200"><input type="checkbox" x-model="showRoom" class="accent-blue-500">Raum anzeigen</label>
-                        <label x-show="showRoom" class="ml-6 mt-2 block text-xs font-semibold text-theme-muted">
-                            Schriftgröße Raum: <span x-text="`${Number(roomFontSize).toFixed(1)} mm`"></span>
-                            <input type="range" min="1" max="5" step="0.2" x-model.number="roomFontSize" class="mt-2 h-1 w-full accent-blue-500">
-                        </label>
                         <label class="mt-3 flex items-center gap-2 text-sm text-gray-200"><input type="checkbox" x-model="showShelf" class="accent-blue-500">Regal anzeigen</label>
                         <label x-show="showShelf" class="ml-6 mt-2 block text-xs font-semibold text-theme-muted">
                             Schriftgröße Regal: <span x-text="`${Number(shelfFontSize).toFixed(1)} mm`"></span>
-                            <input type="range" min="1" max="5" step="0.2" x-model.number="shelfFontSize" class="mt-2 h-1 w-full accent-blue-500">
+                            <input type="range" min="1" :max="shelfFontSizeMax" step="0.2" x-model.number="shelfFontSize" class="mt-2 h-1 w-full accent-blue-500">
+                            <span class="mt-1 block font-normal">Maximal bis zur verfügbaren Etikettenbreite</span>
                         </label>
                     </fieldset>
                     <label class="mt-4 flex items-start gap-2 border-t border-theme-border pt-4 text-sm text-gray-200">
@@ -180,5 +177,5 @@
 <script src="/static/js/vendor/qrcode-generator.js?v=1"></script>
 <script src="/static/js/vendor/JsBarcode.all.min.js?v=1"></script>
 <script src="/static/js/vendor/jszip.min.js?v=1"></script>
-<script src="/static/js/label_designer.js?v=8"></script>
+<script src="/static/js/label_designer.js?v=9"></script>
 {{ template "footer" . }}

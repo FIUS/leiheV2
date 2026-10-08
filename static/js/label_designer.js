@@ -1,5 +1,6 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const LABEL_GAP_MM = 2.5;
+const LABEL_TITLE_FONT_SIZE_MM = 2.8;
 
 function parseLabelMillimeters(value, fieldName) {
     const parsed = Number(String(value).trim().replace(',', '.'));
@@ -129,7 +130,6 @@ document.addEventListener('alpine:init', () => {
         titleMaxLines: 2,
         titleOverflow: 'ellipsis',
         showRoom: false,
-        roomFontSize: 2.4,
         showShelf: false,
         shelfFontSize: 2.4,
         onlyCompleteLocations: false,
@@ -146,7 +146,7 @@ document.addEventListener('alpine:init', () => {
                 'rollType', 'bandWidth', 'lengthMode', 'fixedLength', 'dieCutSize',
                 'codeType', 'payloadMode', 'urlTemplate', 'layout', 'showBrand',
                 'brandText', 'showID', 'idTemplate', 'showTitle', 'titleMaxLines', 'titleOverflow',
-                'showRoom', 'roomFontSize', 'showShelf', 'shelfFontSize', 'selectedIds'
+                'showRoom', 'showShelf', 'shelfFontSize', 'selectedIds'
             ].forEach((key) => this.$watch(key, updatePreview));
 
             try {
@@ -190,6 +190,20 @@ document.addEventListener('alpine:init', () => {
 
         get previewItem() {
             return this.selectedItems[0] || null;
+        },
+
+        get shelfFontSizeMax() {
+            try {
+                const item = this.previewItem || { id: 0, name: '', shelf: 'CU' };
+                const { width } = this.outputDimensionsForItem(item);
+                const textWidth = this.layout === 'horizontal'
+                    ? this.horizontalTextFlow(item, width).textWidth
+                    : width;
+                const shelfLength = Math.max(1, String(item.shelf || 'CU').trim().length);
+                return Math.max(1, Math.floor((textWidth / (shelfLength * 0.56)) * 10) / 10);
+            } catch {
+                return 5;
+            }
         },
 
         get allVisibleSelected() {
@@ -243,7 +257,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         titleBlock(item, maxWidth) {
-            const fontSize = 2.8;
+            const fontSize = LABEL_TITLE_FONT_SIZE_MM;
             const layout = this.showTitle
                 ? fitLabelTitle(item.name, maxWidth, Number(this.titleMaxLines), this.titleOverflow, fontSize)
                 : { lines: [], fontSize };
@@ -253,7 +267,7 @@ document.addEventListener('alpine:init', () => {
         locationBlocks(item, maxWidth) {
             const blocks = [];
             [
-                { show: this.showRoom, value: item.room, fontSize: Number(this.roomFontSize), weight: '400' },
+                { show: this.showRoom, value: item.room, fontSize: LABEL_TITLE_FONT_SIZE_MM, weight: '400' },
                 { show: this.showShelf, value: item.shelf, fontSize: Number(this.shelfFontSize), weight: '700' }
             ].forEach(({ show, value, fontSize, weight }) => {
                 const location = String(value || '').trim();
@@ -495,7 +509,6 @@ document.addEventListener('alpine:init', () => {
                 titleMaxLines: Number(this.titleMaxLines),
                 titleOverflow: this.titleOverflow,
                 showRoom: this.showRoom,
-                roomFontSizeMm: Number(this.roomFontSize),
                 showShelf: this.showShelf,
                 shelfFontSizeMm: Number(this.shelfFontSize),
                 onlyCompleteLocations: this.onlyCompleteLocations,
