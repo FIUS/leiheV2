@@ -158,8 +158,12 @@ document.addEventListener('alpine:init', () => {
 
         get filteredItems() {
             const search = this.search.trim().toLocaleLowerCase('de');
+            const cleanID = window.extractGameID ? window.extractGameID(search) : '';
             return this.items.filter(item =>
-                !search || `${item.name} ${item.id}`.toLocaleLowerCase('de').includes(search)
+                !search ||
+                (cleanID && String(item.id) === cleanID) ||
+                `${item.name} ${item.id}`.toLocaleLowerCase('de').includes(search) ||
+                (cleanID && `${item.name} ${item.id}`.toLocaleLowerCase('de').includes(cleanID))
             );
         },
 

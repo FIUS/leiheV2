@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	stdmail "net/mail"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +17,37 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
+
+var gameIDRegex = regexp.MustCompile(`(?i)(?:[?&]id=(\d+)|(?:^|/|#)(\d+)/?(?:[?#]|$)|(?:id[:\s#]+)(\d+)\b|\b(\d+)\b)`)
+
+func ExtractGameID(raw string) (int32, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return 0, errors.New("keine Eingabe")
+	}
+	matches := gameIDRegex.FindStringSubmatch(trimmed)
+	for i := 1; i < len(matches); i++ {
+		if matches[i] != "" {
+			val, err := strconv.ParseInt(matches[i], 10, 32)
+			if err == nil && val > 0 {
+				return int32(val), nil
+			}
+		}
+	}
+	var digits strings.Builder
+	for _, r := range trimmed {
+		if r >= '0' && r <= '9' {
+			digits.WriteRune(r)
+		}
+	}
+	if digits.Len() > 0 {
+		val, err := strconv.ParseInt(digits.String(), 10, 32)
+		if err == nil && val > 0 {
+			return int32(val), nil
+		}
+	}
+	return 0, errors.New("keine gültige Spiele-ID gefunden")
+}
 
 func RenderStaffLoans(c *gin.Context) {
 	settings, err := queries.GetAppSettings(c.Request.Context())
@@ -43,7 +75,15 @@ func SearchStaffLoans(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültige Suche"})
 		return
 	}
-	bookings, err := queries.SearchStaffLoanBookings(c.Request.Context(), c.Query("q"), mode)
+	searchQuery := strings.TrimSpace(c.Query("q"))
+	// If query matches a URL or ID format, extract ID for direct booking matching
+	if extractedID, err := ExtractGameID(searchQuery); err == nil && extractedID > 0 {
+		// If query looks like a full URL or ID wrapper, prioritize the extracted ID as query or keep original
+		if strings.Contains(searchQuery, "/") || strings.Contains(searchQuery, "http") || strings.Contains(searchQuery, "id=") {
+			searchQuery = strconv.Itoa(int(extractedID))
+		}
+	}
+	bookings, err := queries.SearchStaffLoanBookings(c.Request.Context(), searchQuery, mode)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Buchungen konnten nicht gesucht werden"})
 		return
@@ -57,7 +97,8 @@ func SearchStaffLoanItems(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültiges Rückgabedatum"})
 		return
 	}
-	items, err := queries.SearchStaffLoanItems(c.Request.Context(), c.Query("q"), endDate)
+	searchQuery := strings.TrimSpace(c.Query("q"))
+	items, err := queries.SearchStaffLoanItems(c.Request.Context(), searchQuery, endDate)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Spiele konnten nicht gesucht werden"})
 		return
@@ -67,7 +108,7 @@ func SearchStaffLoanItems(c *gin.Context) {
 
 func LookupStaffLoanSystemID(c *gin.Context) {
 	rawID := strings.TrimSpace(c.Query("id"))
-	id, err := strconv.ParseInt(rawID, 10, 32)
+	id, err := ExtractGameID(rawID)
 	if err != nil || id <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Bitte eine gültige System-ID eingeben"})
 		return

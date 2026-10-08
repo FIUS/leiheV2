@@ -48,8 +48,14 @@
             bookingSearch: '',
             normalize(value) { return (value || '').trim().toLocaleLowerCase('de'); },
             matchesBooking(name, email, token) {
-                const query = this.normalize(this.bookingSearch);
-                return !query || [name, email, token].some(value => this.normalize(value).includes(query));
+                const rawQuery = this.bookingSearch.trim();
+                const query = this.normalize(rawQuery);
+                if (!query) return true;
+                const clean = (window.extractGameID ? window.extractGameID(rawQuery) : rawQuery).toLocaleLowerCase('de');
+                return [name, email, token].some(value => {
+                    const norm = this.normalize(value);
+                    return norm.includes(query) || (clean && norm.includes(clean));
+                });
             },
             hasMatchingBookings() {
                 return Array.from(this.$el.querySelectorAll('[data-booking-card]'))
@@ -59,9 +65,11 @@
         <h2 class="mb-4 text-xl font-bold text-white">Alle Buchungen</h2>
         {{ if .Bookings }}
         <label for="booking-search" class="sr-only">Buchungen nach Buchungsnummer, Name oder E-Mail durchsuchen</label>
-        <input id="booking-search" type="search" x-model="bookingSearch"
-               placeholder="Buchungsnummer, Name oder E-Mail suchen …"
-               class="mb-4 w-full rounded-xl border border-theme-border bg-theme-card px-4 py-3 text-sm text-white placeholder:text-theme-muted outline-none transition focus:border-blue-500">
+        <div class="mb-4">
+            <input id="booking-search" type="search" x-model="bookingSearch"
+                   placeholder="Buchungsnummer, Name oder E-Mail suchen …"
+                   class="w-full rounded-xl border border-theme-border bg-theme-card px-4 py-3 text-sm text-white placeholder:text-theme-muted outline-none transition focus:border-blue-500">
+        </div>
         {{ end }}
         {{ if not .Bookings }}
         <div class="rounded-xl border border-theme-border bg-theme-card p-6 text-sm text-theme-muted">Keine Buchungen vorhanden.</div>

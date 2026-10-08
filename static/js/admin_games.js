@@ -22,14 +22,18 @@ document.addEventListener('alpine:init', () => {
             return (value || '').trim().toLocaleLowerCase('de').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         },
 
-        matchesGame(name) {
-            const query = this.normalizeSearch(this.searchQuery);
-            return !query || this.normalizeSearch(name).includes(query);
+        matchesGame(name, id = '') {
+            const raw = this.searchQuery.trim();
+            const query = this.normalizeSearch(raw);
+            if (!query) return true;
+            const cleanID = window.extractGameID ? window.extractGameID(raw) : '';
+            if (cleanID && String(id).trim() === cleanID) return true;
+            return this.normalizeSearch(name).includes(query) || (cleanID && this.normalizeSearch(name).includes(cleanID));
         },
 
         hasVisibleGames() {
             return Array.from(document.querySelectorAll('[data-admin-game-row]'))
-                .some(row => this.matchesGame(row.dataset.name));
+                .some(row => this.matchesGame(row.dataset.name, row.dataset.id));
         },
 
         openEditGame(dataset) {

@@ -8,6 +8,8 @@ document.addEventListener('alpine:init', () => {
         returnBookings: [],
         selectedBooking: null,
         selectedItemIDs: [],
+        scannedItemIDs: [],
+        prebookingScanInput: '',
         spontaneousItems: [],
         itemSearch: '',
         itemResults: [],
@@ -22,6 +24,8 @@ document.addEventListener('alpine:init', () => {
         message: '',
         itemWarning: '',
         busy: false,
+        returnScanInput: '',
+        returnScannedItemIDs: {},
 
         init() {
             this.requireDeposit = this.$el.dataset.requireDeposit === 'true';
@@ -38,20 +42,34 @@ document.addEventListener('alpine:init', () => {
             window.location.hash = mode;
             this.error = '';
             this.message = '';
+            this.itemWarning = '';
             if (mode === 'return' && this.returnBookings.length === 0) await this.searchBookings('return');
         },
 
         clearSelection() {
             this.selectedBooking = null;
             this.selectedItemIDs = [];
+            this.scannedItemIDs = [];
+            this.prebookingScanInput = '';
             this.issueDeposit = '';
             this.error = '';
             this.message = '';
+            this.itemWarning = '';
+        },
+
+        cleanID(input) {
+            return (window.extractGameID ? window.extractGameID(input) : String(input).replace(/\D/g, '')).trim();
         },
 
         async searchBookings(mode) {
-            const query = mode === 'issue' ? this.issueSearch : this.returnSearch;
-            if (mode === 'return' && !query.trim()) {
+            let query = mode === 'issue' ? this.issueSearch.trim() : this.returnSearch.trim();
+            if (query) {
+                const extracted = this.cleanID(query);
+                if (extracted && (query.includes('/') || query.includes('http') || query.includes('id='))) {
+                    query = extracted;
+                }
+            }
+            if (mode === 'return' && !query) {
                 this.returnBookings = [];
                 return;
             }
@@ -69,12 +87,79 @@ document.addEventListener('alpine:init', () => {
         selectBooking(booking) {
             this.selectedBooking = booking;
             this.selectedItemIDs = booking.items.map(item => String(item.id));
+            this.scannedItemIDs = [];
+            this.prebookingScanInput = '';
             this.error = '';
             this.message = '';
+            this.itemWarning = '';
+        },
+
+        isPrebookedItemScanned(itemID) {
+            return this.scannedItemIDs.includes(String(itemID)) || this.scannedItemIDs.includes(Number(itemID));
+        },
+
+        scanPrebookedGame(rawInput) {
+            this.error = '';
+            this.itemWarning = '';
+            this.message = '';
+            const id = this.cleanID(rawInput);
+            if (!id) {
+                this.error = 'Bitte eine gültige Spiele-ID oder Barcode eingeben.';
+                return;
+            }
+
+            if (!this.selectedBooking) {
+                // If no booking is selected, search for prebookings containing this item
+                this.issueSearch = id;
+                this.searchBookings('issue').then(() => {
+                    if (this.issueBookings.length === 1) {
+                        this.selectBooking(this.issueBookings[0]);
+                        this.scanPrebookedGame(id);
+                    } else if (this.issueBookings.length > 1) {
+                        this.message = `Mehrere Vorbestellungen für Spiel-ID ${id} gefunden. Bitte eine auswählen.`;
+                    } else {
+                        this.error = `Keine offene Vorbestellung für Spiel-ID ${id} gefunden.`;
+                    }
+                });
+                return;
+            }
+
+            const item = this.selectedBooking.items.find(i => String(i.id) === id);
+            if (!item) {
+                this.itemWarning = `Das Spiel mit ID ${id} gehört nicht zu dieser Vorbestellung (${this.selectedBooking.person_name})!`;
+                return;
+            }
+
+            if (this.isPrebookedItemScanned(id)) {
+                this.itemWarning = `Spiel „${item.name}“ (ID ${id}) wurde bereits erfasst.`;
+                this.prebookingScanInput = '';
+                return;
+            }
+
+            this.scannedItemIDs.push(String(id));
+            // Make sure the item is also selected for checkout
+            if (!this.selectedItemIDs.includes(String(id))) {
+                this.selectedItemIDs.push(String(id));
+            }
+            this.message = `Spiel „${item.name}“ (ID ${id}) erfolgreich erfasst ✓`;
+            this.prebookingScanInput = '';
+        },
+
+        openScannerForPrebooking() {
+            if (window.openCameraScanner) {
+                window.openCameraScanner((id) => this.scanPrebookedGame(id));
+            }
+        },
+
+        canIssueSelectedBooking() {
+            if (!this.selectedBooking || this.selectedItemIDs.length === 0) return false;
+            if (this.requireDeposit && !this.issueDeposit.trim()) return false;
+            // Every selected game MUST be physically scanned/captured!
+            return this.selectedItemIDs.every(id => this.isPrebookedItemScanned(id));
         },
 
         async issueSelectedBooking() {
-            if (!this.selectedBooking || this.selectedItemIDs.length === 0) return;
+            if (!this.canIssueSelectedBooking()) return;
             await this.postJSON('/admin/api/ausgabe/prebooked', {
                 booking_id: this.selectedBooking.id,
                 item_ids: this.selectedItemIDs.map(Number),
@@ -105,9 +190,13 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async lookupSystemID() {
-            const id = this.systemID.trim();
-            if (!id) return;
+        async lookupSystemID(rawInput = null) {
+            const raw = rawInput !== null ? rawInput : this.systemID;
+            const id = this.cleanID(raw);
+            if (!id) {
+                this.error = 'Bitte eine gültige Spiele-ID eingeben';
+                return;
+            }
             this.error = '';
             this.itemWarning = '';
             try {
@@ -126,6 +215,12 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        openScannerForSpontaneous() {
+            if (window.openCameraScanner) {
+                window.openCameraScanner((id) => this.lookupSystemID(id));
+            }
+        },
+
         addSpontaneousItem(item) {
             this.error = '';
             this.itemWarning = '';
@@ -138,6 +233,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
             this.spontaneousItems.push(item);
+            this.message = `Spiel „${item.name}“ hinzugefügt ✓`;
         },
 
         isItemSelected(itemID) {
@@ -185,10 +281,98 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        isReturnItemScanned(bookingID, itemID) {
+            const list = this.returnScannedItemIDs[bookingID] || [];
+            return list.includes(Number(itemID)) || list.includes(String(itemID));
+        },
+
+        getReturnScannedCount(booking) {
+            const list = this.returnScannedItemIDs[booking.id] || [];
+            return (booking.items || []).filter(item => list.includes(Number(item.id)) || list.includes(String(item.id))).length;
+        },
+
+        isBookingReadyForReturn(booking) {
+            if (!booking || !booking.items || booking.items.length === 0) return false;
+            const list = this.returnScannedItemIDs[booking.id] || [];
+            return booking.items.every(item => list.includes(Number(item.id)) || list.includes(String(item.id)));
+        },
+
+        async scanReturnGame(rawInput, targetBooking = null) {
+            this.error = '';
+            this.message = '';
+            this.itemWarning = '';
+            const id = this.cleanID(rawInput);
+            if (!id) {
+                this.error = 'Bitte eine gültige Spiele-ID oder Barcode eingeben.';
+                return;
+            }
+
+            let booking = targetBooking;
+            if (!booking) {
+                // Look in currently loaded returnBookings first
+                booking = this.returnBookings.find(b => b.items && b.items.some(i => String(i.id) === id));
+                if (!booking) {
+                    // Fetch from server by searching for this game ID
+                    try {
+                        const response = await fetch(`/admin/api/ausgabe/bookings?mode=return&q=${encodeURIComponent(id)}`);
+                        const data = await response.json();
+                        if (response.ok && data.bookings && data.bookings.length > 0) {
+                            this.returnBookings = data.bookings;
+                            booking = this.returnBookings.find(b => b.items && b.items.some(i => String(i.id) === id)) || this.returnBookings[0];
+                        }
+                    } catch (_) {}
+                }
+            }
+
+            if (!booking) {
+                this.error = `Keine aktive Ausleihe für Spiel-ID ${id} gefunden.`;
+                return;
+            }
+
+            const item = booking.items.find(i => String(i.id) === id);
+            if (!item) {
+                this.error = `Spiel mit ID ${id} gehört nicht zur Ausleihe von ${booking.person_name}!`;
+                return;
+            }
+
+            if (!this.returnScannedItemIDs[booking.id]) {
+                this.returnScannedItemIDs[booking.id] = [];
+            }
+
+            if (this.isReturnItemScanned(booking.id, id)) {
+                this.message = `Spiel „${item.name}“ (ID ${id}) wurde bereits erfasst.`;
+                this.returnScanInput = '';
+                return;
+            }
+
+            this.returnScannedItemIDs[booking.id].push(Number(id));
+            this.returnScanInput = '';
+
+            if (this.isBookingReadyForReturn(booking)) {
+                this.message = `Alle Spiele von ${booking.person_name} erfasst ✓ Rücknahme kann abgeschlossen werden.`;
+            } else {
+                const count = this.getReturnScannedCount(booking);
+                this.message = `Spiel „${item.name}“ für ${booking.person_name} erfasst (${count} von ${booking.items.length} Spielen erfasst) ✓`;
+            }
+        },
+
+        openScannerForReturn(booking = null) {
+            if (window.openCameraScanner) {
+                window.openCameraScanner((id) => this.scanReturnGame(id, booking));
+            }
+        },
+
         async returnBooking(booking) {
-            if (!window.confirm(`Ausleihe von ${booking.person_name} wirklich zurücknehmen?`)) return;
+            if (!this.isBookingReadyForReturn(booking)) {
+                this.error = `Bitte vor der Rücknahme alle ${booking.items.length} Spiele physisch per Scanner erfassen.`;
+                return;
+            }
+            if (!window.confirm(`Ausleihe von ${booking.person_name} wirklich zurücknehmen? Alle ${booking.items.length} Spiele wurden erfasst.`)) return;
             await this.postJSON('/admin/api/ausgabe/return', { booking_id: booking.id }, 'Buchung zurückgenommen; die Spiele sind wieder verfügbar.');
-            if (!this.error) await this.searchBookings('return');
+            if (!this.error) {
+                delete this.returnScannedItemIDs[booking.id];
+                await this.searchBookings('return');
+            }
         },
 
         async postJSON(url, payload, successMessage) {

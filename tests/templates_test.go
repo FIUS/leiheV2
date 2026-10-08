@@ -291,14 +291,10 @@ func TestStaffLoansTemplateRendersIssueAndReturnFlows(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Failed to execute staff_loans.html: %v", err)
 	}
-	for _, expected := range []string{"Buchungen", "Ausgeben", "Zurücknehmen", "Vorbestellung", "Jetzt ausleihen", "Nach Spielnamen suchen", "Barcode / System-ID eingeben", "System-ID", "Lagerort", "Bitte die Spiele gleich wieder an ihren Lagerort aufräumen", "Aktive Ausleihe suchen", "Abgegebenes Pfand", "booking.deposit || 'Kein Pfand erfasst'", "data-require-deposit=\"true\""} {
+	for _, expected := range []string{"Buchungen", "Ausgeben", "Zurücknehmen", "Vorbestellung", "Jetzt ausleihen", "Nach Spielnamen suchen", "Barcode / System-ID eingeben", "System-ID", "Lagerort", "Bitte die Spiele gleich wieder an ihren Lagerort aufräumen", "Aktive Ausleihe suchen", "Abgegebenes Pfand", "booking.deposit || 'Kein Pfand erfasst'", "data-require-deposit=\"true\"", "Kamera"} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected staff lending page to contain %q", expected)
 		}
-	}
-
-	if bytes.Contains(output.Bytes(), []byte("Kamera")) {
-		t.Error("staff lending page should not render camera scanning controls")
 	}
 }
 
@@ -422,5 +418,154 @@ func TestGamesTemplateRendersStoredBGGRatingAndCategoryTags(t *testing.T) {
 	}
 	if bytes.Contains(output.Bytes(), []byte(`>7.8 / 10</span>`)) {
 		t.Error("games cards should display the mapped five-star rating rather than a hard-coded ten-star rating")
+	}
+}
+
+func TestGamesTemplateRendersEqualMinAndMaxPlayersAsSingleValue(t *testing.T) {
+	tmpl, err := template.ParseGlob("../templates/*.html")
+	if err != nil {
+		t.Fatalf("Failed to parse templates: %v", err)
+	}
+
+	game := db.ListItemsWithCategoriesRow{
+		ID:          1,
+		Name:        "2-Player Duel",
+		MinPlayers:  2,
+		MaxPlayers:  2,
+		MinPlaytime: 30,
+		MaxPlaytime: 30,
+		Status:      "available",
+	}
+
+	var output bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&output, "games.html", map[string]interface{}{
+		"UserRole":   "guest",
+		"Games":      []db.ListItemsWithCategoriesRow{game},
+		"Categories": []db.Category{},
+	}); err != nil {
+		t.Fatalf("Failed to execute games.html: %v", err)
+	}
+
+	rendered := output.String()
+	if bytes.Contains(output.Bytes(), []byte("2 - 2")) {
+		t.Errorf("games.html should not render '2 - 2' when min and max players are equal: %s", rendered)
+	}
+	if !bytes.Contains(output.Bytes(), []byte(`Spieler:</strong> 2</span>`)) {
+		t.Errorf("games.html should render 'Spieler: 2' when min and max players are 2: %s", rendered)
+	}
+
+	// Verify admin_games.html
+	var adminOutput bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&adminOutput, "admin_games.html", map[string]interface{}{
+		"UserRole":   "admin",
+		"ActiveTab":  "games",
+		"Games":      []db.ListItemsWithCategoriesRow{game},
+		"Categories": []db.Category{},
+	}); err != nil {
+		t.Fatalf("Failed to execute admin_games.html: %v", err)
+	}
+	if bytes.Contains(adminOutput.Bytes(), []byte("2 - 2")) {
+		t.Errorf("admin_games.html should not render '2 - 2' when min and max players are equal")
+	}
+}
+
+func TestCameraScannerAndGameIDFeaturesRendered(t *testing.T) {
+	tmpl, err := template.ParseGlob("../templates/*.html")
+	if err != nil {
+		t.Fatalf("Failed to parse templates: %v", err)
+	}
+
+	// 1. Header includes camera_scanner.js
+	var headerOutput bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&headerOutput, "header", map[string]interface{}{
+		"UserRole": "admin",
+	}); err != nil {
+		t.Fatalf("Failed to execute header template: %v", err)
+	}
+	if !bytes.Contains(headerOutput.Bytes(), []byte("/static/js/camera_scanner.js")) {
+		t.Error("header should include /static/js/camera_scanner.js")
+	}
+
+	// 2. Staff loans includes camera buttons and game capture indicators for prebookings, spontaneous loans, and returns
+	var staffOutput bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&staffOutput, "staff_loans.html", map[string]interface{}{
+		"UserRole":       "maintainer",
+		"RequireDeposit": true,
+	}); err != nil {
+		t.Fatalf("Failed to execute staff_loans.html: %v", err)
+	}
+	for _, expected := range []string{
+		"openScannerForPrebooking()", "openScannerForSpontaneous()", "openScannerForReturn()",
+		"isPrebookedItemScanned", "isReturnItemScanned", "canIssueSelectedBooking()",
+	} {
+		if !bytes.Contains(staffOutput.Bytes(), []byte(expected)) {
+			t.Errorf("staff_loans.html missing expected element: %s", expected)
+		}
+	}
+
+	// 3. Admin bookings has text search but NO camera scan button
+	var bookingsOutput bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&bookingsOutput, "admin_bookings.html", map[string]interface{}{
+		"UserRole": "admin",
+		"Bookings": []db.BookingOverview{
+			{ID: 1, Token: "TEST1234", PersonName: "Test User", Status: "active", Email: sql.NullString{String: "test@example.com", Valid: true}},
+		},
+	}); err != nil {
+		t.Fatalf("Failed to execute admin_bookings.html: %v", err)
+	}
+	if bytes.Contains(bookingsOutput.Bytes(), []byte("openScanner()")) || bytes.Contains(bookingsOutput.Bytes(), []byte("Kamera-Scan")) {
+		t.Error("admin_bookings.html should NOT include camera scan button")
+	}
+	if !bytes.Contains(bookingsOutput.Bytes(), []byte(`id="booking-search"`)) {
+		t.Error("admin_bookings.html should include text search input")
+	}
+
+	// 4. Admin games has text search but NO camera scan button
+	var adminGamesOutput bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&adminGamesOutput, "admin_games.html", map[string]interface{}{
+		"UserRole":  "admin",
+		"ActiveTab": "games",
+		"Games": []db.ListItemsWithCategoriesRow{
+			{ID: 1, Name: "Test Game", Status: "available"},
+		},
+		"Categories": []db.Category{},
+	}); err != nil {
+		t.Fatalf("Failed to execute admin_games.html: %v", err)
+	}
+	if bytes.Contains(adminGamesOutput.Bytes(), []byte("openScanner()")) || bytes.Contains(adminGamesOutput.Bytes(), []byte("Kamera-Scan")) {
+		t.Error("admin_games.html should NOT include camera scan button")
+	}
+	if !bytes.Contains(adminGamesOutput.Bytes(), []byte(`id="admin-game-search"`)) {
+		t.Error("admin_games.html should include text search input")
+	}
+
+	// 5. Games catalog has text search but NO camera scan button
+	var gamesOutput bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&gamesOutput, "games.html", map[string]interface{}{
+		"UserRole": "guest",
+		"Games": []db.ListItemsWithCategoriesRow{
+			{ID: 1, Name: "Test Game", Status: "available"},
+		},
+		"Categories": []db.Category{},
+	}); err != nil {
+		t.Fatalf("Failed to execute games.html: %v", err)
+	}
+	if bytes.Contains(gamesOutput.Bytes(), []byte("openScanner()")) {
+		t.Error("games.html should NOT include camera scan button")
+	}
+	if !bytes.Contains(gamesOutput.Bytes(), []byte(`x-model="search"`)) {
+		t.Error("games.html should include text search input")
+	}
+
+	// 6. Barcode designer has text search but NO camera scan button
+	var designerOutput bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&designerOutput, "barcode_designer.html", map[string]interface{}{
+		"UserRole":  "admin",
+		"ActiveTab": "barcode-designer",
+	}); err != nil {
+		t.Fatalf("Failed to execute barcode_designer.html: %v", err)
+	}
+	if bytes.Contains(designerOutput.Bytes(), []byte("openScanner()")) {
+		t.Error("barcode_designer.html should NOT include camera scan button")
 	}
 }

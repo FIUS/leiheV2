@@ -200,7 +200,12 @@ func (q *Queries) SearchStaffLoanBookings(ctx context.Context, search, mode stri
 		       OR COALESCE(u.last_name, '') ILIKE '%' || $4 || '%'
 		       OR CONCAT_WS(' ', u.first_name, u.last_name) ILIKE '%' || $4 || '%'
 		       OR COALESCE(u.email, b.guest_email, '') ILIKE '%' || $4 || '%'
-		       OR COALESCE(b.guest_name, '') ILIKE '%' || $4 || '%')
+		       OR COALESCE(b.guest_name, '') ILIKE '%' || $4 || '%'
+		       OR EXISTS (
+		           SELECT 1 FROM booking_items bi
+		           JOIN items i ON i.id = bi.item_id
+		           WHERE bi.booking_id = b.id AND (CAST(i.id AS text) = $4 OR i.name ILIKE '%' || $4 || '%')
+		       ))
 		ORDER BY b.start_date, b.created_at DESC
 		LIMIT 50
 	`, pq.Array(statuses), todayStart, tomorrowStart, search, mode)

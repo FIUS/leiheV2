@@ -111,9 +111,7 @@
                 <div class="rounded-xl border border-theme-border bg-theme-card p-4 sm:p-5">
                     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                         <div><h2 class="font-bold text-white">Spiele auswählen</h2><p class="text-xs text-theme-muted"><span x-text="selectedIds.length"></span> ausgewählt · <span x-text="filteredItems.length"></span> angezeigt</p></div>
-                        <div class="flex flex-wrap gap-2">
-                            <input type="search" x-model="search" placeholder="Spiel suchen …" aria-label="Spiel suchen" class="min-w-40 rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-sm text-white">
-                        </div>
+                        <input type="search" x-model="search" placeholder="Spiel suchen …" aria-label="Spiel suchen" class="min-w-40 rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-sm text-white">
                     </div>
                     <label class="mb-2 flex items-center gap-2 border-b border-theme-border pb-3 text-sm font-semibold text-gray-200">
                         <input type="checkbox" :checked="allVisibleSelected" @change="toggleVisible($event.target.checked)" class="accent-blue-500">

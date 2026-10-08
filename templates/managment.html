@@ -193,8 +193,8 @@
                     {{ range .Games }}
                     <tr class="hover:bg-[#1E2532] transition-colors">
                         <td class="py-3 px-5 font-bold">{{ .Name }}</td>
-                        <td class="py-3 px-5 text-theme-muted">{{ .MinPlayers }} - {{ .MaxPlayers }}</td>
-                        <td class="py-3 px-5 text-theme-muted">{{ .MinPlaytime }} - {{ .MaxPlaytime }} Min.</td>
+                        <td class="py-3 px-5 text-theme-muted">{{ if eq .MinPlayers .MaxPlayers }}{{ .MinPlayers }}{{ else }}{{ .MinPlayers }} - {{ .MaxPlayers }}{{ end }}</td>
+                        <td class="py-3 px-5 text-theme-muted">{{ if eq .MinPlaytime .MaxPlaytime }}{{ .MinPlaytime }} Min.{{ else }}{{ .MinPlaytime }} - {{ .MaxPlaytime }} Min.{{ end }}</td>
                         <td class="py-3 px-5">
                             {{ if eq .Status "available" }}
                             <span class="rounded border border-green-800 bg-green-950 px-2 py-1 text-xs text-green-200">Verfügbar</span>

@@ -178,6 +178,7 @@ document.addEventListener('alpine:init', () => {
             const container = document.getElementById("games-container");
             const games = container ? Array.from(container.querySelectorAll("[data-game-id]")) : [];
             const search = this.search.trim().toLowerCase();
+            const cleanID = window.extractGameID ? window.extractGameID(search) : '';
             filteredGamesCache = games.filter((game) => {
                 const data = game.dataset;
                 const minPlayers = Number(data.minPlayers);
@@ -185,8 +186,14 @@ document.addEventListener('alpine:init', () => {
                 const minPlaytime = Number(data.minPlaytime);
                 const maxPlaytime = Number(data.maxPlaytime);
                 const categories = data.categories ? data.categories.split(",").map((category) => category.trim()) : [];
+                const gameID = String(data.gameId);
 
-                return (!search || gameNameMatchesSearch(data.name, search)) &&
+                const matchesSearch = !search ||
+                    (cleanID && gameID === cleanID) ||
+                    gameNameMatchesSearch(data.name, search) ||
+                    (cleanID && gameNameMatchesSearch(data.name, cleanID));
+
+                return matchesSearch &&
                     (Number(this.playersFilter) === 0 || (minPlayers <= Number(this.playersFilter) && maxPlayers >= Number(this.playersFilter))) &&
                     (this.maxDurationFilter > 240
                         ? maxPlaytime >= this.minDurationFilter
