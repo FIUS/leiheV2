@@ -475,7 +475,7 @@ func TestCameraScannerAndGameIDFeaturesRendered(t *testing.T) {
 		t.Fatalf("Failed to parse templates: %v", err)
 	}
 
-	// 1. Header includes camera_scanner.js
+	// 1. Header includes the maintained scanner decoder before camera_scanner.js.
 	var headerOutput bytes.Buffer
 	if err := tmpl.ExecuteTemplate(&headerOutput, "header", map[string]interface{}{
 		"UserRole": "admin",
@@ -484,6 +484,9 @@ func TestCameraScannerAndGameIDFeaturesRendered(t *testing.T) {
 	}
 	if !bytes.Contains(headerOutput.Bytes(), []byte("/static/js/camera_scanner.js")) {
 		t.Error("header should include /static/js/camera_scanner.js")
+	}
+	if !bytes.Contains(headerOutput.Bytes(), []byte("/static/js/html5-qrcode.min.js")) {
+		t.Error("header should include /static/js/html5-qrcode.min.js")
 	}
 
 	// 2. Staff loans includes camera buttons and game capture indicators for prebookings, spontaneous loans, and returns
