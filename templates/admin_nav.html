@@ -1,6 +1,6 @@
 {{ define "admin_nav" }}
-<div class="bg-theme-card border-b border-theme-border overflow-x-auto hide-scrollbar">
-    <nav class="flex items-center gap-2 p-4 min-w-max text-sm">
+<div class="bg-theme-card border-b border-theme-border">
+    <nav class="flex flex-wrap items-center gap-2 p-4 text-sm">
         <a href="/admin/dashboard" class="flex items-center gap-2 px-4 py-2.5 rounded-lg transition font-semibold border {{ if eq .ActiveTab "dashboard" }}bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-sm{{ else }}text-theme-muted hover:bg-[#1E2532] hover:text-white border-transparent{{ end }}">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
         Dashboard
@@ -13,7 +13,30 @@
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
         Buchungen
         </a>
+        {{ if and (or (eq .UserRole "admin") (eq .UserRole "maintainer")) .ModuleBarcodesEnabled }}
+        <div class="w-px h-6 bg-theme-border mx-2"></div>
+        <a href="/admin/labels" class="flex items-center gap-2 px-4 py-2.5 rounded-lg transition font-semibold border {{ if eq .ActiveTab "barcodes" }}bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-sm{{ else }}text-theme-muted hover:bg-[#1E2532] hover:text-white border-transparent{{ end }}">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"/></svg>
+        Etiketten-Designer
+        </a>
+        {{ end }}
         {{ if eq .UserRole "admin" }}
+        <details class="group relative">
+            <summary class="flex cursor-pointer list-none items-center gap-2 rounded-lg border px-4 py-2.5 font-semibold transition {{ if eq .ActiveTab "locations" }}border-blue-500/30 bg-blue-500/10 text-blue-400 shadow-sm{{ else }}border-transparent text-theme-muted hover:bg-[#1E2532] hover:text-white{{ end }}">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18v16H3zM3 10h18M9 4v6m6-6v6M9 10v10m6-10v10"/></svg>
+                Lagerorte
+                <svg class="h-3 w-3 transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <div class="absolute left-0 top-full z-[80] mt-2 max-h-[70vh] min-w-56 overflow-y-auto rounded-xl border border-theme-border bg-theme-card p-2 shadow-xl">
+                <a href="/admin/locations" class="block whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-gray-200 hover:bg-theme-bg hover:text-white">Assistent</a>
+                {{ if .StorageRooms }}
+                <div class="my-2 border-t border-theme-border"></div>
+                {{ range .StorageRooms }}
+                <a href="/admin/locations?room={{ . | urlquery }}" class="block whitespace-nowrap rounded-lg px-3 py-2 text-sm text-theme-muted hover:bg-theme-bg hover:text-white">{{ . }}</a>
+                {{ end }}
+                {{ end }}
+            </div>
+        </details>
         <div class="w-px h-6 bg-theme-border mx-2"></div>
         <a href="/admin/users" class="flex items-center gap-2 px-4 py-2.5 rounded-lg transition font-semibold border {{ if eq .ActiveTab "users" }}bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-sm{{ else }}text-theme-muted hover:bg-[#1E2532] hover:text-white border-transparent{{ end }}">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
@@ -24,19 +47,7 @@
         Einstellungen
         </a>
         {{ end }}
-        {{ if and (or (eq .UserRole "admin") (eq .UserRole "maintainer")) .ModuleBarcodesEnabled }}
-        <a href="/admin/labels" class="flex items-center gap-2 px-4 py-2.5 rounded-lg transition font-semibold border {{ if eq .ActiveTab "barcodes" }}bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-sm{{ else }}text-theme-muted hover:bg-[#1E2532] hover:text-white border-transparent{{ end }}">
-        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"/></svg>
-        Etiketten-Designer
-        </a>
-        {{ end }}
-
     </nav>
 </div>
 <script src="/static/js/admin_feedback.js?v=1"></script>
-<style>
-    /* Versteckt den Scrollbalken für ein cleanes UI auf Mobile, aber behält die Funktion */
-    .hide-scrollbar::-webkit-scrollbar { display: none; }
-    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-</style>
 {{ end }}

@@ -246,6 +246,14 @@ func pageData(c *gin.Context, values gin.H) gin.H {
 			values["ModuleBarcodesEnabled"] = settings.ModuleBarcodesEnabled
 		}
 	}
+	if userRole == "admin" {
+		rooms, err := queries.ListStorageRooms(c.Request.Context())
+		if err != nil {
+			log.Printf("could not load storage rooms for admin navigation: %v", err)
+		} else {
+			values["StorageRooms"] = rooms
+		}
+	}
 	if user, ok := currentUser(c); ok {
 		values["UserName"] = strings.TrimSpace(strings.TrimSpace(user.FirstName) + " " + strings.TrimSpace(user.LastName))
 		values["CurrentUser"] = user

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"html/template"
 	"leiheV2/db"
+	"strings"
 	"testing"
 	"time"
 )
@@ -375,6 +376,73 @@ func TestBarcodeDesignerTemplateAndAdminNavigation(t *testing.T) {
 	}
 	if bytes.Contains(output.Bytes(), []byte("Etiketten-Designer")) {
 		t.Error("barcode designer link must be hidden while the module is disabled")
+	}
+}
+
+func TestAdminLocationModuleAndNavigation(t *testing.T) {
+	tmpl, err := template.ParseGlob("../templates/*.html")
+	if err != nil {
+		t.Fatalf("Failed to parse templates: %v", err)
+	}
+
+	var output bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&output, "admin_locations.html", map[string]interface{}{
+		"UserRole":      "admin",
+		"ActiveTab":     "locations",
+		"LocationsJSON": `["A1L","A1R","B0"]`,
+		"SelectedRoom":  "V38.008",
+	}); err != nil {
+		t.Fatalf("Failed to execute admin_locations.html: %v", err)
+	}
+	for _, expected := range []string{
+		"Lagerort-Assistent", "Spiele hinzufügen", "In diesem Fach",
+		"Ausgewählte Spiele zuweisen", "/static/js/admin_locations.js",
+		`/admin/locations`, `data-selected-room="V38.008"`, "roomShelves",
+	} {
+		if !bytes.Contains(output.Bytes(), []byte(expected)) {
+			t.Errorf("Expected location module output to contain %q", expected)
+		}
+	}
+
+	output.Reset()
+	if err := tmpl.ExecuteTemplate(&output, "admin_nav", map[string]interface{}{
+		"UserRole": "admin", "ActiveTab": "locations", "ModuleBarcodesEnabled": true,
+		"StorageRooms": []string{"V38.008", "Haus & Hof"},
+	}); err != nil {
+		t.Fatalf("Failed to execute admin navigation: %v", err)
+	}
+	nav := output.String()
+	labelsIndex := strings.Index(nav, `href="/admin/labels"`)
+	locationsIndex := strings.Index(nav, `href="/admin/locations"`)
+	usersIndex := strings.Index(nav, `href="/admin/users"`)
+	settingsIndex := strings.Index(nav, `href="/admin/settings"`)
+	if labelsIndex < 0 || locationsIndex < 0 || usersIndex < 0 || settingsIndex < 0 {
+		t.Fatal("admin navigation is missing a module or admin-only link")
+	}
+	if !(labelsIndex < locationsIndex && locationsIndex < usersIndex && usersIndex < settingsIndex) {
+		t.Error("modules should precede admin-only links, with settings rightmost")
+	}
+	for _, roomLink := range []string{`href="/admin/locations?room=V38.008"`, `href="/admin/locations?room=Haus&#43;%26&#43;Hof"`} {
+		if !strings.Contains(nav, roomLink) {
+			t.Errorf("admin location menu should include encoded room link %q", roomLink)
+		}
+	}
+
+	output.Reset()
+	if err := tmpl.ExecuteTemplate(&output, "admin_nav", map[string]interface{}{
+		"UserRole": "maintainer", "ActiveTab": "barcodes", "ModuleBarcodesEnabled": true,
+		"StorageRooms": []string{"V38.008"},
+	}); err != nil {
+		t.Fatalf("Failed to execute maintainer navigation: %v", err)
+	}
+	if !bytes.Contains(output.Bytes(), []byte(`href="/admin/labels"`)) {
+		t.Error("maintainers should retain access to the barcode designer")
+	}
+	if bytes.Contains(output.Bytes(), []byte(`href="/admin/locations"`)) {
+		t.Error("maintainers must not see the admin-only location module")
+	}
+	if bytes.Contains(output.Bytes(), []byte(`href="/admin/settings"`)) {
+		t.Error("maintainers must not see admin settings")
 	}
 }
 

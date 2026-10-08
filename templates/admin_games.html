@@ -76,36 +76,38 @@
                            class="w-full rounded-xl border border-theme-border bg-theme-card py-3 pl-10 pr-4 text-sm text-white placeholder:text-theme-muted outline-none transition focus:border-blue-500">
                 </div>
             </div>
-            <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm overflow-visible">
-                <table class="min-w-full divide-y divide-theme-border text-sm">
+            <div class="bg-theme-card border border-theme-border rounded-xl shadow-sm">
+                <div class="overflow-x-auto rounded-xl">
+                <table class="w-full min-w-[760px] table-fixed divide-y divide-theme-border text-sm md:min-w-0">
                     <thead class="bg-theme-bg text-theme-muted text-left font-semibold uppercase tracking-wider text-[10px]">
                     <tr>
-                        <th class="py-3 px-5">Spielname</th>
-                        <th class="py-3 px-5">Spieler</th>
-                        <th class="py-3 px-5">Dauer</th>
-                        <th class="py-3 px-5">Status</th>
-                        <th class="py-3 px-5 text-right">Aktion</th>
+                        <th class="w-[32%] py-3 px-3 md:px-5">Spielname</th>
+                        <th class="w-[12%] py-3 px-2 md:px-5">Spieler</th>
+                        <th class="w-[15%] py-3 px-2 md:px-5">Dauer</th>
+                        <th class="w-[15%] py-3 px-2 md:px-5">Status</th>
+                        <th class="w-[26%] py-3 px-2 text-right md:px-5">Aktion</th>
                     </tr>
                     </thead>
                     <tbody class="divide-y divide-theme-border text-gray-200">
                     {{ range .Games }}
                     <tr data-admin-game-row data-id="{{ .ID }}" data-name="{{ .Name }}" x-show="matchesGame($el.dataset.name, $el.dataset.id)" class="hover:bg-[#1E2532] transition-colors">
-                        <td class="py-3 px-5 font-bold">{{ .Name }}</td>
-                        <td class="py-3 px-5 text-theme-muted">{{ if eq .MinPlayers .MaxPlayers }}{{ .MinPlayers }}{{ else }}{{ .MinPlayers }} - {{ .MaxPlayers }}{{ end }}</td>
-                        <td class="py-3 px-5 text-theme-muted">{{ if eq .MinPlaytime .MaxPlaytime }}{{ .MinPlaytime }} Min.{{ else }}{{ .MinPlaytime }} - {{ .MaxPlaytime }} Min.{{ end }}</td>
-                        <td class="py-3 px-5">
+                        <td class="break-words py-3 px-3 font-bold md:px-5">{{ .Name }}</td>
+                        <td class="py-3 px-2 text-theme-muted md:px-5">{{ if eq .MinPlayers .MaxPlayers }}{{ .MinPlayers }}{{ else }}{{ .MinPlayers }} - {{ .MaxPlayers }}{{ end }}</td>
+                        <td class="py-3 px-2 text-theme-muted md:px-5">{{ if eq .MinPlaytime .MaxPlaytime }}{{ .MinPlaytime }} Min.{{ else }}{{ .MinPlaytime }} - {{ .MaxPlaytime }} Min.{{ end }}</td>
+                        <td class="py-3 px-2 md:px-5">
                             <span class="px-2 py-1 rounded text-xs {{ if eq .Status "available" }}border border-green-800 bg-green-950 text-green-200{{ else }}border border-yellow-800 bg-yellow-950 text-yellow-200{{ end }}">
                             {{ if eq .Status "available" }}Verfügbar{{ else }}Ausgeliehen{{ end }}
                             </span>
                         </td>
-                        <td class="relative py-3 px-5 text-right flex justify-end items-center gap-4">
+                        <td class="relative py-3 px-2 text-right md:px-5">
+                            <div class="flex flex-wrap justify-end items-center gap-2 md:gap-4">
                             <button @click="openBGGModal($event.currentTarget.dataset.name, $event.currentTarget.dataset)"
                                     data-id="{{ .ID }}" data-name="{{ .Name }}" data-min-players="{{ .MinPlayers }}"
                                     data-max-players="{{ .MaxPlayers }}" data-min-playtime="{{ .MinPlaytime }}"
                                     data-max-playtime="{{ .MaxPlaytime }}" data-bgg-rating="{{ if .BGGRating.Valid }}{{ .BGGRating.Float64 }}{{ end }}" data-room="{{ .Room.String }}"
                                     data-shelf="{{ .Shelf.String }}" data-image-url="{{ .ImageUrl.String }}"
                                     data-is-expansion="{{ .IsExpansion }}" data-categories="{{ .CategoryNames }}"
-                                    class="text-orange-400 hover:underline text-xs font-bold flex items-center gap-1">BGG Sync</button>
+                                    class="text-orange-400 hover:underline text-xs font-bold flex items-center gap-1 whitespace-nowrap">BGG Sync</button>
 
                             <div class="relative" x-data="{ menuOpen: false }" @click.outside="menuOpen = false">
                                 <button @click="menuOpen = !menuOpen" class="bg-[#1E2532] border border-theme-border text-gray-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1">
@@ -123,6 +125,7 @@
                                     <button @click="openDeleteGame({{ .ID }}, {{ .Name | printf "%q" }}); menuOpen = false" class="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-theme-bg hover:text-red-300">Löschen</button>
                                 </div>
                             </div>
+                            </div>
                         </td>
                     </tr>
                     {{ end }}
@@ -131,6 +134,7 @@
                     </tr>
                     </tbody>
                 </table>
+                </div>
             </div>
 
             <div x-show="deleteModalOpen" x-cloak class="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 text-left">
