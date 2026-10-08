@@ -50,10 +50,21 @@
         if (!error) return;
         error.textContent = message;
         error.classList.remove('hidden');
+        const status = document.getElementById('scanner-status');
+        if (status) status.classList.add('hidden');
     }
 
     function clearError() {
         document.getElementById('scanner-error')?.classList.add('hidden');
+        document.getElementById('scanner-status')?.classList.remove('hidden');
+    }
+
+    function showStatus(message) {
+        const status = document.getElementById('scanner-status');
+        if (status) {
+            status.textContent = message;
+            status.classList.remove('hidden');
+        }
     }
 
     function createScannerModal() {
@@ -77,6 +88,7 @@
                 </div>
                 <div class="relative min-h-[260px] bg-black">
                     <div id="scanner-reader" class="min-h-[260px]"></div>
+                    <div id="scanner-status" role="status" class="absolute inset-x-4 bottom-4 rounded-xl bg-black/75 p-2 text-center text-xs text-white">Kamera wird gestartet …</div>
                     <div id="scanner-error" class="absolute inset-x-4 top-4 hidden rounded-xl border border-red-800 bg-red-950/90 p-3 text-center text-xs text-red-200"></div>
                 </div>
                 <div class="flex flex-col gap-2 border-t border-theme-border bg-theme-bg p-3.5">
@@ -152,10 +164,18 @@
             showError('Der Scanner konnte nicht geladen werden. Bitte die Seite neu laden oder den Code manuell eingeben.');
             return;
         }
+        if (!navigator.mediaDevices?.getUserMedia) {
+            showError('Der Browser erlaubt keinen Kamerazugriff. Bitte die Seite über HTTPS öffnen oder den Code manuell eingeben.');
+            return;
+        }
 
         try {
             cameras = await window.Html5Qrcode.getCameras();
             if (expectedSessionID !== sessionID) return;
+            if (cameras.length === 0) {
+                showError('Es wurde keine Kamera gefunden. Bitte eine Kamera anschließen oder den Code manuell eingeben.');
+                return;
+            }
             const switchButton = document.getElementById('scanner-switch-btn');
             switchButton?.classList.toggle('hidden', cameras.length < 2);
 
@@ -168,19 +188,22 @@
             scanner = newScanner;
             await newScanner.start(
                 selectedCamera ? { deviceId: { exact: selectedCamera } } : { facingMode: { ideal: 'environment' } },
-                { fps: 10, qrbox: { width: 240, height: 240 } },
+                { fps: 10 },
                 handleScan,
                 () => {}
             );
             if (expectedSessionID !== sessionID || scanner !== newScanner) {
                 if (scanner === newScanner) scanner = null;
                 await stopAndClear(newScanner);
+                return;
             }
+            showStatus('Kamera läuft (Scanner v4) — Code ins Bild halten.');
         } catch (error) {
             if (expectedSessionID !== sessionID) return;
             console.error('Kamerafehler:', error);
             await stopScanner();
-            showError('Kamera konnte nicht gestartet werden. Bitte Zugriff im Browser erlauben oder den Code manuell eingeben.');
+            const detail = error instanceof Error ? ` (${error.message})` : '';
+            showError(`Kamera konnte nicht gestartet werden. Bitte Kamerazugriff erlauben oder den Code manuell eingeben.${detail}`);
         }
     }
 
@@ -191,6 +214,7 @@
 
         scanHandled = true;
         playScanBeep();
+        showStatus('Code erkannt.');
         const callback = activeCallback;
         closeCameraScanner();
         callback?.(gameID, decodedText);
