@@ -76,13 +76,6 @@ func SearchStaffLoans(c *gin.Context) {
 		return
 	}
 	searchQuery := strings.TrimSpace(c.Query("q"))
-	// If query matches a URL or ID format, extract ID for direct booking matching
-	if extractedID, err := ExtractGameID(searchQuery); err == nil && extractedID > 0 {
-		// If query looks like a full URL or ID wrapper, prioritize the extracted ID as query or keep original
-		if strings.Contains(searchQuery, "/") || strings.Contains(searchQuery, "http") || strings.Contains(searchQuery, "id=") {
-			searchQuery = strconv.Itoa(int(extractedID))
-		}
-	}
 	bookings, err := queries.SearchStaffLoanBookings(c.Request.Context(), searchQuery, mode)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Buchungen konnten nicht gesucht werden"})

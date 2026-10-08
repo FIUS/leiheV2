@@ -27,19 +27,10 @@
         <!-- VORBESTELLUNG -->
         <div x-show="issueSource === 'prebooked'" class="space-y-5">
             <div class="rounded-xl border border-theme-border bg-theme-card p-5">
-                <label for="prebooking-search" class="mb-2 block text-sm font-semibold text-white">Vorbestellung suchen oder Spiel scannen</label>
-                <div class="flex flex-col gap-2 sm:flex-row">
-                    <input id="prebooking-search" type="search" x-model="issueSearch" @input.debounce.300ms="searchBookings('issue')"
-                           placeholder="Name, Buchungscode, E-Mail oder Spiel-Barcode" class="min-w-0 flex-1 rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white outline-none focus:border-blue-500">
-                    <button type="button" @click="openScannerForPrebooking()" title="Mit Kamera scannen" class="inline-flex items-center justify-center gap-2 rounded-lg border border-theme-border bg-theme-bg px-4 py-3 text-sm font-semibold text-blue-400 hover:border-blue-500 hover:text-white transition">
-                        <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span>Kamera-Scan</span>
-                    </button>
-                </div>
-                <p class="mt-2 text-xs text-theme-muted">Suche nach Namen, Buchungscode, E-Mail-Adresse oder scanne ein reserviertes Spiel.</p>
+                <label for="prebooking-search" class="mb-2 block text-sm font-semibold text-white">Vorbestellung suchen</label>
+                <input id="prebooking-search" type="search" x-model="issueSearch" @input.debounce.300ms="searchBookings('issue')"
+                       placeholder="Name, Buchungsnummer oder E-Mail" class="w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white outline-none focus:border-blue-500">
+                <p class="mt-2 text-xs text-theme-muted">Suche nach Namen, Buchungscode oder E-Mail-Adresse.</p>
             </div>
 
             <div x-show="!selectedBooking" class="space-y-3">
@@ -143,17 +134,8 @@
             <div class="rounded-xl border border-theme-border bg-theme-card p-5">
                 <h2 class="mb-3 font-bold text-white">Spiel hinzufügen</h2>
                 <label for="item-name-search" class="mb-2 block text-sm font-semibold text-gray-200">Nach Spielnamen suchen</label>
-                <div class="flex flex-col gap-2 sm:flex-row">
-                    <input id="item-name-search" x-model="itemSearch" @input.debounce.300ms="searchItems()" type="search" placeholder="Name des Spiels"
-                           class="min-w-0 flex-1 rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white outline-none focus:border-blue-500">
-                    <button type="button" @click="openScannerForSpontaneous()" title="Mit Kamera scannen" class="inline-flex items-center justify-center gap-2 rounded-lg border border-theme-border bg-theme-bg px-4 py-3 text-sm font-semibold text-blue-400 hover:border-blue-500 hover:text-white transition">
-                        <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span>Kamera-Scan</span>
-                    </button>
-                </div>
+                <input id="item-name-search" x-model="itemSearch" @input.debounce.300ms="searchItems()" type="search" placeholder="Name des Spiels"
+                       class="w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white outline-none focus:border-blue-500">
                 <div x-show="itemSearch.trim().length > 0" class="mt-3 space-y-2">
                     <template x-for="item in itemResults" :key="item.id">
                         <div class="flex flex-col gap-2 rounded-lg border border-theme-border bg-theme-bg p-3 sm:flex-row sm:items-center">

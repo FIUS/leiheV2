@@ -63,12 +63,6 @@ document.addEventListener('alpine:init', () => {
 
         async searchBookings(mode) {
             let query = mode === 'issue' ? this.issueSearch.trim() : this.returnSearch.trim();
-            if (query) {
-                const extracted = this.cleanID(query);
-                if (extracted && (query.includes('/') || query.includes('http') || query.includes('id='))) {
-                    query = extracted;
-                }
-            }
             if (mode === 'return' && !query) {
                 this.returnBookings = [];
                 return;
@@ -102,25 +96,13 @@ document.addEventListener('alpine:init', () => {
             this.error = '';
             this.itemWarning = '';
             this.message = '';
+            if (!this.selectedBooking) {
+                this.error = 'Bitte zuerst eine Vorbestellung auswählen.';
+                return;
+            }
             const id = this.cleanID(rawInput);
             if (!id) {
                 this.error = 'Bitte eine gültige Spiele-ID oder Barcode eingeben.';
-                return;
-            }
-
-            if (!this.selectedBooking) {
-                // If no booking is selected, search for prebookings containing this item
-                this.issueSearch = id;
-                this.searchBookings('issue').then(() => {
-                    if (this.issueBookings.length === 1) {
-                        this.selectBooking(this.issueBookings[0]);
-                        this.scanPrebookedGame(id);
-                    } else if (this.issueBookings.length > 1) {
-                        this.message = `Mehrere Vorbestellungen für Spiel-ID ${id} gefunden. Bitte eine auswählen.`;
-                    } else {
-                        this.error = `Keine offene Vorbestellung für Spiel-ID ${id} gefunden.`;
-                    }
-                });
                 return;
             }
 
