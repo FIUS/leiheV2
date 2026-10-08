@@ -7,7 +7,7 @@
                 <h1 class="text-2xl font-bold text-white sm:text-3xl">Etiketten-Designer</h1>
                 <p class="mt-1 text-sm text-theme-muted">Druckerunabhängige Vektor-Etiketten gestalten und gesammelt als SVG exportieren.</p>
             </div>
-            <span class="rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-xs text-theme-muted">SVG · 1,5 mm Sicherheitsrand</span>
+            <span class="rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-xs text-theme-muted">1,5mm Abstand auf allen Seiten</span>
         </div>
 
         <div class="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(18rem,0.85fr)_minmax(0,1.6fr)]">
@@ -68,10 +68,9 @@
                     <fieldset>
                         <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-theme-muted">Etikettenausrichtung</legend>
                         <div class="grid grid-cols-2 gap-2">
-                            <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="layout === 'vertical' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input type="radio" value="vertical" x-model="layout" class="mr-2 accent-blue-500">Übereinander · Hochformat</label>
-                            <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="layout === 'horizontal' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input type="radio" value="horizontal" x-model="layout" class="mr-2 accent-blue-500">Nebeneinander · Querformat</label>
+                            <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="layout === 'vertical' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input type="radio" value="vertical" x-model="layout" class="mr-2 accent-blue-500">Vertikal</label>
+                            <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="layout === 'horizontal' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input type="radio" value="horizontal" x-model="layout" class="mr-2 accent-blue-500">Horizontal</label>
                         </div>
-                        <p class="mt-1 text-xs text-theme-muted">Die Anordnung bestimmt die Etikettenausrichtung; Code und Text bleiben aufrecht.</p>
                     </fieldset>
                     <label class="mt-4 flex items-center gap-2 text-sm text-gray-200"><input type="checkbox" x-model="showBrand" class="accent-blue-500">Kopfzeile anzeigen</label>
                     <label x-show="showBrand" class="mt-2 block text-xs font-semibold uppercase tracking-wide text-theme-muted">Titel

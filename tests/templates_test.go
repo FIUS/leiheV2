@@ -325,7 +325,7 @@ func TestBarcodeDesignerTemplateAndAdminNavigation(t *testing.T) {
 		"Endlosband", "Einzel-Etikett", "Code-128", "URL-Template", "Alle angezeigten auswählen",
 		"Manifest JSON", "qrcode-generator.js", "JsBarcode.all.min.js", "jszip.min.js", "/static/js/label_designer.js",
 		`x-model="bandWidth"`, `x-model="dieCutSize"`, `placeholder="z. B. 29 x 90 oder 50 × 30"`,
-		"Titel", "Etikettenausrichtung", "Anordnung bestimmt die Etikettenausrichtung", "Nebeneinander · Querformat", "Übereinander · Hochformat", "Zeilen für Spielenamen",
+		"Titel", "Etikettenausrichtung", "Anordnung bestimmt die Etikettenausrichtung", "Horizontal", "Vertikal", "Zeilen für Spielenamen",
 		"Schrift verkleinern", "Mit … kürzen",
 	} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
