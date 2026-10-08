@@ -93,15 +93,13 @@ document.addEventListener('alpine:init', () => {
         urlTemplate: 'https://verleih.fius.de/{id}',
         layout: 'vertical',
         showBrand: true,
-        brandText: 'FIUS Verleih',
+        brandText: 'Verleih',
         showID: true,
         idTemplate: 'ID: #{id}',
         showTitle: true,
         items: [],
-        categories: [],
         selectedIds: [],
         search: '',
-        categoryFilter: '',
         exporting: false,
         exportProgress: 0,
         error: '',
@@ -121,9 +119,6 @@ document.addEventListener('alpine:init', () => {
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Spiele konnten nicht geladen werden.');
                 this.items = data.items || [];
-                this.categories = [...new Set(this.items.flatMap(item =>
-                    (item.categories || '').split(',').map(category => category.trim()).filter(Boolean)
-                ))].sort((a, b) => a.localeCompare(b, 'de'));
                 this.renderPreview();
             } catch (error) {
                 this.error = error.message || 'Spiele konnten nicht geladen werden.';
@@ -133,8 +128,7 @@ document.addEventListener('alpine:init', () => {
         get filteredItems() {
             const search = this.search.trim().toLocaleLowerCase('de');
             return this.items.filter(item =>
-                (!search || `${item.name} ${item.id}`.toLocaleLowerCase('de').includes(search)) &&
-                (!this.categoryFilter || (item.categories || '').split(',').map(value => value.trim()).includes(this.categoryFilter))
+                !search || `${item.name} ${item.id}`.toLocaleLowerCase('de').includes(search)
             );
         },
 
@@ -320,14 +314,13 @@ document.addEventListener('alpine:init', () => {
             try {
                 const manifest = {
                     format: 'SVG',
-                    printer: 'Brother QL series',
+                    target: 'Druckerunabhängiges SVG',
                     generatedAt: new Date().toISOString(),
                     settings: this.exportSettings(),
                     labels: this.selectedItems.map((item, index) => ({
                         filename: this.exportFilename(index, item),
                         id: item.id,
                         name: item.name,
-                        categories: item.categories ? item.categories.split(',').map(value => value.trim()).filter(Boolean) : [],
                         payload: this.payloadFor(item),
                         widthMm: this.dimensionsForItem(item).width,
                         heightMm: this.dimensionsForItem(item).height

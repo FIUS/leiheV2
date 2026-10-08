@@ -74,7 +74,7 @@ func TestTemplatesParseAndExecute(t *testing.T) {
 	}
 	for _, expected := range []string{
 		`aria-label="Menü öffnen"`, `lg:hidden`, `/admin/ausgabe#issue`, `/admin/ausgabe#return`,
-		`Buchungen`, `Nutzerkonto`, `Meine Buchungen`, `Etiketten-Designer`,
+		`Buchungen`, `Nutzerkonto`, `Meine Buchungen`, `Etiketten-Designer`, `href="/labels"`,
 	} {
 		if !bytes.Contains([]byte(output), []byte(expected)) {
 			t.Errorf("Expected responsive header output to contain %q", expected)
@@ -325,10 +325,14 @@ func TestBarcodeDesignerTemplateAndAdminNavigation(t *testing.T) {
 		"Endlosband", "Einzel-Etikett", "Code-128", "URL-Template", "Alle angezeigten auswählen",
 		"Manifest JSON", "qrcode-generator.js", "JsBarcode.all.min.js", "jszip.min.js", "/static/js/label_designer.js",
 		`x-model="bandWidth"`, `x-model="dieCutSize"`, `placeholder="z. B. 29 x 90 oder 50 × 30"`,
+		"Titel",
 	} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected barcode designer output to contain %q", expected)
 		}
+	}
+	if bytes.Contains(output.Bytes(), []byte("Kategorie")) {
+		t.Error("barcode designer should not show game categories")
 	}
 
 	output.Reset()

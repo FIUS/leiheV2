@@ -5,7 +5,7 @@
         <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
             <div>
                 <h1 class="text-2xl font-bold text-white sm:text-3xl">Etiketten-Designer</h1>
-                <p class="mt-1 text-sm text-theme-muted">Vektor-Etiketten für Brother QL-Drucker gestalten und gesammelt exportieren.</p>
+                <p class="mt-1 text-sm text-theme-muted">Druckerunabhängige Vektor-Etiketten gestalten und gesammelt als SVG exportieren.</p>
             </div>
             <span class="rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-xs text-theme-muted">SVG · 1,5 mm Sicherheitsrand</span>
         </div>
@@ -39,7 +39,7 @@
                         </template>
                         <label x-show="rollType === 'diecut'" class="block text-xs font-semibold uppercase tracking-wide text-theme-muted">Etikettengröße (Breite × Höhe in mm)
                             <input type="text" x-model="dieCutSize" placeholder="z. B. 29 x 90 oder 50 × 30" class="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2.5 text-sm text-white">
-                            <span class="mt-1 block normal-case text-theme-muted">Maße sind nicht auf Brother-Formate beschränkt.</span>
+                            <span class="mt-1 block normal-case text-theme-muted">Maße sind nicht auf bestimmte Druckerformate beschränkt.</span>
                         </label>
                     </div>
                 </section>
@@ -73,7 +73,7 @@
                         </div>
                     </fieldset>
                     <label class="mt-4 flex items-center gap-2 text-sm text-gray-200"><input type="checkbox" x-model="showBrand" class="accent-blue-500">Kopfzeile anzeigen</label>
-                    <label x-show="showBrand" class="mt-2 block text-xs font-semibold uppercase tracking-wide text-theme-muted">Branding-Text
+                    <label x-show="showBrand" class="mt-2 block text-xs font-semibold uppercase tracking-wide text-theme-muted">Titel
                         <input type="text" x-model="brandText" class="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2.5 text-sm normal-case text-white">
                     </label>
                     <label class="mt-4 flex items-center gap-2 text-sm text-gray-200"><input type="checkbox" x-model="showID" class="accent-blue-500">System-ID anzeigen</label>
@@ -102,7 +102,6 @@
                         <div><h2 class="font-bold text-white">Spiele auswählen</h2><p class="text-xs text-theme-muted"><span x-text="selectedIds.length"></span> ausgewählt · <span x-text="filteredItems.length"></span> angezeigt</p></div>
                         <div class="flex flex-wrap gap-2">
                             <input type="search" x-model="search" placeholder="Spiel suchen …" aria-label="Spiel suchen" class="min-w-40 rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-sm text-white">
-                            <select x-model="categoryFilter" aria-label="Kategorie filtern" class="rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-sm text-white"><option value="">Alle Kategorien</option><template x-for="category in categories" :key="category"><option :value="category" x-text="category"></option></template></select>
                         </div>
                     </div>
                     <label class="mb-2 flex items-center gap-2 border-b border-theme-border pb-3 text-sm font-semibold text-gray-200">
@@ -111,17 +110,16 @@
                     </label>
                     <div class="max-h-80 overflow-auto">
                         <table class="w-full text-left text-sm">
-                            <thead class="sticky top-0 bg-theme-card text-xs uppercase text-theme-muted"><tr><th class="w-10 py-2">Ausw.</th><th class="py-2">Spiel</th><th class="py-2">Kategorien</th><th class="py-2 text-right">ID</th></tr></thead>
+                            <thead class="sticky top-0 bg-theme-card text-xs uppercase text-theme-muted"><tr><th class="w-10 py-2">Ausw.</th><th class="py-2">Spiel</th><th class="py-2 text-right">ID</th></tr></thead>
                             <tbody>
                                 <template x-for="item in filteredItems" :key="item.id">
                                     <tr class="border-t border-theme-border/70 hover:bg-theme-bg/60">
                                         <td class="py-2"><input type="checkbox" :checked="selectedIds.includes(item.id)" @change="toggleItem(item.id, $event.target.checked)" :aria-label="`Etikett für ${item.name} auswählen`" class="accent-blue-500"></td>
                                         <td class="max-w-64 truncate py-2 font-medium text-white" x-text="item.name"></td>
-                                        <td class="max-w-48 truncate py-2 text-xs text-theme-muted" x-text="item.categories || '—'"></td>
                                         <td class="py-2 text-right font-mono text-xs text-theme-muted" x-text="item.id"></td>
                                     </tr>
                                 </template>
-                                <tr x-show="filteredItems.length === 0"><td colspan="4" class="py-8 text-center text-sm text-theme-muted">Keine passenden Spiele gefunden.</td></tr>
+                                <tr x-show="filteredItems.length === 0"><td colspan="3" class="py-8 text-center text-sm text-theme-muted">Keine passenden Spiele gefunden.</td></tr>
                             </tbody>
                         </table>
                     </div>

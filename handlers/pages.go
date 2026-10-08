@@ -255,22 +255,20 @@ func RenderBarcodeDesigner(c *gin.Context) {
 }
 
 func ListBarcodeDesignerItems(c *gin.Context) {
-	items, err := queries.ListItemsWithCategories(c.Request.Context())
+	items, err := queries.ListItems(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Spiele konnten nicht geladen werden"})
 		return
 	}
 	type labelItem struct {
-		ID         int32  `json:"id"`
-		Name       string `json:"name"`
-		Categories string `json:"categories"`
+		ID   int32  `json:"id"`
+		Name string `json:"name"`
 	}
 	labelItems := make([]labelItem, 0, len(items))
 	for _, item := range items {
 		labelItems = append(labelItems, labelItem{
-			ID:         item.ID,
-			Name:       item.Name,
-			Categories: item.CategoryNames,
+			ID:   item.ID,
+			Name: item.Name,
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"items": labelItems})

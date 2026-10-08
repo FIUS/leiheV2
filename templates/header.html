@@ -32,7 +32,7 @@
                 <a href="/admin/ausgabe" class="inline-flex h-11 items-center rounded-lg border border-theme-border px-2.5 text-xs font-semibold text-gray-200 transition hover:border-blue-500 hover:text-white lg:px-3 lg:text-sm">Ausgabe &amp; Rücknahme</a>
                 <a href="/admin/bookings" class="inline-flex h-11 items-center rounded-lg border border-theme-border px-2.5 text-xs font-semibold text-gray-200 transition hover:border-blue-500 hover:text-white lg:px-3 lg:text-sm">Buchungen</a>
                 {{ if and (eq .UserRole "admin") .ModuleBarcodesEnabled }}
-                <a href="/admin/etiketten" class="inline-flex h-11 items-center rounded-lg border border-theme-border px-2.5 text-xs font-semibold text-gray-200 transition hover:border-blue-500 hover:text-white lg:px-3 lg:text-sm">Etiketten-Designer</a>
+                <a href="/labels" class="inline-flex h-11 items-center rounded-lg border border-theme-border px-2.5 text-xs font-semibold text-gray-200 transition hover:border-blue-500 hover:text-white lg:px-3 lg:text-sm">Etiketten-Designer</a>
                 {{ end }}
             </div>
             {{ end }}
@@ -74,7 +74,7 @@
             <a @click="mobileMenuOpen = false" href="/admin/ausgabe#return" class="block rounded-lg px-3 py-3 text-sm font-semibold text-gray-200 hover:bg-theme-card">Zurücknehmen</a>
             <a @click="mobileMenuOpen = false" href="/admin/bookings" class="block rounded-lg px-3 py-3 text-sm text-gray-200 hover:bg-theme-card">Buchungsübersicht</a>
             {{ if and (eq .UserRole "admin") .ModuleBarcodesEnabled }}
-            <a @click="mobileMenuOpen = false" href="/admin/etiketten" class="block rounded-lg px-3 py-3 text-sm text-gray-200 hover:bg-theme-card">Etiketten-Designer</a>
+            <a @click="mobileMenuOpen = false" href="/labels" class="block rounded-lg px-3 py-3 text-sm text-gray-200 hover:bg-theme-card">Etiketten-Designer</a>
             {{ end }}
         </section>
         {{ end }}

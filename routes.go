@@ -50,7 +50,7 @@ func SetupRoutes(r *gin.Engine) {
 		admin.GET("/users", handlers.RequireRole("admin"), handlers.RenderAdminUsers)
 		admin.GET("/settings", handlers.RequireRole("admin"), handlers.RenderAdminSettings)
 		admin.POST("/settings", handlers.RequireRole("admin"), handlers.UpdateAdminSettings)
-		admin.GET("/etiketten", handlers.RequireRole("admin"), handlers.RequireBarcodesModule(), handlers.RenderBarcodeDesigner)
+		admin.GET("/labels", handlers.RequireRole("admin"), handlers.RequireBarcodesModule(), handlers.RenderBarcodeDesigner)
 		admin.GET("/api/etiketten/spiele", handlers.RequireRole("admin"), handlers.RequireBarcodesModule(), handlers.ListBarcodeDesignerItems)
 	}
 
