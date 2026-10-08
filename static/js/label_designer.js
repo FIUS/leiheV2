@@ -64,7 +64,7 @@ function wrapLabelText(value, maxCharacters) {
 function appendLabelText(parent, value, x, y, maxWidth, options = {}) {
     const fontSize = options.fontSize || 3.2;
     const maxCharacters = Math.max(4, Math.floor(maxWidth / (fontSize * 0.56)));
-    const lines = wrapLabelText(value, maxCharacters);
+    const lines = options.lines || wrapLabelText(value, maxCharacters);
     const text = labelSvgElement('text', {
         x, y, fill: options.fill || '#111827',
         'font-family': options.fontFamily || 'Arial, Helvetica, sans-serif',
@@ -81,6 +81,35 @@ function appendLabelText(parent, value, x, y, maxWidth, options = {}) {
     return lines.length * fontSize * 1.2;
 }
 
+function wrapLabelTitle(value, maxCharacters, maxLines = 2) {
+    const lines = wrapLabelText(value, maxCharacters);
+    if (lines.length <= maxLines) return lines;
+    const visibleLines = lines.slice(0, maxLines);
+    let lastLine = visibleLines[maxLines - 1];
+    if (lastLine.length >= maxCharacters) lastLine = lastLine.slice(0, maxCharacters - 1);
+    visibleLines[maxLines - 1] = `${lastLine.trimEnd()}…`;
+    return visibleLines;
+}
+
+function fitLabelTitle(value, maxWidth, maxLines, overflow, initialFontSize) {
+    let fontSize = initialFontSize;
+    let maxCharacters = Math.max(1, Math.floor(maxWidth / (fontSize * 0.56)));
+    let lines = wrapLabelText(value, maxCharacters);
+
+    if (lines.length > maxLines && overflow === 'shrink') {
+        while (lines.length > maxLines && fontSize > 1.2) {
+            fontSize = Math.max(1.2, fontSize - 0.2);
+            maxCharacters = Math.max(1, Math.floor(maxWidth / (fontSize * 0.56)));
+            lines = wrapLabelText(value, maxCharacters);
+        }
+    }
+
+    if (lines.length > maxLines) {
+        lines = wrapLabelTitle(value, maxCharacters, maxLines);
+    }
+    return { lines, fontSize };
+}
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('barcodeDesigner', () => ({
         rollType: 'continuous',
@@ -92,11 +121,14 @@ document.addEventListener('alpine:init', () => {
         payloadMode: 'id',
         urlTemplate: 'https://verleih.fius.de/{id}',
         layout: 'vertical',
+        canvasOrientation: 'portrait',
         showBrand: true,
         brandText: 'Verleih',
         showID: true,
         idTemplate: 'ID: #{id}',
         showTitle: true,
+        titleMaxLines: 2,
+        titleOverflow: 'ellipsis',
         items: [],
         selectedIds: [],
         search: '',
@@ -108,8 +140,8 @@ document.addEventListener('alpine:init', () => {
             const updatePreview = () => this.renderPreview();
             [
                 'rollType', 'bandWidth', 'lengthMode', 'fixedLength', 'dieCutSize',
-                'codeType', 'payloadMode', 'urlTemplate', 'layout', 'showBrand',
-                'brandText', 'showID', 'idTemplate', 'showTitle', 'selectedIds'
+                'codeType', 'payloadMode', 'urlTemplate', 'layout', 'canvasOrientation', 'showBrand',
+                'brandText', 'showID', 'idTemplate', 'showTitle', 'titleMaxLines', 'titleOverflow', 'selectedIds'
             ].forEach((key) => this.$watch(key, updatePreview));
 
             try {
@@ -148,10 +180,17 @@ document.addEventListener('alpine:init', () => {
         get labelDimensions() {
             const item = this.previewItem || { id: 0, name: '' };
             try {
-                return this.dimensionsForItem(item);
+                return this.outputDimensionsForItem(item);
             } catch {
                 return { width: '—', height: '—' };
             }
+        },
+
+        outputDimensionsForItem(item) {
+            const dimensions = this.dimensionsForItem(item);
+            return this.canvasOrientation === 'landscape'
+                ? { width: dimensions.height, height: dimensions.width }
+                : dimensions;
         },
 
         dimensionsForItem(item) {
@@ -162,8 +201,8 @@ document.addEventListener('alpine:init', () => {
             if (this.lengthMode === 'fixed') {
                 return { width, height: parseLabelMillimeters(this.fixedLength, 'Etikettenlänge') };
             }
-            const titleLines = this.showTitle ? wrapLabelText(item.name || '', Math.max(4, Math.floor((width - 3) / 2))).length : 0;
-            const textHeight = (this.showBrand ? 6 : 0) + (this.showID ? 6 : 0) + titleLines * 4 + 4;
+            const titleLineCount = this.showTitle ? Number(this.titleMaxLines) : 0;
+            const textHeight = (this.showBrand ? 6 : 0) + (this.showID ? 6 : 0) + titleLineCount * 4 + 4;
             const codeHeight = this.codeType === 'qr' ? Math.max(12, width - 7) : 16;
             const height = this.layout === 'vertical'
                 ? Math.max(22, Math.ceil(textHeight + codeHeight + 5))
@@ -200,7 +239,7 @@ document.addEventListener('alpine:init', () => {
                 const nested = labelSvgElement('svg', {
                     x, y, width, height,
                     viewBox: `0 0 ${qr.getModuleCount()} ${qr.getModuleCount()}`,
-                    preserveAspectRatio: 'none',
+                    preserveAspectRatio: 'xMidYMid meet',
                     'aria-label': `QR-Code ${payload}`
                 });
                 Array.from(parsed.childNodes).forEach(child => nested.appendChild(document.importNode(child, true)));
@@ -231,8 +270,9 @@ document.addEventListener('alpine:init', () => {
         },
 
         createLabelSVG(item) {
-            const dimensions = this.dimensionsForItem(item);
-            const { width, height } = dimensions;
+            const { width, height } = this.outputDimensionsForItem(item);
+            const contentWidth = width;
+            const contentHeight = height;
             const svg = labelSvgElement('svg', {
                 xmlns: SVG_NS,
                 width: `${width}mm`,
@@ -248,47 +288,56 @@ document.addEventListener('alpine:init', () => {
             const content = labelSvgElement('g');
             svg.appendChild(content);
             let top = margin + 2.5;
-            const maxTextWidth = width - margin * 2;
+            const maxTextWidth = contentWidth - margin * 2;
             if (this.showBrand && this.brandText.trim()) {
-                appendLabelText(content, this.brandText.trim(), width / 2, top, maxTextWidth, {
+                appendLabelText(content, this.brandText.trim(), contentWidth / 2, top, maxTextWidth, {
                     fontSize: Math.min(3.4, maxTextWidth / 8), fontWeight: '700', anchor: 'middle'
                 });
                 top += 4.5;
             }
 
             const idLine = this.idTemplate.replaceAll('{id}', String(item.id));
-            const titleLines = this.showTitle ? wrapLabelText(item.name, Math.max(4, Math.floor(maxTextWidth / 2))) : [];
-            const titleHeight = titleLines.length * 4;
+            const titleLayout = this.showTitle
+                ? fitLabelTitle(item.name, maxTextWidth, Number(this.titleMaxLines), this.titleOverflow, 2.8)
+                : { lines: [], fontSize: 2.8 };
+            const titleHeight = titleLayout.lines.length * titleLayout.fontSize * 1.2;
             const idHeight = this.showID ? 4.5 : 0;
-            const remainingHeight = Math.max(8, height - top - margin - idHeight - titleHeight - 2);
+            const remainingHeight = Math.max(8, contentHeight - top - margin - idHeight - titleHeight - 2);
 
             if (this.layout === 'vertical') {
                 const codeSize = this.codeType === 'qr'
-                    ? Math.min(width - margin * 2, remainingHeight, Math.max(10, height * 0.55))
-                    : Math.min(width - margin * 2, Math.max(8, remainingHeight * 0.65));
+                    ? Math.min(contentWidth - margin * 2, remainingHeight, Math.max(10, contentHeight * 0.55))
+                    : Math.min(contentWidth - margin * 2, Math.max(8, remainingHeight * 0.65));
                 const codeHeight = this.codeType === 'qr' ? codeSize : Math.min(13, remainingHeight);
                 const codeY = top + Math.max(0, (remainingHeight - codeHeight) / 2);
-                this.renderCode(svg, this.payloadFor(item), (width - codeSize) / 2, codeY, codeSize, codeHeight);
+                this.renderCode(content, this.payloadFor(item), (contentWidth - codeSize) / 2, codeY, codeSize, codeHeight);
                 let textY = top + remainingHeight + 3;
                 if (this.showID) {
-                    appendLabelText(content, idLine, width / 2, textY, maxTextWidth, { fontSize: 3.2, fontWeight: '700', anchor: 'middle' });
+                    appendLabelText(content, idLine, contentWidth / 2, textY, maxTextWidth, { fontSize: 3.2, fontWeight: '700', anchor: 'middle' });
                     textY += 4.5;
                 }
-                if (this.showTitle) appendLabelText(content, item.name, width / 2, textY, maxTextWidth, { fontSize: 2.8, anchor: 'middle' });
+                if (this.showTitle) appendLabelText(content, item.name, contentWidth / 2, textY, maxTextWidth, {
+                    fontSize: titleLayout.fontSize, anchor: 'middle', lines: titleLayout.lines
+                });
             } else {
-                const codeWidth = Math.max(7, Math.min(width * 0.42, height * 0.62));
+                const codeWidth = Math.max(7, Math.min(contentWidth * 0.42, contentHeight * 0.62));
                 const codeHeight = this.codeType === 'qr' ? Math.min(codeWidth, remainingHeight) : Math.min(15, remainingHeight);
                 const codeX = margin;
                 const codeY = top + Math.max(0, (remainingHeight - codeHeight) / 2);
-                this.renderCode(svg, this.payloadFor(item), codeX, codeY, codeWidth, codeHeight);
+                this.renderCode(content, this.payloadFor(item), codeX, codeY, codeWidth, codeHeight);
                 const textX = codeX + codeWidth + 2;
-                const textWidth = Math.max(4, width - margin - textX);
+                const textWidth = Math.max(4, contentWidth - margin - textX);
                 let textY = top + 3;
                 if (this.showID) {
                     appendLabelText(content, idLine, textX, textY, textWidth, { fontSize: Math.min(3.2, textWidth / 4), fontWeight: '700' });
                     textY += 5;
                 }
-                if (this.showTitle) appendLabelText(content, item.name, textX, textY, textWidth, { fontSize: Math.min(3, textWidth / 4) });
+                const horizontalTitleLayout = this.showTitle
+                    ? fitLabelTitle(item.name, textWidth, Number(this.titleMaxLines), this.titleOverflow, Math.min(3, textWidth / 4))
+                    : { lines: [], fontSize: Math.min(3, textWidth / 4) };
+                if (this.showTitle) appendLabelText(content, item.name, textX, textY, textWidth, {
+                    fontSize: horizontalTitleLayout.fontSize, lines: horizontalTitleLayout.lines
+                });
             }
             return svg;
         },
@@ -322,8 +371,8 @@ document.addEventListener('alpine:init', () => {
                         id: item.id,
                         name: item.name,
                         payload: this.payloadFor(item),
-                        widthMm: this.dimensionsForItem(item).width,
-                        heightMm: this.dimensionsForItem(item).height
+                        widthMm: this.outputDimensionsForItem(item).width,
+                        heightMm: this.outputDimensionsForItem(item).height
                     }))
                 };
                 this.downloadBlob(new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' }), 'labels_manifest.json');
@@ -345,11 +394,14 @@ document.addEventListener('alpine:init', () => {
                 payloadMode: this.payloadMode,
                 urlTemplate: this.urlTemplate,
                 layout: this.layout,
+                canvasOrientation: this.canvasOrientation,
                 showBrand: this.showBrand,
                 brandText: this.brandText,
                 showID: this.showID,
                 idTemplate: this.idTemplate,
                 showTitle: this.showTitle,
+                titleMaxLines: Number(this.titleMaxLines),
+                titleOverflow: this.titleOverflow,
                 safetyMarginMm: LABEL_MARGIN_MM
             };
         },
