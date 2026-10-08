@@ -5,8 +5,12 @@ import (
 	"database/sql"
 )
 
-func (q *Queries) UpdateItemShelf(ctx context.Context, id int32, shelf string) error {
-	result, err := q.db.ExecContext(ctx, "UPDATE items SET shelf = $2 WHERE id = $1", id, sql.NullString{String: shelf, Valid: shelf != ""})
+func (q *Queries) UpdateItemLocation(ctx context.Context, id int32, room, shelf string) error {
+	result, err := q.db.ExecContext(ctx, "UPDATE items SET room = $2, shelf = $3 WHERE id = $1",
+		id,
+		sql.NullString{String: room, Valid: room != ""},
+		sql.NullString{String: shelf, Valid: shelf != ""},
+	)
 	if err != nil {
 		return err
 	}

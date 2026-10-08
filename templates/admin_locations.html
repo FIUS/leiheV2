@@ -1,7 +1,7 @@
 {{ template "header" . }}
 <div class="mx-auto mt-4 flex min-h-[85vh] w-full max-w-full min-w-0 flex-col overflow-hidden rounded-xl border border-theme-border bg-theme-bg text-gray-100 shadow-lg">
     {{ template "admin_nav" . }}
-    <main id="admin-location-manager" x-data="adminLocationManager" data-locations="{{ .LocationsJSON }}" data-selected-room="{{ .SelectedRoom }}" class="min-w-0 flex-1 bg-[#0B101A] p-4 md:p-8">
+    <main id="admin-location-manager" x-data="adminLocationManager" data-locations="{{ .LocationsJSON }}" data-rooms="{{ .RoomsJSON }}" data-selected-room="{{ .SelectedRoom }}" class="min-w-0 flex-1 bg-[#0B101A] p-4 md:p-8">
         <div class="mb-6">
             <h1 x-show="!selectedRoom" class="text-2xl font-bold text-white sm:text-3xl">Lagerort-Assistent</h1>
             <h1 x-show="selectedRoom" class="text-2xl font-bold text-white sm:text-3xl" x-text="`Raum ${selectedRoom}`"></h1>
@@ -63,8 +63,15 @@
             <section class="min-w-0 rounded-xl border border-theme-border bg-theme-card p-4 sm:p-5">
                 <div class="mb-4">
                     <h2 class="text-lg font-bold text-white">Spiele hinzufügen</h2>
-                    <p class="mt-1 text-sm text-theme-muted">Suche Spiele und wähle alle aus, die in dieses Fach kommen.</p>
+                    <p class="mt-1 text-sm text-theme-muted">Wähle den Raum und suche Spiele für dieses Fach aus.</p>
                 </div>
+                <label for="assignment-room" class="mb-3 block text-xs font-semibold uppercase tracking-wide text-theme-muted">Raum für diese Zuweisung
+                    <input id="assignment-room" x-model="targetRoom" list="storage-room-options" maxlength="100" required
+                           placeholder="Raum angeben" class="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm normal-case text-white outline-none focus:border-blue-500">
+                    <datalist id="storage-room-options">
+                        <template x-for="room in rooms" :key="room"><option :value="room"></option></template>
+                    </datalist>
+                </label>
                 <label for="location-game-search" class="sr-only">Spiele suchen</label>
                 <input id="location-game-search" x-model="search" type="search" placeholder="Spielname oder ID suchen …"
                        class="w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white outline-none focus:border-blue-500">
@@ -119,4 +126,4 @@
         </div>
     </main>
 </div>
-<script src="/static/js/admin_locations.js?v=2"></script>
+<script src="/static/js/admin_locations.js?v=3"></script>

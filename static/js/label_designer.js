@@ -128,6 +128,11 @@ document.addEventListener('alpine:init', () => {
         showTitle: true,
         titleMaxLines: 2,
         titleOverflow: 'ellipsis',
+        showRoom: false,
+        roomFontSize: 2.4,
+        showShelf: false,
+        shelfFontSize: 2.4,
+        onlyCompleteLocations: false,
         items: [],
         selectedIds: [],
         search: '',
@@ -140,7 +145,8 @@ document.addEventListener('alpine:init', () => {
             [
                 'rollType', 'bandWidth', 'lengthMode', 'fixedLength', 'dieCutSize',
                 'codeType', 'payloadMode', 'urlTemplate', 'layout', 'showBrand',
-                'brandText', 'showID', 'idTemplate', 'showTitle', 'titleMaxLines', 'titleOverflow', 'selectedIds'
+                'brandText', 'showID', 'idTemplate', 'showTitle', 'titleMaxLines', 'titleOverflow',
+                'showRoom', 'roomFontSize', 'showShelf', 'shelfFontSize', 'selectedIds'
             ].forEach((key) => this.$watch(key, updatePreview));
 
             try {
@@ -170,6 +176,16 @@ document.addEventListener('alpine:init', () => {
         get selectedItems() {
             const selected = new Set(this.selectedIds);
             return this.items.filter(item => selected.has(item.id));
+        },
+
+        get exportItems() {
+            return this.onlyCompleteLocations
+                ? this.selectedItems.filter(item => this.hasCompleteLocation(item))
+                : this.selectedItems;
+        },
+
+        hasCompleteLocation(item) {
+            return Boolean(String(item.room || '').trim() && String(item.shelf || '').trim());
         },
 
         get previewItem() {
@@ -234,6 +250,21 @@ document.addEventListener('alpine:init', () => {
             return { value: item.name, lines: layout.lines, fontSize: layout.fontSize, height: layout.lines.length * layout.fontSize * 1.2 };
         },
 
+        locationBlocks(item, maxWidth) {
+            const blocks = [];
+            [
+                { show: this.showRoom, value: item.room, label: 'Raum', fontSize: Number(this.roomFontSize) },
+                { show: this.showShelf, value: item.shelf, label: 'Regal', fontSize: Number(this.shelfFontSize) }
+            ].forEach(({ show, value, label, fontSize }) => {
+                const location = String(value || '').trim();
+                if (!show || !location) return;
+                const text = `${label}: ${location}`;
+                const lines = wrapLabelText(text, Math.max(1, Math.floor(maxWidth / (fontSize * 0.56))));
+                blocks.push({ value: text, lines, fontSize, height: lines.length * fontSize * 1.2 });
+            });
+            return blocks;
+        },
+
         verticalFlow(item, width) {
             const textWidth = width;
             let header = null;
@@ -252,6 +283,7 @@ document.addEventListener('alpine:init', () => {
                 blocks.push({ value: idLine, lines, fontSize, height: lines.length * fontSize * 1.2, weight: '700' });
             }
             if (this.showTitle) blocks.push(this.titleBlock(item, textWidth));
+            blocks.push(...this.locationBlocks(item, textWidth));
 
             const positionedBlocks = [];
             let textY = codeY + codeHeight + (blocks.length ? LABEL_GAP_MM : 0);
@@ -294,6 +326,7 @@ document.addEventListener('alpine:init', () => {
                 blocks.push({ value: idLine, lines, fontSize, height: lines.length * fontSize * 1.2, weight: '700' });
             }
             if (this.showTitle) blocks.push(this.titleBlock(item, textWidth));
+            blocks.push(...this.locationBlocks(item, textWidth));
             let y = 0;
             const positionedBlocks = blocks.map((block, index) => {
                 const positioned = { ...block, y: y + block.fontSize };
@@ -423,10 +456,13 @@ document.addEventListener('alpine:init', () => {
                     target: 'Druckerunabhängiges SVG',
                     generatedAt: new Date().toISOString(),
                     settings: this.exportSettings(),
-                    labels: this.selectedItems.map((item, index) => ({
+                    excludedIncompleteLocationCount: this.selectedItems.length - this.exportItems.length,
+                    labels: this.exportItems.map((item, index) => ({
                         filename: this.exportFilename(index, item),
                         id: item.id,
                         name: item.name,
+                        room: item.room,
+                        shelf: item.shelf,
                         payload: this.payloadFor(item),
                         widthMm: this.outputDimensionsForItem(item).width,
                         heightMm: this.outputDimensionsForItem(item).height
@@ -459,18 +495,23 @@ document.addEventListener('alpine:init', () => {
                 showTitle: this.showTitle,
                 titleMaxLines: Number(this.titleMaxLines),
                 titleOverflow: this.titleOverflow,
+                showRoom: this.showRoom,
+                roomFontSizeMm: Number(this.roomFontSize),
+                showShelf: this.showShelf,
+                shelfFontSizeMm: Number(this.shelfFontSize),
+                onlyCompleteLocations: this.onlyCompleteLocations,
                 safetyMarginMm: 0
             };
         },
 
         async exportZip() {
-            if (this.exporting || this.selectedItems.length === 0) return;
+            if (this.exporting || this.exportItems.length === 0) return;
             this.exporting = true;
             this.exportProgress = 0;
             this.error = '';
             try {
                 const zip = new JSZip();
-                const items = this.selectedItems;
+                const items = this.exportItems;
                 for (let index = 0; index < items.length; index++) {
                     const item = items[index];
                     const svg = this.createLabelSVG(item);

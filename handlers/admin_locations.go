@@ -15,7 +15,7 @@ import (
 var gameStorageLocations = []string{
 	"A1L", "A1R", "A2L", "A2R", "A3L", "A3R", "A4L", "A4R",
 	"B0", "B2L", "B2R", "B3L", "B3R", "B4L", "B4R",
-	"C1L", "C1R", "C2L", "C2R", "C3L", "C3R", "C4L", "C4R",
+	"C1L", "C1R", "C2L", "C2R", "C3L", "C3R", "CU",
 }
 
 func RenderAdminLocations(c *gin.Context) {
@@ -24,9 +24,20 @@ func RenderAdminLocations(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Lagerorte konnten nicht geladen werden")
 		return
 	}
+	rooms, err := queries.ListStorageRooms(c.Request.Context())
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Räume konnten nicht geladen werden")
+		return
+	}
+	roomsJSON, err := json.Marshal(rooms)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Räume konnten nicht geladen werden")
+		return
+	}
 	c.HTML(http.StatusOK, "admin_locations.html", pageData(c, gin.H{
 		"ActiveTab":     "locations",
 		"LocationsJSON": string(locationsJSON),
+		"RoomsJSON":     string(roomsJSON),
 		"SelectedRoom":  strings.TrimSpace(c.Query("room")),
 	}))
 }
@@ -58,6 +69,7 @@ func ListLocationItems(c *gin.Context) {
 
 type assignLocationRequest struct {
 	ItemIDs  []int32 `json:"item_ids" binding:"required"`
+	Room     string  `json:"room" binding:"required"`
 	Location string  `json:"location" binding:"required"`
 }
 
@@ -71,6 +83,11 @@ func AssignLocationItems(c *gin.Context) {
 	location := strings.TrimSpace(req.Location)
 	if !isKnownStorageLocation(location) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Unbekannter Lagerort"})
+		return
+	}
+	room := strings.TrimSpace(req.Room)
+	if room == "" || len(room) > 100 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bitte gib einen gültigen Raum an (maximal 100 Zeichen)"})
 		return
 	}
 	if len(req.ItemIDs) == 0 || len(req.ItemIDs) > 500 {
@@ -97,7 +114,7 @@ func AssignLocationItems(c *gin.Context) {
 			if _, err := tx.GetItem(c.Request.Context(), id); err != nil {
 				return err
 			}
-			if err := tx.UpdateItemShelf(c.Request.Context(), id, location); err != nil {
+			if err := tx.UpdateItemLocation(c.Request.Context(), id, room, location); err != nil {
 				return err
 			}
 		}

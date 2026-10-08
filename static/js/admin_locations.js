@@ -1,7 +1,9 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('adminLocationManager', () => ({
         locations: [],
+        rooms: [],
         selectedRoom: '',
+        targetRoom: '',
         locationIndex: 0,
         items: [],
         search: '',
@@ -13,7 +15,9 @@ document.addEventListener('alpine:init', () => {
         init() {
             try {
                 this.locations = JSON.parse(this.$el.dataset.locations || '[]');
+                this.rooms = JSON.parse(this.$el.dataset.rooms || '[]');
                 this.selectedRoom = String(this.$el.dataset.selectedRoom || '').trim();
+                this.targetRoom = this.rooms[0] || '';
             } catch (error) {
                 this.error = 'Lagerorte konnten nicht geladen werden.';
                 console.error('Invalid storage location configuration:', error);
@@ -31,7 +35,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         get currentItems() {
-            return this.items.filter(item => String(item.shelf || '').trim().toUpperCase() === this.currentLocation);
+            return this.items.filter(item =>
+                String(item.shelf || '').trim().toUpperCase() === this.currentLocation &&
+                this.normalize(item.room) === this.normalize(this.targetRoom)
+            );
         },
 
         get roomItems() {
@@ -56,7 +63,8 @@ document.addEventListener('alpine:init', () => {
         },
 
         isAtCurrentLocation(item) {
-            return String(item.shelf || '').trim().toUpperCase() === this.currentLocation;
+            return String(item.shelf || '').trim().toUpperCase() === this.currentLocation &&
+                this.normalize(item.room) === this.normalize(this.targetRoom);
         },
 
         itemsForShelf(shelf) {
@@ -101,14 +109,23 @@ document.addEventListener('alpine:init', () => {
         },
 
         async assignSelected() {
+            this.targetRoom = this.targetRoom.trim();
+            if (!this.targetRoom || this.targetRoom.length > 100) {
+                this.error = 'Bitte gib einen gültigen Raum an (maximal 100 Zeichen).';
+                return;
+            }
             const selected = this.items.filter(item => this.selectedIDs.includes(Number(item.id)) && !this.isAtCurrentLocation(item));
             if (selected.length === 0) {
                 this.error = 'Wähle mindestens ein Spiel aus, das noch nicht in diesem Fach liegt.';
                 return;
             }
 
-            const moving = selected.filter(item => String(item.shelf || '').trim());
-            if (moving.length > 0 && !window.confirm(`${moving.length} Spiel(e) werden von ihrem bisherigen Fach in ${this.currentLocation} verschoben. Fortfahren?`)) {
+            const moving = selected.filter(item =>
+                (String(item.shelf || '').trim() || String(item.room || '').trim()) &&
+                (String(item.shelf || '').trim().toUpperCase() !== this.currentLocation ||
+                    this.normalize(item.room) !== this.normalize(this.targetRoom))
+            );
+            if (moving.length > 0 && !window.confirm(`${moving.length} Spiel(e) werden in Raum ${this.targetRoom}, Fach ${this.currentLocation} verschoben. Fortfahren?`)) {
                 return;
             }
 
@@ -121,14 +138,17 @@ document.addEventListener('alpine:init', () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         item_ids: selected.map(item => Number(item.id)),
+                        room: this.targetRoom,
                         location: this.currentLocation,
                     }),
                 });
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Lagerorte konnten nicht gespeichert werden.');
-                this.message = `${data.updated} Spiel(e) ${this.currentLocation} zugeordnet.`;
+                this.message = `${data.updated} Spiel(e) Raum ${this.targetRoom}, Fach ${this.currentLocation} zugeordnet.`;
                 this.selectedIDs = [];
                 await this.loadItems();
+                this.rooms = [...new Set([...this.rooms, this.targetRoom])]
+                    .sort((left, right) => left.localeCompare(right, 'de', {numeric: true}));
             } catch (error) {
                 this.error = error.message;
             } finally {

@@ -278,14 +278,18 @@ func ListBarcodeDesignerItems(c *gin.Context) {
 		return
 	}
 	type labelItem struct {
-		ID   int32  `json:"id"`
-		Name string `json:"name"`
+		ID    int32  `json:"id"`
+		Name  string `json:"name"`
+		Room  string `json:"room"`
+		Shelf string `json:"shelf"`
 	}
 	labelItems := make([]labelItem, 0, len(items))
 	for _, item := range items {
 		labelItems = append(labelItems, labelItem{
-			ID:   item.ID,
-			Name: item.Name,
+			ID:    item.ID,
+			Name:  item.Name,
+			Room:  item.Room.String,
+			Shelf: item.Shelf.String,
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"items": labelItems})
