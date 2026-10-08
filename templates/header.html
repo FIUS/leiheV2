@@ -74,7 +74,7 @@
             <a @click="mobileMenuOpen = false" href="/admin/ausgabe#return" class="block rounded-lg px-3 py-3 text-sm font-semibold text-gray-200 hover:bg-theme-card">Zurücknehmen</a>
             <a @click="mobileMenuOpen = false" href="/admin/bookings" class="block rounded-lg px-3 py-3 text-sm text-gray-200 hover:bg-theme-card">Buchungsübersicht</a>
             {{ if and (eq .UserRole "admin") .ModuleBarcodesEnabled }}
-            <a @click="mobileMenuOpen = false" href="/labels" class="block rounded-lg px-3 py-3 text-sm text-gray-200 hover:bg-theme-card">Etiketten-Designer</a>
+            <a @click="mobileMenuOpen = false" href="admin/labels" class="block rounded-lg px-3 py-3 text-sm text-gray-200 hover:bg-theme-card">Etiketten-Designer</a>
             {{ end }}
         </section>
         {{ end }}
