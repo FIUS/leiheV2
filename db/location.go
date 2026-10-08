@@ -24,6 +24,25 @@ func (q *Queries) UpdateItemLocation(ctx context.Context, id int32, room, shelf 
 	return nil
 }
 
+func (q *Queries) UpdateItemRoomIfMissing(ctx context.Context, id int32, room string) error {
+	result, err := q.db.ExecContext(ctx,
+		"UPDATE items SET room = $2 WHERE id = $1 AND NULLIF(TRIM(COALESCE(room, '')), '') IS NULL AND NULLIF(TRIM(COALESCE(shelf, '')), '') IS NOT NULL",
+		id,
+		sql.NullString{String: room, Valid: room != ""},
+	)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected != 1 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 func (q *Queries) ListStorageRooms(ctx context.Context) ([]string, error) {
 	rows, err := q.db.QueryContext(ctx, "SELECT DISTINCT TRIM(room) FROM items WHERE NULLIF(TRIM(COALESCE(room, '')), '') IS NOT NULL ORDER BY TRIM(room)")
 	if err != nil {

@@ -11,6 +11,46 @@
 
         <div x-show="error" x-cloak role="alert" class="mb-4 rounded-xl border border-red-800 bg-red-950 p-4 text-sm text-red-200" x-text="error"></div>
         <div x-show="message" x-cloak role="status" class="mb-4 rounded-xl border border-green-800 bg-green-950 p-4 text-sm text-green-200" x-text="message"></div>
+        <datalist id="storage-room-options">
+            <template x-for="room in rooms" :key="room"><option :value="room"></option></template>
+        </datalist>
+
+        <section x-show="!selectedRoom && itemsMissingRoom.length > 0" class="mb-5 rounded-xl border border-amber-700/60 bg-theme-card p-4 sm:p-5">
+            <div class="mb-4">
+                <h2 class="text-lg font-bold text-white">Raum bei bereits zugeordneten Spielen ergänzen</h2>
+                <p class="mt-1 text-sm text-theme-muted">Hier kannst du den fehlenden Raum nachtragen. Die gespeicherten Fächer bleiben unverändert.</p>
+            </div>
+            <label for="repair-room" class="mb-3 block text-xs font-semibold uppercase tracking-wide text-theme-muted">Fehlender Raum
+                <input id="repair-room" x-model="targetRoom" list="storage-room-options" maxlength="100" required
+                       placeholder="Vorhandenen oder neuen Raum angeben" class="mt-2 w-full max-w-xl rounded-lg border border-theme-border bg-theme-bg p-3 text-sm normal-case text-white outline-none focus:border-blue-500">
+            </label>
+            <div class="flex flex-wrap items-center gap-3">
+                <input type="search" x-model="roomRepairSearch" placeholder="Spiel, ID oder Fach suchen …" aria-label="Spiele ohne Raum suchen"
+                       class="min-w-60 flex-1 rounded-lg border border-theme-border bg-theme-bg p-3 text-sm text-white outline-none focus:border-blue-500">
+                <span class="text-sm text-theme-muted" x-text="`${itemsMissingRoom.length} Spiele ohne Raum · ${roomRepairSelectedIDs.length} ausgewählt`"></span>
+            </div>
+            <label class="mt-3 flex items-center gap-2 border-b border-theme-border pb-3 text-sm font-semibold text-gray-200">
+                <input type="checkbox" @change="selectRoomRepairResults($event.target.checked)" class="accent-blue-500">
+                Angezeigte Spiele auswählen (<span x-text="roomRepairResults.length"></span>)
+            </label>
+            <div class="mt-2 max-h-64 space-y-1 overflow-y-auto">
+                <template x-for="item in roomRepairResults" :key="`repair-${item.id}`">
+                    <label class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm hover:bg-theme-bg">
+                        <input type="checkbox" :checked="roomRepairSelectedIDs.includes(Number(item.id))"
+                               @change="toggleRoomRepairItem(item.id, $event.target.checked)" class="accent-blue-500">
+                        <span class="min-w-0 flex-1 truncate text-white" x-text="item.name"></span>
+                        <span class="shrink-0 font-mono text-xs text-theme-muted" x-text="`ID ${item.id} · ${item.shelf}`"></span>
+                    </label>
+                </template>
+                <p x-show="roomRepairResults.length === 0" class="py-4 text-center text-sm text-theme-muted">Keine passenden Spiele ohne Raum gefunden.</p>
+            </div>
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-theme-border pt-4">
+                <span class="text-sm text-theme-muted">Es werden nur leere Raumfelder ergänzt.</span>
+                <button type="button" @click="fillMissingRooms()" :disabled="busy || roomRepairSelectedIDs.length === 0"
+                        class="rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        x-text="busy ? 'Wird gespeichert …' : 'Raum ergänzen'"></button>
+            </div>
+        </section>
 
         <section x-show="selectedRoom && !error" class="space-y-4">
             <div class="flex items-center justify-between gap-3 rounded-xl border border-theme-border bg-theme-card p-4">
@@ -68,9 +108,6 @@
                 <label for="assignment-room" class="mb-3 block text-xs font-semibold uppercase tracking-wide text-theme-muted">Raum für diese Zuweisung
                     <input id="assignment-room" x-model="targetRoom" list="storage-room-options" maxlength="100" required
                            placeholder="Raum angeben" class="mt-2 w-full rounded-lg border border-theme-border bg-theme-bg p-3 text-sm normal-case text-white outline-none focus:border-blue-500">
-                    <datalist id="storage-room-options">
-                        <template x-for="room in rooms" :key="room"><option :value="room"></option></template>
-                    </datalist>
                 </label>
                 <label for="location-game-search" class="sr-only">Spiele suchen</label>
                 <input id="location-game-search" x-model="search" type="search" placeholder="Spielname oder ID suchen …"
@@ -126,4 +163,4 @@
         </div>
     </main>
 </div>
-<script src="/static/js/admin_locations.js?v=3"></script>
+<script src="/static/js/admin_locations.js?v=4"></script>

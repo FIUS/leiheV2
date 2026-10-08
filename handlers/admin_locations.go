@@ -132,6 +132,62 @@ func AssignLocationItems(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"updated": len(uniqueIDs)})
 }
 
+type fillMissingRoomsRequest struct {
+	ItemIDs []int32 `json:"item_ids" binding:"required"`
+	Room    string  `json:"room" binding:"required"`
+}
+
+func FillMissingLocationRooms(c *gin.Context) {
+	var req fillMissingRoomsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültige Eingabe"})
+		return
+	}
+
+	room := strings.TrimSpace(req.Room)
+	if room == "" || len(room) > 100 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bitte gib einen gültigen Raum an (maximal 100 Zeichen)"})
+		return
+	}
+	if len(req.ItemIDs) == 0 || len(req.ItemIDs) > 500 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bitte wähle zwischen 1 und 500 Spielen aus"})
+		return
+	}
+
+	uniqueIDs := make([]int32, 0, len(req.ItemIDs))
+	seen := make(map[int32]struct{}, len(req.ItemIDs))
+	for _, id := range req.ItemIDs {
+		if id <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültige Spiele-ID"})
+			return
+		}
+		if _, exists := seen[id]; exists {
+			continue
+		}
+		seen[id] = struct{}{}
+		uniqueIDs = append(uniqueIDs, id)
+	}
+
+	err := queries.InTx(c.Request.Context(), func(tx *db.Queries) error {
+		for _, id := range uniqueIDs {
+			if err := tx.UpdateItemRoomIfMissing(c.Request.Context(), id, room); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Mindestens ein Spiel hat bereits einen Raum oder kein gespeichertes Fach"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Räume konnten nicht gespeichert werden"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"updated": len(uniqueIDs)})
+}
+
 func isKnownStorageLocation(location string) bool {
 	for _, known := range gameStorageLocations {
 		if location == known {

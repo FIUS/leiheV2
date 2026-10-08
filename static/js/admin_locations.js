@@ -8,6 +8,8 @@ document.addEventListener('alpine:init', () => {
         items: [],
         search: '',
         selectedIDs: [],
+        roomRepairSearch: '',
+        roomRepairSelectedIDs: [],
         error: '',
         message: '',
         busy: false,
@@ -58,6 +60,17 @@ document.addEventListener('alpine:init', () => {
                 .slice(0, 50);
         },
 
+        get itemsMissingRoom() {
+            return this.items.filter(item => !String(item.room || '').trim() && String(item.shelf || '').trim());
+        },
+
+        get roomRepairResults() {
+            const query = this.normalize(this.roomRepairSearch);
+            return this.itemsMissingRoom
+                .filter(item => !query || this.normalize(`${item.name} ${item.id} ${item.shelf}`).includes(query))
+                .slice(0, 500);
+        },
+
         normalize(value) {
             return String(value || '').trim().toLocaleLowerCase('de').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         },
@@ -80,6 +93,20 @@ document.addEventListener('alpine:init', () => {
             this.selectedIDs = checked
                 ? [...new Set([...this.selectedIDs, itemID])]
                 : this.selectedIDs.filter(selectedID => selectedID !== itemID);
+        },
+
+        toggleRoomRepairItem(id, checked) {
+            const itemID = Number(id);
+            this.roomRepairSelectedIDs = checked
+                ? [...new Set([...this.roomRepairSelectedIDs, itemID])]
+                : this.roomRepairSelectedIDs.filter(selectedID => selectedID !== itemID);
+        },
+
+        selectRoomRepairResults(checked) {
+            const resultIDs = new Set(this.roomRepairResults.map(item => Number(item.id)));
+            this.roomRepairSelectedIDs = checked
+                ? [...new Set([...this.roomRepairSelectedIDs, ...resultIDs])]
+                : this.roomRepairSelectedIDs.filter(id => !resultIDs.has(id));
         },
 
         selectLocation(index) {
@@ -146,6 +173,49 @@ document.addEventListener('alpine:init', () => {
                 if (!response.ok) throw new Error(data.error || 'Lagerorte konnten nicht gespeichert werden.');
                 this.message = `${data.updated} Spiel(e) Raum ${this.targetRoom}, Fach ${this.currentLocation} zugeordnet.`;
                 this.selectedIDs = [];
+                await this.loadItems();
+                this.rooms = [...new Set([...this.rooms, this.targetRoom])]
+                    .sort((left, right) => left.localeCompare(right, 'de', {numeric: true}));
+            } catch (error) {
+                this.error = error.message;
+            } finally {
+                this.busy = false;
+            }
+        },
+
+        async fillMissingRooms() {
+            this.targetRoom = this.targetRoom.trim();
+            if (!this.targetRoom || this.targetRoom.length > 100) {
+                this.error = 'Bitte gib einen gültigen Raum an (maximal 100 Zeichen).';
+                return;
+            }
+            const selected = this.itemsMissingRoom
+                .filter(item => this.roomRepairSelectedIDs.includes(Number(item.id)));
+            if (selected.length === 0) {
+                this.error = 'Wähle mindestens ein Spiel mit fehlendem Raum aus.';
+                return;
+            }
+            if (selected.length > 500) {
+                this.error = 'Bitte wähle höchstens 500 Spiele auf einmal aus.';
+                return;
+            }
+
+            this.busy = true;
+            this.error = '';
+            this.message = '';
+            try {
+                const response = await fetch('/admin/api/locations/fill-missing-rooms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        item_ids: selected.map(item => Number(item.id)),
+                        room: this.targetRoom,
+                    }),
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Räume konnten nicht gespeichert werden.');
+                this.message = `Raum ${this.targetRoom} für ${data.updated} Spiel(e) ergänzt; die Fachzuordnungen blieben unverändert.`;
+                this.roomRepairSelectedIDs = [];
                 await this.loadItems();
                 this.rooms = [...new Set([...this.rooms, this.targetRoom])]
                     .sort((left, right) => left.localeCompare(right, 'de', {numeric: true}));

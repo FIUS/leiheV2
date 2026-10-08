@@ -253,14 +253,13 @@ document.addEventListener('alpine:init', () => {
         locationBlocks(item, maxWidth) {
             const blocks = [];
             [
-                { show: this.showRoom, value: item.room, label: 'Raum', fontSize: Number(this.roomFontSize) },
-                { show: this.showShelf, value: item.shelf, label: 'Regal', fontSize: Number(this.shelfFontSize) }
-            ].forEach(({ show, value, label, fontSize }) => {
+                { show: this.showRoom, value: item.room, fontSize: Number(this.roomFontSize), weight: '400' },
+                { show: this.showShelf, value: item.shelf, fontSize: Number(this.shelfFontSize), weight: '700' }
+            ].forEach(({ show, value, fontSize, weight }) => {
                 const location = String(value || '').trim();
                 if (!show || !location) return;
-                const text = `${label}: ${location}`;
-                const lines = wrapLabelText(text, Math.max(1, Math.floor(maxWidth / (fontSize * 0.56))));
-                blocks.push({ value: text, lines, fontSize, height: lines.length * fontSize * 1.2 });
+                const lines = wrapLabelText(location, Math.max(1, Math.floor(maxWidth / (fontSize * 0.56))));
+                blocks.push({ value: location, lines, fontSize, height: lines.length * fontSize * 1.2, weight });
             });
             return blocks;
         },
