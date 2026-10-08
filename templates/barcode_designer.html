@@ -10,8 +10,8 @@
             <span class="rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-xs text-theme-muted">SVG · 1,5 mm Sicherheitsrand</span>
         </div>
 
-        <div class="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.85fr)]">
-            <aside class="order-2 min-w-0 space-y-4 xl:order-2">
+        <div class="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(18rem,0.85fr)_minmax(0,1.6fr)]">
+            <aside class="min-w-0 space-y-4">
                 <section class="rounded-xl border border-theme-border bg-theme-card p-4 sm:p-5">
                     <h2 class="mb-4 text-base font-bold text-white">Band &amp; Format</h2>
                     <div class="space-y-4">
@@ -68,17 +68,10 @@
                     <fieldset>
                         <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-theme-muted">Etikettenausrichtung</legend>
                         <div class="grid grid-cols-2 gap-2">
-                            <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="canvasOrientation === 'portrait' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input type="radio" value="portrait" x-model="canvasOrientation" class="mr-2 accent-blue-500">Hochformat</label>
-                            <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="canvasOrientation === 'landscape' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input type="radio" value="landscape" x-model="canvasOrientation" class="mr-2 accent-blue-500">Querformat</label>
+                            <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="layout === 'vertical' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input type="radio" value="vertical" x-model="layout" class="mr-2 accent-blue-500">Übereinander · Hochformat</label>
+                            <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="layout === 'horizontal' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input type="radio" value="horizontal" x-model="layout" class="mr-2 accent-blue-500">Nebeneinander · Querformat</label>
                         </div>
-                        <p class="mt-1 text-xs text-theme-muted">Dreht nur die Etikettenfläche. Text und Code bleiben aufrecht.</p>
-                    </fieldset>
-                    <fieldset>
-                        <legend class="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-theme-muted">Code- und Textanordnung</legend>
-                        <div class="grid grid-cols-2 gap-2">
-                            <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="layout === 'vertical' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input type="radio" value="vertical" x-model="layout" class="mr-2 accent-blue-500">Vertikal</label>
-                            <label class="cursor-pointer rounded-lg border border-theme-border p-2.5 text-sm" :class="layout === 'horizontal' ? 'border-blue-500 bg-blue-500/10 text-white' : 'text-theme-muted'"><input type="radio" value="horizontal" x-model="layout" class="mr-2 accent-blue-500">Horizontal</label>
-                        </div>
+                        <p class="mt-1 text-xs text-theme-muted">Die Anordnung bestimmt die Etikettenausrichtung; Code und Text bleiben aufrecht.</p>
                     </fieldset>
                     <label class="mt-4 flex items-center gap-2 text-sm text-gray-200"><input type="checkbox" x-model="showBrand" class="accent-blue-500">Kopfzeile anzeigen</label>
                     <label x-show="showBrand" class="mt-2 block text-xs font-semibold uppercase tracking-wide text-theme-muted">Titel
@@ -103,7 +96,7 @@
                 </section>
             </aside>
 
-            <section class="order-1 min-w-0 space-y-5 xl:order-1">
+            <section class="min-w-0 space-y-5">
                 <div class="rounded-xl border border-theme-border bg-theme-card p-4 sm:p-5">
                     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <div><h2 class="font-bold text-white">Live-Vorschau</h2><p class="text-xs text-theme-muted" x-text="previewItem ? `${previewItem.name} · ID ${previewItem.id}` : 'Wähle ein Spiel aus der Tabelle aus.'"></p></div>
@@ -171,5 +164,5 @@
 <script src="/static/js/vendor/qrcode-generator.js?v=1"></script>
 <script src="/static/js/vendor/JsBarcode.all.min.js?v=1"></script>
 <script src="/static/js/vendor/jszip.min.js?v=1"></script>
-<script src="/static/js/label_designer.js?v=3"></script>
+<script src="/static/js/label_designer.js?v=4"></script>
 {{ template "footer" . }}

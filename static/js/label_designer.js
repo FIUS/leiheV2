@@ -97,8 +97,8 @@ function fitLabelTitle(value, maxWidth, maxLines, overflow, initialFontSize) {
     let lines = wrapLabelText(value, maxCharacters);
 
     if (lines.length > maxLines && overflow === 'shrink') {
-        while (lines.length > maxLines && fontSize > 1.2) {
-            fontSize = Math.max(1.2, fontSize - 0.2);
+        while (lines.length > maxLines && fontSize > 0.8) {
+            fontSize = Math.max(0.8, fontSize - 0.1);
             maxCharacters = Math.max(1, Math.floor(maxWidth / (fontSize * 0.56)));
             lines = wrapLabelText(value, maxCharacters);
         }
@@ -121,7 +121,6 @@ document.addEventListener('alpine:init', () => {
         payloadMode: 'id',
         urlTemplate: 'https://verleih.fius.de/{id}',
         layout: 'vertical',
-        canvasOrientation: 'portrait',
         showBrand: true,
         brandText: 'Verleih',
         showID: true,
@@ -140,7 +139,7 @@ document.addEventListener('alpine:init', () => {
             const updatePreview = () => this.renderPreview();
             [
                 'rollType', 'bandWidth', 'lengthMode', 'fixedLength', 'dieCutSize',
-                'codeType', 'payloadMode', 'urlTemplate', 'layout', 'canvasOrientation', 'showBrand',
+                'codeType', 'payloadMode', 'urlTemplate', 'layout', 'showBrand',
                 'brandText', 'showID', 'idTemplate', 'showTitle', 'titleMaxLines', 'titleOverflow', 'selectedIds'
             ].forEach((key) => this.$watch(key, updatePreview));
 
@@ -188,9 +187,9 @@ document.addEventListener('alpine:init', () => {
 
         outputDimensionsForItem(item) {
             const dimensions = this.dimensionsForItem(item);
-            return this.canvasOrientation === 'landscape'
-                ? { width: dimensions.height, height: dimensions.width }
-                : dimensions;
+            const isLandscape = this.layout === 'horizontal';
+            if (isLandscape === (dimensions.width > dimensions.height)) return dimensions;
+            return { width: dimensions.height, height: dimensions.width };
         },
 
         dimensionsForItem(item) {
@@ -200,6 +199,10 @@ document.addEventListener('alpine:init', () => {
             const width = parseLabelMillimeters(this.bandWidth, 'Bandbreite');
             if (this.lengthMode === 'fixed') {
                 return { width, height: parseLabelMillimeters(this.fixedLength, 'Etikettenlänge') };
+            }
+            if (this.layout === 'horizontal') {
+                const height = Math.max(30, Math.ceil(width * 1.8));
+                return { width, height: Math.min(height, 160) };
             }
             const titleLineCount = this.showTitle ? Number(this.titleMaxLines) : 0;
             const textHeight = (this.showBrand ? 6 : 0) + (this.showID ? 6 : 0) + titleLineCount * 4 + 4;
@@ -289,7 +292,7 @@ document.addEventListener('alpine:init', () => {
             svg.appendChild(content);
             let top = margin + 2.5;
             const maxTextWidth = contentWidth - margin * 2;
-            if (this.showBrand && this.brandText.trim()) {
+            if (this.layout === 'vertical' && this.showBrand && this.brandText.trim()) {
                 appendLabelText(content, this.brandText.trim(), contentWidth / 2, top, maxTextWidth, {
                     fontSize: Math.min(3.4, maxTextWidth / 8), fontWeight: '700', anchor: 'middle'
                 });
@@ -320,21 +323,31 @@ document.addEventListener('alpine:init', () => {
                     fontSize: titleLayout.fontSize, anchor: 'middle', lines: titleLayout.lines
                 });
             } else {
-                const codeWidth = Math.max(7, Math.min(contentWidth * 0.42, contentHeight * 0.62));
-                const codeHeight = this.codeType === 'qr' ? Math.min(codeWidth, remainingHeight) : Math.min(15, remainingHeight);
+                const codeWidth = Math.max(8, contentHeight - margin * 2);
+                const codeHeight = this.codeType === 'qr'
+                    ? codeWidth
+                    : Math.max(8, Math.min(contentHeight - margin * 2, 15));
                 const codeX = margin;
-                const codeY = top + Math.max(0, (remainingHeight - codeHeight) / 2);
+                const codeY = Math.max(margin, (contentHeight - codeHeight) / 2);
                 this.renderCode(content, this.payloadFor(item), codeX, codeY, codeWidth, codeHeight);
                 const textX = codeX + codeWidth + 2;
                 const textWidth = Math.max(4, contentWidth - margin - textX);
-                let textY = top + 3;
+                let textY = margin + 3;
+                if (this.showBrand && this.brandText.trim()) {
+                    appendLabelText(content, this.brandText.trim(), textX, textY, textWidth, {
+                        fontSize: Math.min(3.2, textWidth / 4), fontWeight: '700'
+                    });
+                    textY += 4.5;
+                }
                 if (this.showID) {
                     appendLabelText(content, idLine, textX, textY, textWidth, { fontSize: Math.min(3.2, textWidth / 4), fontWeight: '700' });
                     textY += 5;
                 }
+                const titleFontSize = Math.min(3, textWidth / 4);
+                const availableTitleLines = Math.max(1, Math.floor((contentHeight - margin - textY) / (titleFontSize * 1.2)));
                 const horizontalTitleLayout = this.showTitle
-                    ? fitLabelTitle(item.name, textWidth, Number(this.titleMaxLines), this.titleOverflow, Math.min(3, textWidth / 4))
-                    : { lines: [], fontSize: Math.min(3, textWidth / 4) };
+                    ? fitLabelTitle(item.name, textWidth, Math.min(Number(this.titleMaxLines), availableTitleLines), this.titleOverflow, titleFontSize)
+                    : { lines: [], fontSize: titleFontSize };
                 if (this.showTitle) appendLabelText(content, item.name, textX, textY, textWidth, {
                     fontSize: horizontalTitleLayout.fontSize, lines: horizontalTitleLayout.lines
                 });
@@ -394,7 +407,7 @@ document.addEventListener('alpine:init', () => {
                 payloadMode: this.payloadMode,
                 urlTemplate: this.urlTemplate,
                 layout: this.layout,
-                canvasOrientation: this.canvasOrientation,
+                canvasOrientation: this.layout === 'horizontal' ? 'landscape' : 'portrait',
                 showBrand: this.showBrand,
                 brandText: this.brandText,
                 showID: this.showID,
