@@ -37,7 +37,7 @@ type UpdateUserSettingsRequest struct {
 func CreateUser(c *gin.Context) {
 	var req CreateUserRequest
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültige Eingabe"})
+		redirectAdminNotice(c, "/admin/users", "error", "Ungültige Eingabe.")
 		return
 	}
 
@@ -49,20 +49,23 @@ func CreateUser(c *gin.Context) {
 		oidcSub = "manual-" + strings.TrimSpace(req.Email)
 	}
 
-	_, _ = queries.CreateUser(context.Background(), db.CreateUserParams{
+	if _, err := queries.CreateUser(c.Request.Context(), db.CreateUserParams{
 		FirstName: strings.TrimSpace(req.FirstName),
 		LastName:  strings.TrimSpace(req.LastName),
 		Email:     strings.TrimSpace(req.Email),
 		Role:      db.UserRole(role),
 		OidcSub:   oidcSub,
-	})
-	c.Redirect(http.StatusFound, "/admin?tab=nutzer")
+	}); err != nil {
+		redirectAdminNotice(c, "/admin/users", "error", "Nutzer konnte nicht angelegt werden.")
+		return
+	}
+	redirectAdminNotice(c, "/admin/users", "success", "Nutzer wurde angelegt.")
 }
 
 func UpdateUser(c *gin.Context) {
 	var req UpdateUserRequest
 	if err := c.ShouldBind(&req); err != nil {
-		c.String(http.StatusBadRequest, "Ungültige Eingabe")
+		redirectAdminNotice(c, "/admin/users", "error", "Ungültige Eingabe.")
 		return
 	}
 
@@ -79,7 +82,7 @@ func UpdateUser(c *gin.Context) {
 	}
 	existing, err := queries.GetUser(context.Background(), req.ID)
 	if err != nil {
-		c.String(http.StatusBadRequest, "Nutzer nicht gefunden")
+		redirectAdminNotice(c, "/admin/users", "error", "Nutzer nicht gefunden.")
 		return
 	}
 	if isOIDCUser(existing) {
@@ -97,10 +100,10 @@ func UpdateUser(c *gin.Context) {
 		Role:      db.UserRole(role),
 		OidcSub:   oidcSub,
 	}); err != nil {
-		c.String(http.StatusInternalServerError, "Nutzerrolle konnte nicht gespeichert werden")
+		redirectAdminNotice(c, "/admin/users", "error", "Nutzerrolle konnte nicht gespeichert werden.")
 		return
 	}
-	c.Redirect(http.StatusFound, "/admin?tab=nutzer")
+	redirectAdminNotice(c, "/admin/users", "success", "Nutzer wurde gespeichert.")
 }
 
 func UpdateUserSettings(c *gin.Context) {
@@ -136,8 +139,13 @@ func isOIDCUser(user db.User) bool {
 
 func DeleteUser(c *gin.Context) {
 	userID, _ := strconv.Atoi(c.PostForm("id"))
-	if c.PostForm("confirm_name") == c.PostForm("real_name") {
-		_ = queries.DeleteUser(context.Background(), int32(userID))
+	if c.PostForm("confirm_name") != c.PostForm("real_name") {
+		redirectAdminNotice(c, "/admin/users", "error", "Bestätigungsname stimmt nicht überein.")
+		return
 	}
-	c.Redirect(http.StatusFound, "/admin?tab=nutzer")
+	if err := queries.DeleteUser(c.Request.Context(), int32(userID)); err != nil {
+		redirectAdminNotice(c, "/admin/users", "error", "Nutzer konnte nicht gelöscht werden.")
+		return
+	}
+	redirectAdminNotice(c, "/admin/users", "success", "Nutzer wurde gelöscht.")
 }

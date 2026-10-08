@@ -76,10 +76,17 @@ CREATE TABLE bookings (
 CREATE TABLE app_settings (
     id SMALLINT PRIMARY KEY CHECK (id = 1),
     require_deposit BOOLEAN NOT NULL DEFAULT FALSE,
-    module_barcodes_enabled BOOLEAN NOT NULL DEFAULT FALSE
+    module_barcodes_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    email_booking_received BOOLEAN NOT NULL DEFAULT TRUE,
+    email_booking_review BOOLEAN NOT NULL DEFAULT TRUE,
+    email_booking_updates BOOLEAN NOT NULL DEFAULT TRUE,
+    ignored_email_addresses TEXT NOT NULL DEFAULT ''
 );
 
-INSERT INTO app_settings (id, require_deposit, module_barcodes_enabled) VALUES (1, FALSE, FALSE);
+INSERT INTO app_settings (
+    id, require_deposit, module_barcodes_enabled,
+    email_booking_received, email_booking_review, email_booking_updates, ignored_email_addresses
+) VALUES (1, FALSE, FALSE, TRUE, TRUE, TRUE, '');
 
 -- BOOKING_ITEMS (Der Korb-Inhalt)
 CREATE TABLE booking_items (

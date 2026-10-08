@@ -92,6 +92,7 @@ type BGGVersion struct {
 }
 
 type BGGThingItem struct {
+	Type      string    `xml:"type,attr"`
 	ID        string    `xml:"id,attr"`
 	Names     []BGGName `xml:"name"`
 	Image     string    `xml:"image"`
@@ -123,6 +124,10 @@ type BGGThingItem struct {
 
 type BGGThingResponse struct {
 	Items []BGGThingItem `xml:"item"`
+}
+
+func isBGGExpansion(item BGGThingItem) bool {
+	return strings.EqualFold(item.Type, "boardgameexpansion")
 }
 
 func normalizeBGGSearchQuery(query string) string {
@@ -285,13 +290,10 @@ func GetBGGDetails(c *gin.Context) {
 		}
 	}
 	var categories []string
-	isExpansion := false
+	isExpansion := isBGGExpansion(item)
 	for _, link := range item.Links {
 		if link.Type == "boardgamecategory" {
 			categories = append(categories, link.Value)
-		}
-		if link.Type == "boardgameexpansion" {
-			isExpansion = true
 		}
 	}
 

@@ -112,72 +112,72 @@ func UpdateUserBooking(c *gin.Context) {
 func ReviewPendingBooking(c *gin.Context) {
 	bookingID, err := strconv.ParseInt(c.PostForm("id"), 10, 32)
 	if err != nil || bookingID <= 0 {
-		c.Redirect(http.StatusFound, "/admin/bookings?error=invalid-booking")
+		redirectAdminNotice(c, "/admin/bookings", "error", "Ungültige Buchung.")
 		return
 	}
 	status := c.PostForm("status")
 	if status != "confirmed" && status != "cancelled" {
-		c.Redirect(http.StatusFound, "/admin/bookings?error=invalid-status")
+		redirectAdminNotice(c, "/admin/bookings", "error", "Ungültiger Buchungsstatus.")
 		return
 	}
 	bookingID32 := int32(bookingID)
 	if err := queries.ReviewPendingBooking(c.Request.Context(), bookingID32, status); err != nil {
 		if errors.Is(err, db.ErrBookingNotEditable) {
-			c.Redirect(http.StatusFound, "/admin/bookings?error=booking-not-pending")
+			redirectAdminNotice(c, "/admin/bookings", "error", "Diese Buchung wurde bereits bearbeitet.")
 			return
 		}
-		c.String(http.StatusInternalServerError, "Buchungsstatus konnte nicht aktualisiert werden")
+		redirectAdminNotice(c, "/admin/bookings", "error", "Buchungsstatus konnte nicht aktualisiert werden.")
 		return
 	}
 
 	details, err := queries.GetBookingEmailDetailsByID(c.Request.Context(), bookingID32)
 	if err != nil {
 		logMailError("booking review details", err)
-		c.Redirect(http.StatusFound, "/admin/bookings?error=email-failed")
+		redirectAdminNotice(c, "/admin/bookings", "error", "Buchung geändert, aber E-Mail konnte nicht vorbereitet werden.")
 		return
 	}
 	if details.Email.Valid {
 		if err := sendBookingReviewEmail(details, status == "confirmed"); err != nil {
 			logMailError("booking review", err)
-			c.Redirect(http.StatusFound, "/admin/bookings?error=email-failed")
+			redirectAdminNotice(c, "/admin/bookings", "error", "Buchung geändert, aber Benachrichtigungs-E-Mail konnte nicht versendet werden.")
 			return
 		}
 	} else {
 		log.Printf("booking review email skipped: no recipient (booking id=%d)", bookingID32)
 	}
-	c.Redirect(http.StatusFound, "/admin/bookings?success=booking-reviewed")
+	redirectAdminNotice(c, "/admin/bookings", "success", "Buchungsanfrage wurde bearbeitet.")
 }
 
 func CancelConfirmedBooking(c *gin.Context) {
 	bookingID, err := strconv.ParseInt(c.PostForm("id"), 10, 32)
 	if err != nil || bookingID <= 0 {
-		c.Redirect(http.StatusFound, "/admin/bookings?error=invalid-booking")
+		redirectAdminNotice(c, "/admin/bookings", "error", "Ungültige Buchung.")
 		return
 	}
 	bookingID32 := int32(bookingID)
 	if err := queries.CancelConfirmedBooking(c.Request.Context(), bookingID32); err != nil {
 		if errors.Is(err, db.ErrBookingNotEditable) {
-			c.Redirect(http.StatusFound, "/admin/bookings?error=booking-not-confirmed")
+			redirectAdminNotice(c, "/admin/bookings", "error", "Diese Buchung ist nicht mehr bestätigt.")
 			return
 		}
-		c.String(http.StatusInternalServerError, "Buchung konnte nicht storniert werden")
+		redirectAdminNotice(c, "/admin/bookings", "error", "Buchung konnte nicht storniert werden.")
 		return
 	}
 
 	details, err := queries.GetBookingEmailDetailsByID(c.Request.Context(), bookingID32)
 	if err != nil {
 		logMailError("confirmed booking cancellation details", err)
-		c.Redirect(http.StatusFound, "/admin/bookings?error=email-failed")
+		redirectAdminNotice(c, "/admin/bookings", "error", "Buchung storniert, aber E-Mail konnte nicht vorbereitet werden.")
 		return
 	}
 	if details.Email.Valid {
 		if err := sendBookingUpdateEmail(details, "vom Team storniert"); err != nil {
 			logMailError("confirmed booking cancellation", err)
-			c.Redirect(http.StatusFound, "/admin/bookings?error=email-failed")
+			redirectAdminNotice(c, "/admin/bookings", "error", "Buchung storniert, aber Benachrichtigungs-E-Mail konnte nicht versendet werden.")
 			return
 		}
 	} else {
 		log.Printf("confirmed booking cancellation email skipped: no recipient (booking id=%d)", bookingID32)
 	}
-	c.Redirect(http.StatusFound, "/admin/bookings?success=booking-cancelled")
+	redirectAdminNotice(c, "/admin/bookings", "success", "Buchung wurde storniert.")
 }

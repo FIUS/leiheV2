@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/hex"
@@ -29,6 +30,14 @@ type mailConfig struct {
 }
 
 var mail mailConfig
+
+type emailCategory string
+
+const (
+	emailBookingReceived emailCategory = "booking_received"
+	emailBookingReview   emailCategory = "booking_review"
+	emailBookingUpdates  emailCategory = "booking_updates"
+)
 
 func InitMail() error {
 	host, err := requiredEnv("SMTP_HOST")
@@ -83,7 +92,15 @@ func firstConfiguredEnv(keys ...string) (string, error) {
 	return "", fmt.Errorf("%s must be configured", strings.Join(keys, " or "))
 }
 
-func sendMail(to, subject, body string) error {
+func sendMail(category emailCategory, to, subject, body string) error {
+	allowed, err := shouldSendConfiguredEmail(category, to)
+	if err != nil {
+		return fmt.Errorf("load email delivery settings: %w", err)
+	}
+	if !allowed {
+		log.Printf("email skipped by administrator settings (category=%s)", category)
+		return nil
+	}
 	message, recipient, err := mailutil.FormatMessage(mail.FromName, mail.From, to, subject, body)
 	if err != nil {
 		return err
@@ -143,7 +160,7 @@ func sendVerificationEmail(user db.User, token string) error {
 	if err != nil {
 		return err
 	}
-	return sendMail(user.Email, "E-Mail-Adresse bestätigen", body)
+	return sendMail("", user.Email, "E-Mail-Adresse bestätigen", body)
 }
 
 func sendOrderEmail(to, firstName string, details db.BookingEmailDetails) error {
@@ -168,7 +185,7 @@ func sendOrderEmail(to, firstName string, details db.BookingEmailDetails) error 
 	} else if details.Status == "active" {
 		subject = "Ausleihe"
 	}
-	return sendMail(to, subject, body)
+	return sendMail(emailBookingReceived, to, subject, body)
 }
 
 func sendBookingUpdateEmail(details db.BookingEmailDetails, change string) error {
@@ -192,7 +209,7 @@ func sendBookingUpdateEmail(details db.BookingEmailDetails, change string) error
 	if details.Status == "active" && change == "ausgegeben" {
 		subject = "Ausleihe"
 	}
-	return sendMail(details.Email.String, subject, body)
+	return sendMail(emailBookingUpdates, details.Email.String, subject, body)
 }
 
 func sendBookingReviewEmail(details db.BookingEmailDetails, approved bool) error {
@@ -218,7 +235,43 @@ func sendBookingReviewEmail(details db.BookingEmailDetails, approved bool) error
 	if err != nil {
 		return err
 	}
-	return sendMail(details.Email.String, subject, body)
+	return sendMail(emailBookingReview, details.Email.String, subject, body)
+}
+
+func shouldSendConfiguredEmail(category emailCategory, recipient string) (bool, error) {
+	settings, err := queries.GetAppSettings(context.Background())
+	if err != nil {
+		return false, err
+	}
+	if ignoredEmailAddress(settings.IgnoredEmailAddresses, recipient) {
+		return false, nil
+	}
+	return emailCategoryEnabled(settings, category), nil
+}
+
+func emailCategoryEnabled(settings db.AppSettings, category emailCategory) bool {
+	switch category {
+	case emailBookingReceived:
+		return settings.EmailBookingReceived
+	case emailBookingReview:
+		return settings.EmailBookingReview
+	case emailBookingUpdates:
+		return settings.EmailBookingUpdates
+	default:
+		return true
+	}
+}
+
+func ignoredEmailAddress(configured, recipient string) bool {
+	recipient = strings.TrimSpace(recipient)
+	for _, address := range strings.FieldsFunc(configured, func(r rune) bool {
+		return r == '\n' || r == ',' || r == ';'
+	}) {
+		if strings.EqualFold(strings.TrimSpace(address), recipient) {
+			return true
+		}
+	}
+	return false
 }
 
 func bookingStatusLabel(status string) string {

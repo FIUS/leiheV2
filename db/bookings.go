@@ -53,6 +53,12 @@ type BookingOverview struct {
 	ItemNames      []string
 }
 
+func (q *Queries) CountPendingBookings(ctx context.Context) (int64, error) {
+	var count int64
+	err := q.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM bookings WHERE status = 'pending'`).Scan(&count)
+	return count, err
+}
+
 func (q *Queries) ListBookingOverview(ctx context.Context) ([]BookingOverview, error) {
 	rows, err := q.db.QueryContext(ctx, `
 		SELECT b.id, b.public_token,

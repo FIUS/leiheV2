@@ -34,8 +34,30 @@
                     </span>
                 </div>
                 <input type="hidden" name="module_barcodes_enabled" value="false">
+                <h2 class="mb-2 mt-8 text-lg font-bold text-white">E-Mail-Benachrichtigungen</h2>
+                <p class="mb-4 text-sm text-theme-muted">Wähle, welche Buchungs-E-Mails versendet werden. Bestätigungs-E-Mails zur Kontoaktivierung bleiben davon unberührt.</p>
+                <div class="space-y-3">
+                    <label class="flex min-w-0 items-start gap-3 rounded-lg border border-theme-border bg-theme-bg p-4">
+                        <input type="checkbox" name="email_booking_received" value="true" {{ if .Settings.EmailBookingReceived }}checked{{ end }} class="mt-1 h-4 w-4 shrink-0 accent-blue-500">
+                        <span><span class="block text-sm font-semibold text-white">Neue Buchungsanfragen</span><span class="mt-1 block text-sm text-theme-muted">E-Mail nach dem Erstellen einer Reservierungsanfrage.</span></span>
+                    </label>
+                    <input type="hidden" name="email_booking_received" value="false">
+                    <label class="flex min-w-0 items-start gap-3 rounded-lg border border-theme-border bg-theme-bg p-4">
+                        <input type="checkbox" name="email_booking_review" value="true" {{ if .Settings.EmailBookingReview }}checked{{ end }} class="mt-1 h-4 w-4 shrink-0 accent-blue-500">
+                        <span><span class="block text-sm font-semibold text-white">Bestätigen oder Ablehnen</span><span class="mt-1 block text-sm text-theme-muted">Status-E-Mail, wenn das Team eine Buchungsanfrage bestätigt oder ablehnt.</span></span>
+                    </label>
+                    <input type="hidden" name="email_booking_review" value="false">
+                    <label class="flex min-w-0 items-start gap-3 rounded-lg border border-theme-border bg-theme-bg p-4">
+                        <input type="checkbox" name="email_booking_updates" value="true" {{ if .Settings.EmailBookingUpdates }}checked{{ end }} class="mt-1 h-4 w-4 shrink-0 accent-blue-500">
+                        <span><span class="block text-sm font-semibold text-white">Änderungen und Ausleihstatus</span><span class="mt-1 block text-sm text-theme-muted">E-Mail bei Änderungen, Stornierungen, Ausgabe und Rücknahme.</span></span>
+                    </label>
+                    <input type="hidden" name="email_booking_updates" value="false">
+                </div>
+                <label class="mt-5 block text-sm font-semibold text-white" for="ignored-email-addresses">E-Mail-Adressen ohne Benachrichtigungen</label>
+                <p class="mb-2 mt-1 text-sm text-theme-muted">Eine Adresse pro Zeile. Alle ausgehenden E-Mails an diese Empfänger werden unterdrückt, auch Kontoaktivierungen.</p>
+                <textarea id="ignored-email-addresses" name="ignored_email_addresses" rows="5" placeholder="beispiel@domain.de" class="w-full rounded-lg border border-theme-border bg-theme-bg px-3 py-2.5 text-sm text-white placeholder:text-theme-muted">{{ .Settings.IgnoredEmailAddresses }}</textarea>
                 <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <p class="min-w-0 text-xs text-theme-muted">Änderungen gelten sofort für neue Ausgaben.</p>
+                    <p class="min-w-0 text-xs text-theme-muted">Änderungen gelten sofort für neue E-Mails.</p>
                     <button type="submit" class="w-full shrink-0 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-500 sm:w-auto">Speichern</button>
                 </div>
             </form>

@@ -159,7 +159,7 @@ func CreateItem(c *gin.Context) {
 		renderAdminGamesError(c, http.StatusInternalServerError, "Konnte Item nicht speichern")
 		return
 	}
-	c.Redirect(http.StatusFound, "/admin/games")
+	redirectAdminNotice(c, "/admin/games", "success", "Spiel wurde angelegt.")
 }
 
 func UpdateItem(c *gin.Context) {
@@ -199,7 +199,7 @@ func UpdateItem(c *gin.Context) {
 		renderAdminGamesError(c, http.StatusInternalServerError, "Konnte Änderungen nicht speichern")
 		return
 	}
-	c.Redirect(http.StatusFound, "/admin/games")
+	redirectAdminNotice(c, "/admin/games", "success", "Änderungen wurden gespeichert.")
 }
 
 func CreateCategory(c *gin.Context) {
@@ -212,7 +212,7 @@ func CreateCategory(c *gin.Context) {
 		renderAdminGamesError(c, http.StatusInternalServerError, "Kategorie konnte nicht gespeichert werden")
 		return
 	}
-	c.Redirect(http.StatusFound, "/admin/games")
+	redirectAdminNotice(c, "/admin/games", "success", "Kategorie wurde angelegt.")
 }
 
 func DeleteCategory(c *gin.Context) {
@@ -225,17 +225,20 @@ func DeleteCategory(c *gin.Context) {
 		renderAdminGamesError(c, http.StatusInternalServerError, "Kategorie konnte nicht gelöscht werden")
 		return
 	}
-	c.Redirect(http.StatusFound, "/admin/games")
+	redirectAdminNotice(c, "/admin/games", "success", "Kategorie wurde gelöscht.")
 }
 
 func DeleteItem(c *gin.Context) {
 	itemID, _ := strconv.Atoi(c.PostForm("id"))
 	if c.PostForm("confirm_name") != c.PostForm("real_name") {
-		c.String(http.StatusBadRequest, "Bestätigungsname stimmt nicht.")
+		redirectAdminNotice(c, "/admin/games", "error", "Bestätigungsname stimmt nicht überein.")
 		return
 	}
-	_ = queries.DeleteItem(context.Background(), int32(itemID))
-	c.Redirect(http.StatusFound, "/admin?tab=spiele")
+	if err := queries.DeleteItem(context.Background(), int32(itemID)); err != nil {
+		redirectAdminNotice(c, "/admin/games", "error", "Spiel konnte nicht gelöscht werden.")
+		return
+	}
+	redirectAdminNotice(c, "/admin/games", "success", "Spiel wurde gelöscht.")
 }
 
 func UpdateItemImage(c *gin.Context) {
@@ -254,7 +257,7 @@ func UpdateItemImage(c *gin.Context) {
 	if skips != "" {
 		redirectURL += "?skip=" + skips
 	}
-	c.Redirect(http.StatusFound, redirectURL)
+	redirectAdminNotice(c, redirectURL, "success", "Bild wurde aktualisiert.")
 }
 
 func GetItemDetails(c *gin.Context) {

@@ -53,6 +53,10 @@ function gameNameMatchesSearch(name, query) {
     );
 }
 
+function gameMatchesSelectedCategories(selectedCategories, gameCategories) {
+    return selectedCategories.every(category => gameCategories.includes(category));
+}
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('gamesCatalog', () => {
         let filteredGamesCacheKey = '';
@@ -187,7 +191,7 @@ document.addEventListener('alpine:init', () => {
                     (this.maxDurationFilter > 240
                         ? maxPlaytime >= this.minDurationFilter
                         : minPlaytime <= this.maxDurationFilter && maxPlaytime >= this.minDurationFilter) &&
-                    (!this.selectedCategories.length || this.selectedCategories.some((category) => categories.includes(category))) &&
+                    gameMatchesSelectedCategories(this.selectedCategories, categories) &&
                     (this.minRatingFilter === 0 || Number(data.rating) >= Number(this.minRatingFilter) * 2);
             }).map((game) => ({
                 id: Number(game.dataset.gameId),

@@ -228,6 +228,15 @@ func pageData(c *gin.Context, values gin.H) gin.H {
 		userRole = "guest"
 	}
 	values["UserRole"] = userRole
+	values["PendingBookingCount"] = int64(0)
+	if userRole == "admin" || userRole == "maintainer" {
+		count, err := queries.CountPendingBookings(c.Request.Context())
+		if err != nil {
+			log.Printf("could not load pending booking count for navigation: %v", err)
+		} else {
+			values["PendingBookingCount"] = count
+		}
+	}
 	values["ModuleBarcodesEnabled"] = false
 	if userRole == "admin" || userRole == "maintainer" {
 		settings, err := queries.GetAppSettings(c.Request.Context())

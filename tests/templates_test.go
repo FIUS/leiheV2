@@ -54,6 +54,7 @@ func TestTemplatesParseAndExecute(t *testing.T) {
 	err = tmpl.ExecuteTemplate(&buf, "managment.html", map[string]interface{}{
 		"UserRole":              "admin",
 		"ModuleBarcodesEnabled": true,
+		"PendingBookingCount":   int64(3),
 		"Games":                 testGames,
 		"Users":                 testUsers,
 	})
@@ -75,9 +76,14 @@ func TestTemplatesParseAndExecute(t *testing.T) {
 	for _, expected := range []string{
 		`aria-label="Menü öffnen"`, `lg:hidden`, `/admin/ausgabe#issue`, `/admin/ausgabe#return`,
 		`Buchungen`, `Nutzerkonto`, `Meine Buchungen`,
+		`aria-label="Buchungen, 3 unbearbeitet"`, `bg-red-600`,
+		`/static/js/admin_feedback.js`,
 	} {
 		if !bytes.Contains([]byte(output), []byte(expected)) {
 			t.Errorf("Expected responsive header output to contain %q", expected)
+		}
+		if count := bytes.Count([]byte(output), []byte(`>3</span>`)); count != 2 {
+			t.Errorf("Expected pending booking count in desktop and mobile navigation, got %d badges", count)
 		}
 	}
 	if bytes.Contains([]byte(output), []byte("Etiketten-Designer")) {
@@ -155,7 +161,7 @@ func TestAdminGamesRendersSingleDeleteDialog(t *testing.T) {
 	}
 
 	games := []db.ListItemsWithCategoriesRow{
-		{ID: 1, Name: "First Game", Status: "available"},
+		{ID: 1, Name: "First Game", Status: "available", Room: sql.NullString{String: "V38.008", Valid: true}, Shelf: sql.NullString{String: "A1", Valid: true}},
 		{ID: 2, Name: "Second Game", Status: "available"},
 	}
 	var output bytes.Buffer
@@ -174,6 +180,11 @@ func TestAdminGamesRendersSingleDeleteDialog(t *testing.T) {
 	}
 	if count := bytes.Count(output.Bytes(), []byte(`x-show="editModalOpen"`)); count != 1 {
 		t.Errorf("Expected one edit dialog, got %d", count)
+	}
+	for _, expected := range []string{`name="room" x-model="editGame.room"`, `name="shelf" x-model="editGame.shelf"`, `data-room="V38.008"`, `data-shelf="A1"`} {
+		if !bytes.Contains(output.Bytes(), []byte(expected)) {
+			t.Errorf("Expected admin game editor to contain %q", expected)
+		}
 	}
 }
 
@@ -300,11 +311,21 @@ func TestAdminSettingsTemplateRendersDepositSettingWithoutOverflow(t *testing.T)
 	if err := tmpl.ExecuteTemplate(&output, "admin_settings.html", map[string]interface{}{
 		"UserRole":  "admin",
 		"ActiveTab": "settings",
-		"Settings":  db.AppSettings{RequireDeposit: true, ModuleBarcodesEnabled: true},
+		"Settings": db.AppSettings{
+			RequireDeposit: true, ModuleBarcodesEnabled: true,
+			EmailBookingReceived: true, EmailBookingReview: true, EmailBookingUpdates: true,
+			IgnoredEmailAddresses: "noreply@example.org",
+		},
 	}); err != nil {
 		t.Fatalf("Failed to execute admin_settings.html: %v", err)
 	}
-	for _, expected := range []string{"Pfand bei jeder Ausgabe erforderlich", `name="require_deposit" value="true" checked`, "Etiketten-Designer aktivieren", `name="module_barcodes_enabled" value="true" checked`, "max-w-full min-w-0", `action="/admin/settings"`} {
+	for _, expected := range []string{
+		"Pfand bei jeder Ausgabe erforderlich", `name="require_deposit" value="true" checked`,
+		"Etiketten-Designer aktivieren", `name="module_barcodes_enabled" value="true" checked`,
+		"E-Mail-Benachrichtigungen", `name="email_booking_received" value="true" checked`,
+		`name="email_booking_review" value="true" checked`, `name="email_booking_updates" value="true" checked`,
+		`id="ignored-email-addresses"`, "noreply@example.org", "max-w-full min-w-0", `action="/admin/settings"`,
+	} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected admin settings output to contain %q", expected)
 		}
