@@ -229,7 +229,7 @@ func pageData(c *gin.Context, values gin.H) gin.H {
 	}
 	values["UserRole"] = userRole
 	values["ModuleBarcodesEnabled"] = false
-	if userRole == "admin" {
+	if userRole == "admin" || userRole == "maintainer" {
 		settings, err := queries.GetAppSettings(c.Request.Context())
 		if err != nil {
 			log.Printf("could not load barcode module setting for admin navigation: %v", err)

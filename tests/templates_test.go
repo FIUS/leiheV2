@@ -74,11 +74,14 @@ func TestTemplatesParseAndExecute(t *testing.T) {
 	}
 	for _, expected := range []string{
 		`aria-label="Menü öffnen"`, `lg:hidden`, `/admin/ausgabe#issue`, `/admin/ausgabe#return`,
-		`Buchungen`, `Nutzerkonto`, `Meine Buchungen`, `Etiketten-Designer`, `href="/labels"`,
+		`Buchungen`, `Nutzerkonto`, `Meine Buchungen`,
 	} {
 		if !bytes.Contains([]byte(output), []byte(expected)) {
 			t.Errorf("Expected responsive header output to contain %q", expected)
 		}
+	}
+	if bytes.Contains([]byte(output), []byte("Etiketten-Designer")) {
+		t.Error("barcode designer link must not appear in the global header")
 	}
 	if bytes.Contains([]byte(output), []byte("bggQuery = '")) {
 		t.Errorf("Found unsafe inline string interpolation in bggQuery")
@@ -325,8 +328,8 @@ func TestBarcodeDesignerTemplateAndAdminNavigation(t *testing.T) {
 		"Endlosband", "Einzel-Etikett", "Code-128", "URL-Template", "Alle angezeigten auswählen",
 		"Manifest JSON", "qrcode-generator.js", "JsBarcode.all.min.js", "jszip.min.js", "/static/js/label_designer.js",
 		`x-model="bandWidth"`, `x-model="dieCutSize"`, `placeholder="z. B. 29 x 90 oder 50 × 30"`,
-		"Titel", "Etikettenausrichtung", "Anordnung bestimmt die Etikettenausrichtung", "Horizontal", "Vertikal", "Zeilen für Spielenamen",
-		"Schrift verkleinern", "Mit … kürzen",
+		"Titel", "Etikettenausrichtung", "Horizontal", "Vertikal", "Zeilen für Spielenamen",
+		"Schrift verkleinern", "Mit … kürzen", "ohne zusätzliches Rand-Padding",
 	} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {
 			t.Errorf("Expected barcode designer output to contain %q", expected)
@@ -336,11 +339,22 @@ func TestBarcodeDesignerTemplateAndAdminNavigation(t *testing.T) {
 		t.Error("barcode designer should not show game categories")
 	}
 
+	for _, role := range []string{"admin", "maintainer"} {
+		output.Reset()
+		if err := tmpl.ExecuteTemplate(&output, "admin_nav", map[string]interface{}{
+			"UserRole": role, "ActiveTab": "barcodes", "ModuleBarcodesEnabled": true,
+		}); err != nil {
+			t.Fatalf("Failed to execute admin navigation for %s: %v", role, err)
+		}
+		if !bytes.Contains(output.Bytes(), []byte(`href="/admin/labels"`)) {
+			t.Errorf("barcode designer link should be available to %s in the internal admin navigation", role)
+		}
+	}
 	output.Reset()
 	if err := tmpl.ExecuteTemplate(&output, "admin_nav", map[string]interface{}{
 		"UserRole": "admin", "ActiveTab": "dashboard", "ModuleBarcodesEnabled": false,
 	}); err != nil {
-		t.Fatalf("Failed to execute admin navigation: %v", err)
+		t.Fatalf("Failed to execute disabled admin navigation: %v", err)
 	}
 	if bytes.Contains(output.Bytes(), []byte("Etiketten-Designer")) {
 		t.Error("barcode designer link must be hidden while the module is disabled")
