@@ -33,6 +33,9 @@ func main() {
 
 	// Initialisiere die generierten sqlc Queries und übergebe sie an die Handler
 	queries := db.New(database)
+	if err := queries.EnsureStorageShelves(context.Background()); err != nil {
+		log.Fatal("Konnte Regale nicht initialisieren:", err)
+	}
 	handlers.InitQueries(queries)
 	startUncollectedBookingCleanup(queries)
 	if err := handlers.InitAuth(context.Background()); err != nil {

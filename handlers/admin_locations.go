@@ -12,16 +12,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var gameStorageLocations = []string{
-	"A1L", "A1R", "A2L", "A2R", "A3L", "A3R", "A4L", "A4R",
-	"B0", "B2L", "B2R", "B3L", "B3R", "B4L", "B4R",
-	"C1L", "C1R", "C2L", "C2R", "C3L", "C3R", "CU",
-}
-
 func RenderAdminLocations(c *gin.Context) {
-	locationsJSON, err := json.Marshal(gameStorageLocations)
+	locations, err := queries.ListStorageShelves(c.Request.Context())
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Lagerorte konnten nicht geladen werden")
+		c.String(http.StatusInternalServerError, "Regale konnten nicht geladen werden")
+		return
+	}
+	locationsJSON, err := json.Marshal(locations)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Regale konnten nicht geladen werden")
 		return
 	}
 	rooms, err := queries.ListStorageRooms(c.Request.Context())
@@ -81,7 +80,12 @@ func AssignLocationItems(c *gin.Context) {
 	}
 
 	location := strings.TrimSpace(req.Location)
-	if !isKnownStorageLocation(location) {
+	isKnown, err := queries.HasStorageShelf(c.Request.Context(), location)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Regale konnten nicht geladen werden"})
+		return
+	}
+	if !isKnown {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Unbekannter Lagerort"})
 		return
 	}
@@ -109,7 +113,7 @@ func AssignLocationItems(c *gin.Context) {
 		uniqueIDs = append(uniqueIDs, id)
 	}
 
-	err := queries.InTx(c.Request.Context(), func(tx *db.Queries) error {
+	err = queries.InTx(c.Request.Context(), func(tx *db.Queries) error {
 		for _, id := range uniqueIDs {
 			if _, err := tx.GetItem(c.Request.Context(), id); err != nil {
 				return err
@@ -188,11 +192,89 @@ func FillMissingLocationRooms(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"updated": len(uniqueIDs)})
 }
 
-func isKnownStorageLocation(location string) bool {
-	for _, known := range gameStorageLocations {
-		if location == known {
-			return true
+type addStorageShelfRequest struct {
+	Code string `json:"code" binding:"required"`
+}
+
+func AddStorageShelf(c *gin.Context) {
+	var req addStorageShelfRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültige Eingabe"})
+		return
+	}
+	code, err := db.ValidateStorageShelfCode(req.Code)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Der Regalname muss zwischen 1 und 100 Zeichen lang sein"})
+		return
+	}
+	exists, err := queries.HasStorageShelf(c.Request.Context(), code)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Regale konnten nicht geprüft werden"})
+		return
+	}
+	if exists {
+		c.JSON(http.StatusConflict, gin.H{"error": "Dieses Regal existiert bereits"})
+		return
+	}
+	if err := queries.AddStorageShelf(c.Request.Context(), code); err != nil {
+		if errors.Is(err, db.ErrStorageShelfAlreadyExists) {
+			c.JSON(http.StatusConflict, gin.H{"error": "Dieses Regal existiert bereits"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Regal konnte nicht hinzugefügt werden"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"code": code})
+}
+
+type renameStorageShelfRequest struct {
+	OldCode string `json:"old_code" binding:"required"`
+	NewCode string `json:"new_code" binding:"required"`
+}
+
+func RenameStorageShelf(c *gin.Context) {
+	var req renameStorageShelfRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültige Eingabe"})
+		return
+	}
+	oldCode := strings.TrimSpace(req.OldCode)
+	newCode, err := db.ValidateStorageShelfCode(req.NewCode)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Der Regalname muss zwischen 1 und 100 Zeichen lang sein"})
+		return
+	}
+	exists, err := queries.HasStorageShelf(c.Request.Context(), oldCode)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Regale konnten nicht geprüft werden"})
+		return
+	}
+	if !exists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Das Regal wurde nicht gefunden"})
+		return
+	}
+	if oldCode == newCode {
+		c.JSON(http.StatusOK, gin.H{"old_code": oldCode, "new_code": newCode, "updated": 0})
+		return
+	}
+	if !strings.EqualFold(oldCode, newCode) {
+		exists, err = queries.HasStorageShelf(c.Request.Context(), newCode)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Regale konnten nicht geprüft werden"})
+			return
+		}
+		if exists {
+			c.JSON(http.StatusConflict, gin.H{"error": "Dieses Regal existiert bereits"})
+			return
 		}
 	}
-	return false
+	if err := queries.RenameStorageShelf(c.Request.Context(), oldCode, newCode); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Das Regal wurde nicht gefunden"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Regal konnte nicht umbenannt werden"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"old_code": oldCode, "new_code": newCode})
 }

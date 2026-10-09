@@ -4,6 +4,8 @@ document.addEventListener('alpine:init', () => {
         rooms: [],
         selectedRoom: '',
         targetRoom: '',
+        newShelfCode: '',
+        shelfEdits: {},
         locationIndex: 0,
         items: [],
         search: '',
@@ -17,6 +19,7 @@ document.addEventListener('alpine:init', () => {
         init() {
             try {
                 this.locations = JSON.parse(this.$el.dataset.locations || '[]');
+                this.shelfEdits = Object.fromEntries(this.locations.map(code => [code, code]));
                 this.rooms = JSON.parse(this.$el.dataset.rooms || '[]');
                 this.selectedRoom = String(this.$el.dataset.selectedRoom || '').trim();
                 this.targetRoom = this.rooms[0] || '';
@@ -38,7 +41,7 @@ document.addEventListener('alpine:init', () => {
 
         get currentItems() {
             return this.items.filter(item =>
-                String(item.shelf || '').trim().toUpperCase() === this.currentLocation &&
+                this.sameShelf(item.shelf, this.currentLocation) &&
                 this.normalize(item.room) === this.normalize(this.targetRoom)
             );
         },
@@ -75,8 +78,12 @@ document.addEventListener('alpine:init', () => {
             return String(value || '').trim().toLocaleLowerCase('de').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         },
 
+        sameShelf(left, right) {
+            return String(left || '').trim().toLocaleLowerCase('de') === String(right || '').trim().toLocaleLowerCase('de');
+        },
+
         isAtCurrentLocation(item) {
-            return String(item.shelf || '').trim().toUpperCase() === this.currentLocation &&
+            return this.sameShelf(item.shelf, this.currentLocation) &&
                 this.normalize(item.room) === this.normalize(this.targetRoom);
         },
 
@@ -120,6 +127,68 @@ document.addEventListener('alpine:init', () => {
             this.selectLocation(Math.max(0, Math.min(this.locations.length - 1, this.locationIndex + offset)));
         },
 
+        async addShelf() {
+            const code = this.newShelfCode.trim();
+            if (!code || code.length > 100) {
+                this.error = 'Der Regalname muss zwischen 1 und 100 Zeichen lang sein.';
+                return;
+            }
+            this.busy = true;
+            this.error = '';
+            this.message = '';
+            try {
+                const response = await fetch('/admin/api/locations/shelves', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code }),
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Regal konnte nicht hinzugefügt werden.');
+                this.locations = [...this.locations, data.code];
+                this.shelfEdits[data.code] = data.code;
+                this.newShelfCode = '';
+                this.message = `Regal ${data.code} wurde hinzugefügt.`;
+            } catch (error) {
+                this.error = error.message;
+            } finally {
+                this.busy = false;
+            }
+        },
+
+        async renameShelf(oldCode) {
+            const newCode = String(this.shelfEdits[oldCode] || '').trim();
+            if (!newCode || newCode.length > 100) {
+                this.error = 'Der Regalname muss zwischen 1 und 100 Zeichen lang sein.';
+                return;
+            }
+            if (newCode === oldCode) return;
+
+            this.busy = true;
+            this.error = '';
+            this.message = '';
+            try {
+                const response = await fetch('/admin/api/locations/shelves/rename', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ old_code: oldCode, new_code: newCode }),
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Regal konnte nicht umbenannt werden.');
+                this.locations = this.locations.map(code => code === oldCode ? data.new_code : code);
+                this.items.forEach(item => {
+                    if (String(item.shelf || '').trim() === oldCode) item.shelf = data.new_code;
+                });
+                delete this.shelfEdits[oldCode];
+                this.shelfEdits[data.new_code] = data.new_code;
+                this.message = `Regal ${oldCode} wurde in ${data.new_code} umbenannt.`;
+            } catch (error) {
+                this.shelfEdits[oldCode] = oldCode;
+                this.error = error.message;
+            } finally {
+                this.busy = false;
+            }
+        },
+
         async loadItems() {
             this.error = '';
             try {
@@ -149,7 +218,7 @@ document.addEventListener('alpine:init', () => {
 
             const moving = selected.filter(item =>
                 (String(item.shelf || '').trim() || String(item.room || '').trim()) &&
-                (String(item.shelf || '').trim().toUpperCase() !== this.currentLocation ||
+                (!this.sameShelf(item.shelf, this.currentLocation) ||
                     this.normalize(item.room) !== this.normalize(this.targetRoom))
             );
             if (moving.length > 0 && !window.confirm(`${moving.length} Spiel(e) werden in Raum ${this.targetRoom}, Fach ${this.currentLocation} verschoben. Fortfahren?`)) {

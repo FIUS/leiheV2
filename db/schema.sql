@@ -51,6 +51,13 @@ CREATE TABLE items (
                        is_expansion BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+CREATE TABLE storage_shelves (
+    code VARCHAR(100) PRIMARY KEY,
+    sort_order INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX idx_storage_shelves_code_ci ON storage_shelves (LOWER(code));
+
 -- ITEM_CATEGORIES
 CREATE TABLE item_categories (
                                  item_id INT NOT NULL REFERENCES items(id) ON DELETE CASCADE,

@@ -41,6 +41,8 @@ func SetupRoutes(r *gin.Engine) {
 		admin.GET("/api/locations/items", handlers.RequireRole("admin"), handlers.ListLocationItems)
 		admin.POST("/api/locations/assign", handlers.RequireRole("admin"), handlers.AssignLocationItems)
 		admin.POST("/api/locations/fill-missing-rooms", handlers.RequireRole("admin"), handlers.FillMissingLocationRooms)
+		admin.POST("/api/locations/shelves", handlers.RequireRole("admin"), handlers.AddStorageShelf)
+		admin.PATCH("/api/locations/shelves/rename", handlers.RequireRole("admin"), handlers.RenameStorageShelf)
 		admin.POST("/bookings/review", handlers.ReviewPendingBooking)
 		admin.POST("/bookings/confirmed/cancel", handlers.RequireRole("admin"), handlers.CancelConfirmedBooking)
 		admin.GET("/ausgabe", handlers.RenderStaffLoans)

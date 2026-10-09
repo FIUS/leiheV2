@@ -390,13 +390,15 @@ func TestAdminLocationModuleAndNavigation(t *testing.T) {
 		"UserRole":      "admin",
 		"ActiveTab":     "locations",
 		"LocationsJSON": `["A1L","A1R","B0"]`,
+		"RoomsJSON":     `["V38.008"]`,
 		"SelectedRoom":  "V38.008",
 	}); err != nil {
 		t.Fatalf("Failed to execute admin_locations.html: %v", err)
 	}
 	for _, expected := range []string{
 		"Lagerort-Assistent", "Spiele hinzufügen", "In diesem Fach",
-		"Ausgewählte Spiele zuweisen", "/static/js/admin_locations.js",
+		"Ausgewählte Spiele zuweisen", "Regale verwalten", "Regal hinzufügen",
+		"/static/js/admin_locations.js",
 		`/admin/locations`, `data-selected-room="V38.008"`, "roomShelves",
 	} {
 		if !bytes.Contains(output.Bytes(), []byte(expected)) {

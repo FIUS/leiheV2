@@ -52,6 +52,27 @@
             </div>
         </section>
 
+        <details x-show="!selectedRoom" class="mb-5 rounded-xl border border-theme-border bg-theme-card p-4 sm:p-5">
+            <summary class="cursor-pointer text-base font-bold text-white">Regale verwalten</summary>
+            <p class="mb-4 mt-2 text-sm text-theme-muted">Regalnamen ändern oder neue Regale hinzufügen. Beim Umbenennen werden auch die Lagerorte der zugeordneten Spiele aktualisiert.</p>
+            <form @submit.prevent="addShelf()" class="mb-4 flex flex-col gap-2 sm:flex-row">
+                <label for="new-storage-shelf" class="sr-only">Neues Regal</label>
+                <input id="new-storage-shelf" x-model="newShelfCode" maxlength="100" placeholder="Neuer Regalname"
+                       class="min-w-0 flex-1 rounded-lg border border-theme-border bg-theme-bg px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500">
+                <button type="submit" :disabled="busy" class="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-500 disabled:opacity-50">Regal hinzufügen</button>
+            </form>
+            <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                <template x-for="location in locations" :key="location">
+                    <form @submit.prevent="renameShelf(location)" class="flex min-w-0 gap-2">
+                        <label class="sr-only" :for="`shelf-edit-${location}`" x-text="`Regal ${location} umbenennen`"></label>
+                        <input :id="`shelf-edit-${location}`" x-model="shelfEdits[location]" maxlength="100"
+                               class="min-w-0 flex-1 rounded-lg border border-theme-border bg-theme-bg px-3 py-2 text-sm text-white outline-none focus:border-blue-500">
+                        <button type="submit" :disabled="busy || shelfEdits[location] === location" class="shrink-0 rounded-lg border border-theme-border px-3 py-2 text-xs font-semibold text-gray-200 hover:border-blue-500 disabled:opacity-40">Umbenennen</button>
+                    </form>
+                </template>
+            </div>
+        </details>
+
         <section x-show="selectedRoom && !error" class="space-y-4">
             <div class="flex items-center justify-between gap-3 rounded-xl border border-theme-border bg-theme-card p-4">
                 <p class="text-sm text-theme-muted" x-text="`${roomItems.length} Spiele · ${roomShelves.length} Regale`"></p>
@@ -163,4 +184,4 @@
         </div>
     </main>
 </div>
-<script src="/static/js/admin_locations.js?v=4"></script>
+<script src="/static/js/admin_locations.js?v=5"></script>

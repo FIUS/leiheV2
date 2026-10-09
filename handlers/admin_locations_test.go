@@ -1,21 +1,24 @@
 package handlers
 
-import "testing"
+import (
+	"testing"
 
-func TestKnownStorageLocationsMatchShelfPlan(t *testing.T) {
-	for _, location := range []string{
+	"leiheV2/db"
+)
+
+func TestInitialStorageShelvesMatchShelfPlan(t *testing.T) {
+	expected := []string{
 		"A1L", "A1R", "A2L", "A2R", "A3L", "A3R", "A4L", "A4R",
 		"B0", "B2L", "B2R", "B3L", "B3R", "B4L", "B4R",
 		"C1L", "C1R", "C2L", "C2R", "C3L", "C3R", "CU",
-	} {
-		if !isKnownStorageLocation(location) {
-			t.Errorf("expected %q to be a known storage location", location)
-		}
 	}
-
-	for _, location := range []string{"", "B1L", "A5L", "C1", "C4L", "C4R", "a1l"} {
-		if isKnownStorageLocation(location) {
-			t.Errorf("expected %q to be rejected as an unknown storage location", location)
+	initialShelves := db.InitialStorageShelves()
+	if len(initialShelves) != len(expected) {
+		t.Fatalf("expected %d initial shelves, got %d", len(expected), len(initialShelves))
+	}
+	for index, shelf := range expected {
+		if initialShelves[index] != shelf {
+			t.Errorf("initial shelf %d = %q, want %q", index, initialShelves[index], shelf)
 		}
 	}
 }
