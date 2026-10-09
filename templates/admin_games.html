@@ -107,7 +107,7 @@
                                     data-max-playtime="{{ .MaxPlaytime }}" data-bgg-rating="{{ if .BGGRating.Valid }}{{ .BGGRating.Float64 }}{{ end }}" data-room="{{ .Room.String }}"
                                     data-shelf="{{ .Shelf.String }}" data-image-url="{{ .ImageUrl.String }}"
                                     data-is-expansion="{{ .IsExpansion }}" data-categories="{{ .CategoryNames }}"
-                                    class="text-orange-400 hover:underline text-xs font-bold flex items-center gap-1 whitespace-nowrap">BGG Sync</button>
+                                    class="{{ if .BGGRating.Valid }}text-gray-500 hover:text-orange-400{{ else }}text-orange-400 hover:underline{{ end }} text-xs font-bold flex items-center gap-1 whitespace-nowrap">BGG Sync</button>
 
                             <div class="relative" x-data="{ menuOpen: false }" @click.outside="menuOpen = false">
                                 <button @click="menuOpen = !menuOpen" class="bg-[#1E2532] border border-theme-border text-gray-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1">
