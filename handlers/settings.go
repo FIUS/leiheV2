@@ -30,6 +30,11 @@ func UpdateAdminSettings(c *gin.Context) {
 		redirectAdminNotice(c, "/admin/settings", "error", "Bitte prüfe die Liste der E-Mail-Adressen.")
 		return
 	}
+	historyDays, err := strconv.ParseInt(strings.TrimSpace(c.PostForm("booking_history_days")), 10, 32)
+	if err != nil || historyDays < 0 || historyDays > 36500 {
+		redirectAdminNotice(c, "/admin/settings", "error", "Ungültige Einstellung.")
+		return
+	}
 	if err := queries.UpdateAppSettings(c.Request.Context(), db.AppSettings{
 		RequireDeposit:        requireDeposit,
 		ModuleBarcodesEnabled: barcodesEnabled,
@@ -37,6 +42,7 @@ func UpdateAdminSettings(c *gin.Context) {
 		EmailBookingReview:    emailReview,
 		EmailBookingUpdates:   emailUpdates,
 		IgnoredEmailAddresses: ignoredAddresses,
+		BookingHistoryDays:    int32(historyDays),
 	}); err != nil {
 		redirectAdminNotice(c, "/admin/settings", "error", "Einstellung konnte nicht gespeichert werden.")
 		return

@@ -14,6 +14,7 @@ var (
 	ErrBookingNotEditable = errors.New("booking is not editable")
 	ErrBookingConflict    = errors.New("booking conflict")
 	ErrItemUnavailable    = errors.New("one or more items are unavailable")
+	ErrUserHasActiveLoans = errors.New("user has active loans")
 )
 
 func (q *Queries) EnsureItemsAvailable(ctx context.Context, itemIDs []int32) error {
@@ -63,6 +64,7 @@ func (q *Queries) ListBookingOverview(ctx context.Context) ([]BookingOverview, e
 	rows, err := q.db.QueryContext(ctx, `
 		SELECT b.id, b.public_token,
 		       COALESCE(NULLIF(TRIM(CONCAT_WS(' ', borrower.first_name, borrower.last_name)), ''),
+		                CASE WHEN b.user_deleted THEN 'Deleted user' END,
 		                b.guest_name, b.guest_email, 'Gast'),
 		       COALESCE(borrower.email, b.guest_email),
 		       b.start_date, b.end_date, b.status::text,
@@ -188,6 +190,7 @@ func (q *Queries) SearchStaffLoanBookings(ctx context.Context, search, mode stri
 	rows, err := q.db.QueryContext(ctx, `
 		SELECT b.id, b.public_token,
 		       COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+		                CASE WHEN b.user_deleted THEN 'Deleted user' END,
 		                b.guest_name, b.guest_email, 'Gast'),
 		       COALESCE(u.email, b.guest_email, ''), COALESCE(b.deposit, ''),
 		       b.start_date, b.end_date, b.status::text
@@ -478,6 +481,10 @@ func (q *Queries) ListBookingsForUser(ctx context.Context, userID int32) ([]User
 		LEFT JOIN booking_items bi ON bi.booking_id = b.id
 		LEFT JOIN items i ON i.id = bi.item_id
 		WHERE b.user_id = $1
+		  AND b.status <> 'cancelled'
+		  AND (b.status IN ('pending', 'confirmed', 'active')
+		       OR (SELECT booking_history_days FROM app_settings WHERE id = 1) = 0
+		       OR b.end_date >= NOW() - ((SELECT booking_history_days FROM app_settings WHERE id = 1) * INTERVAL '1 day'))
 		GROUP BY b.id
 		ORDER BY b.start_date DESC, b.created_at DESC
 	`, userID)
@@ -587,6 +594,32 @@ func (q *Queries) UpdateUserBookingDates(ctx context.Context, userID, bookingID 
 			SET start_date = $3, end_date = $4
 			WHERE id = $1 AND user_id = $2 AND status = 'pending'
 		`, bookingID, userID, startDate, endDate)
+		return err
+	})
+}
+
+// DeleteUserAccount removes a user who has no active loans together with their
+// pending and confirmed bookings. Remaining bookings are kept anonymized.
+func (q *Queries) DeleteUserAccount(ctx context.Context, userID int32) error {
+	return q.InTx(ctx, func(tx *Queries) error {
+		if err := tx.db.QueryRowContext(ctx, `SELECT id FROM users WHERE id = $1 FOR UPDATE`, userID).Scan(&userID); err != nil {
+			return err
+		}
+		var hasActive bool
+		if err := tx.db.QueryRowContext(ctx, `
+			SELECT EXISTS (SELECT 1 FROM bookings WHERE user_id = $1 AND status = 'active')
+		`, userID).Scan(&hasActive); err != nil {
+			return err
+		}
+		if hasActive {
+			return ErrUserHasActiveLoans
+		}
+		if _, err := tx.db.ExecContext(ctx, `
+			DELETE FROM bookings WHERE user_id = $1 AND status IN ('pending', 'confirmed')
+		`, userID); err != nil {
+			return err
+		}
+		_, err := tx.db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, userID)
 		return err
 	})
 }

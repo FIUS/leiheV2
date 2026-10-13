@@ -21,6 +21,7 @@ services:
       - ./db/migrations/007_app_settings.sql:/docker-entrypoint-initdb.d/8_app_settings.sql
       - ./db/migrations/009_email_preferences.sql:/docker-entrypoint-initdb.d/9_email_preferences.sql
       - ./db/migrations/008_module_barcodes.sql:/docker-entrypoint-initdb.d/9_module_barcodes.sql
+      - ./db/migrations/010_account_deletion_history.sql:/docker-entrypoint-initdb.d/9_z_account_deletion_history.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U leih -d verleih"]
       interval: 5s

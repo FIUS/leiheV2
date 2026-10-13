@@ -31,6 +31,14 @@
             </div>
             {{ if not .CurrentUserIsOIDC }}<button class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-6 rounded-lg transition">Speichern</button>{{ end }}
         </form>
+
+        <div class="mt-8 border-t border-theme-border pt-6">
+            <h2 class="text-lg font-bold text-red-300">Konto löschen</h2>
+            <p class="mt-1 mb-4 text-sm text-theme-muted">Dein Konto wird dauerhaft gelöscht. Ausstehende und bestätigte Buchungen werden entfernt, vergangene Buchungen bleiben anonymisiert erhalten. Mit aktiven Ausleihen ist das Löschen nicht möglich.</p>
+            <form method="POST" action="/api/user/delete" onsubmit="return confirm('Dein Konto wirklich endgültig löschen?')">
+                <button class="rounded-lg border border-red-800 bg-red-950 px-4 py-2.5 text-sm font-bold text-red-200 hover:bg-red-900">Konto löschen</button>
+            </form>
+        </div>
     </div>
 </main>
 {{ template "footer" . }}

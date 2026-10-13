@@ -34,6 +34,11 @@
                     </span>
                 </div>
                 <input type="hidden" name="module_barcodes_enabled" value="false">
+                <div class="mt-3 rounded-lg border border-theme-border bg-theme-bg p-4">
+                    <label class="block text-sm font-semibold text-white" for="booking-history-days">Persönliche Ausleihhistorie (Tage)</label>
+                    <p class="mb-2 mt-1 text-sm text-theme-muted">Abgeschlossene Ausleihen verschwinden nach dieser Anzahl Tagen aus der Historie der Nutzer. 0 = unbegrenzt. Stornierte Buchungen werden Nutzern nie angezeigt.</p>
+                    <input id="booking-history-days" type="number" min="0" max="36500" name="booking_history_days" value="{{ .Settings.BookingHistoryDays }}" class="w-32 rounded-lg border border-theme-border bg-theme-card px-3 py-2 text-sm text-white">
+                </div>
                 <h2 class="mb-2 mt-8 text-lg font-bold text-white">E-Mail-Benachrichtigungen</h2>
                 <p class="mb-4 text-sm text-theme-muted">Wähle, welche Buchungs-E-Mails versendet werden. Bestätigungs-E-Mails zur Kontoaktivierung bleiben davon unberührt.</p>
                 <div class="space-y-3">

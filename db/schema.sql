@@ -74,6 +74,7 @@ CREATE TABLE bookings (
                           guest_name VARCHAR(255),
                           guest_email VARCHAR(255),
                           deposit TEXT,
+                          user_deleted BOOLEAN NOT NULL DEFAULT FALSE,
                           start_date TIMESTAMPTZ NOT NULL,
                           end_date TIMESTAMPTZ NOT NULL,
                           status booking_status NOT NULL DEFAULT 'pending',
@@ -87,7 +88,8 @@ CREATE TABLE app_settings (
     email_booking_received BOOLEAN NOT NULL DEFAULT TRUE,
     email_booking_review BOOLEAN NOT NULL DEFAULT TRUE,
     email_booking_updates BOOLEAN NOT NULL DEFAULT TRUE,
-    ignored_email_addresses TEXT NOT NULL DEFAULT ''
+    ignored_email_addresses TEXT NOT NULL DEFAULT '',
+    booking_history_days INT NOT NULL DEFAULT 0 CHECK (booking_history_days >= 0)
 );
 
 INSERT INTO app_settings (
@@ -109,3 +111,14 @@ CREATE INDEX idx_items_playtime ON items(min_playtime, max_playtime);
 CREATE INDEX idx_bookings_status ON bookings(status);
 CREATE INDEX idx_bookings_token ON bookings(public_token);
 CREATE INDEX idx_bookings_pending_start_date ON bookings(start_date) WHERE status = 'pending';
+
+CREATE FUNCTION mark_bookings_user_deleted() RETURNS trigger AS $$
+BEGIN
+    UPDATE bookings SET user_deleted = TRUE WHERE user_id = OLD.id;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER users_mark_bookings_deleted
+    BEFORE DELETE ON users
+    FOR EACH ROW EXECUTE FUNCTION mark_bookings_user_deleted();

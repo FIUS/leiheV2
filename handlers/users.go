@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"leiheV2/db"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
@@ -148,4 +150,27 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 	redirectAdminNotice(c, "/admin/users", "success", "Nutzer wurde gelöscht.")
+}
+
+func DeleteOwnAccount(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+	if err := queries.DeleteUserAccount(c.Request.Context(), user.ID); err != nil {
+		if errors.Is(err, db.ErrUserHasActiveLoans) {
+			c.Redirect(http.StatusFound, "/settings?error=Konto-kann-nicht-geloescht-werden-solange-Ausleihen-aktiv-sind")
+			return
+		}
+		c.Redirect(http.StatusFound, "/settings?error=Konto-konnte-nicht-geloescht-werden")
+		return
+	}
+	session := sessions.Default(c)
+	session.Clear()
+	if err := session.Save(); err != nil {
+		c.String(http.StatusInternalServerError, "Sitzung konnte nicht beendet werden")
+		return
+	}
+	c.Redirect(http.StatusFound, "/")
 }

@@ -25,6 +25,7 @@ func SetupRoutes(r *gin.Engine) {
 	r.GET("/checkout", handlers.RenderCheckoutPage)
 	r.GET("/settings", handlers.RenderUserSettings)
 	r.POST("/api/user/settings", handlers.UpdateUserSettings)
+	r.POST("/api/user/delete", handlers.DeleteOwnAccount)
 	r.GET("/bookings", handlers.RenderUserBookings)
 	r.POST("/api/user/bookings/cancel", handlers.CancelUserBooking)
 	r.POST("/api/user/bookings/update", handlers.UpdateUserBooking)
