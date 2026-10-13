@@ -154,6 +154,11 @@ func SearchBGG(c *gin.Context) {
 		return
 	}
 
+	settings, err := queries.GetAppSettings(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Einstellungen konnten nicht geladen werden"})
+		return
+	}
 	query = normalizeBGGSearchQuery(query)
 	if query == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültiger Suchbegriff"})
@@ -186,7 +191,10 @@ func SearchBGG(c *gin.Context) {
 		return
 	}
 
-	if len(bggResult.Items) > 0 {
+	if limit := int(settings.BGGSyncLimit); limit > 0 && len(bggResult.Items) > limit {
+		bggResult.Items = bggResult.Items[:limit]
+	}
+	if len(bggResult.Items) > 0 && settings.BGGLoadImages {
 		ids := make([]string, 0, len(bggResult.Items))
 		namesByID := make(map[string]string, len(bggResult.Items))
 		for _, item := range bggResult.Items {

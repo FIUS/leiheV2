@@ -21,6 +21,11 @@ func UpdateAdminSettings(c *gin.Context) {
 	emailReceived, okEmailReceived := boolSetting("email_booking_received")
 	emailReview, okEmailReview := boolSetting("email_booking_review")
 	emailUpdates, okEmailUpdates := boolSetting("email_booking_updates")
+	bggLoadImages, okBGGImages := boolSetting("bgg_load_images")
+	if !okBGGImages {
+		redirectAdminNotice(c, "/admin/settings", "error", "Ungültige Einstellung.")
+		return
+	}
 	if !okDeposit || !okBarcodes || !okEmailReceived || !okEmailReview || !okEmailUpdates {
 		redirectAdminNotice(c, "/admin/settings", "error", "Ungültige Einstellung.")
 		return
@@ -35,6 +40,11 @@ func UpdateAdminSettings(c *gin.Context) {
 		redirectAdminNotice(c, "/admin/settings", "error", "Ungültige Einstellung.")
 		return
 	}
+	bggLimit, err := strconv.ParseInt(strings.TrimSpace(c.PostForm("bgg_sync_limit")), 10, 32)
+	if err != nil || bggLimit < 1 || bggLimit > 100 {
+		redirectAdminNotice(c, "/admin/settings", "error", "Ungültige Einstellung.")
+		return
+	}
 	if err := queries.UpdateAppSettings(c.Request.Context(), db.AppSettings{
 		RequireDeposit:        requireDeposit,
 		ModuleBarcodesEnabled: barcodesEnabled,
@@ -43,6 +53,8 @@ func UpdateAdminSettings(c *gin.Context) {
 		EmailBookingUpdates:   emailUpdates,
 		IgnoredEmailAddresses: ignoredAddresses,
 		BookingHistoryDays:    int32(historyDays),
+		BGGSyncLimit:          int32(bggLimit),
+		BGGLoadImages:         bggLoadImages,
 	}); err != nil {
 		redirectAdminNotice(c, "/admin/settings", "error", "Einstellung konnte nicht gespeichert werden.")
 		return

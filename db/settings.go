@@ -10,6 +10,8 @@ type AppSettings struct {
 	EmailBookingUpdates   bool
 	IgnoredEmailAddresses string
 	BookingHistoryDays    int32
+	BGGSyncLimit          int32
+	BGGLoadImages         bool
 }
 
 func (q *Queries) GetAppSettings(ctx context.Context) (AppSettings, error) {
@@ -18,14 +20,14 @@ func (q *Queries) GetAppSettings(ctx context.Context) (AppSettings, error) {
 		SELECT require_deposit, module_barcodes_enabled,
 		       email_booking_received, email_booking_review,
 		       email_booking_updates, ignored_email_addresses,
-		       booking_history_days
+		       booking_history_days, bgg_sync_limit, bgg_load_images
 		FROM app_settings
 		WHERE id = 1
 	`).Scan(
 		&settings.RequireDeposit, &settings.ModuleBarcodesEnabled,
 		&settings.EmailBookingReceived, &settings.EmailBookingReview,
 		&settings.EmailBookingUpdates, &settings.IgnoredEmailAddresses,
-		&settings.BookingHistoryDays,
+		&settings.BookingHistoryDays, &settings.BGGSyncLimit, &settings.BGGLoadImages,
 	)
 	return settings, err
 }
@@ -36,9 +38,9 @@ func (q *Queries) UpdateAppSettings(ctx context.Context, settings AppSettings) e
 		    id, require_deposit, module_barcodes_enabled,
 		    email_booking_received, email_booking_review,
 		    email_booking_updates, ignored_email_addresses,
-		    booking_history_days
+		    booking_history_days, bgg_sync_limit, bgg_load_images
 		)
-		VALUES (1, $1, $2, $3, $4, $5, $6, $7)
+		VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (id) DO UPDATE
 		SET require_deposit = EXCLUDED.require_deposit,
 		    module_barcodes_enabled = EXCLUDED.module_barcodes_enabled,
@@ -46,12 +48,14 @@ func (q *Queries) UpdateAppSettings(ctx context.Context, settings AppSettings) e
 		    email_booking_review = EXCLUDED.email_booking_review,
 		    email_booking_updates = EXCLUDED.email_booking_updates,
 		    ignored_email_addresses = EXCLUDED.ignored_email_addresses,
-		    booking_history_days = EXCLUDED.booking_history_days
+		    booking_history_days = EXCLUDED.booking_history_days,
+		    bgg_sync_limit = EXCLUDED.bgg_sync_limit,
+		    bgg_load_images = EXCLUDED.bgg_load_images
 	`,
 		settings.RequireDeposit, settings.ModuleBarcodesEnabled,
 		settings.EmailBookingReceived, settings.EmailBookingReview,
 		settings.EmailBookingUpdates, settings.IgnoredEmailAddresses,
-		settings.BookingHistoryDays,
+		settings.BookingHistoryDays, settings.BGGSyncLimit, settings.BGGLoadImages,
 	)
 	return err
 }

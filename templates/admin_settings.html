@@ -39,6 +39,20 @@
                     <p class="mb-2 mt-1 text-sm text-theme-muted">Abgeschlossene Ausleihen verschwinden nach dieser Anzahl Tagen aus der Historie der Nutzer. 0 = unbegrenzt. Stornierte Buchungen werden Nutzern nie angezeigt.</p>
                     <input id="booking-history-days" type="number" min="0" max="36500" name="booking_history_days" value="{{ .Settings.BookingHistoryDays }}" class="w-32 rounded-lg border border-theme-border bg-theme-card px-3 py-2 text-sm text-white">
                 </div>
+                <h2 class="mb-2 mt-8 text-lg font-bold text-white">BoardGameGeek-Sync</h2>
+                <div class="rounded-lg border border-theme-border bg-theme-bg p-4">
+                    <label class="block text-sm font-semibold text-white" for="bgg-sync-limit">Maximale Anzahl geladener Treffer</label>
+                    <p class="mb-2 mt-1 text-sm text-theme-muted">So viele Suchergebnisse werden pro BGG-Suche geladen (1–100). Weniger Treffer bedeuten weniger Anfragen und schnellere Suchen.</p>
+                    <input id="bgg-sync-limit" type="number" min="1" max="100" name="bgg_sync_limit" value="{{ .Settings.BGGSyncLimit }}" class="w-32 rounded-lg border border-theme-border bg-theme-card px-3 py-2 text-sm text-white">
+                </div>
+                <div class="mt-3 flex min-w-0 items-start gap-3 rounded-lg border border-theme-border bg-theme-bg p-4">
+                    <input type="checkbox" name="bgg_load_images" value="true" {{ if .Settings.BGGLoadImages }}checked{{ end }} class="mt-1 h-4 w-4 shrink-0 accent-blue-500">
+                    <span class="min-w-0">
+                        <span class="block text-sm font-semibold text-white">Vorschaubilder in der Suche laden</span>
+                        <span class="mt-1 block break-words text-sm text-theme-muted">Lädt Vorschaubilder in den BGG-Suchergebnissen. Deaktiviert beschleunigt die Suche deutlich; die Bild-URL wird beim Übernehmen eines Spiels weiterhin gesetzt.</span>
+                    </span>
+                </div>
+                <input type="hidden" name="bgg_load_images" value="false">
                 <h2 class="mb-2 mt-8 text-lg font-bold text-white">E-Mail-Benachrichtigungen</h2>
                 <p class="mb-4 text-sm text-theme-muted">Wähle, welche Buchungs-E-Mails versendet werden. Bestätigungs-E-Mails zur Kontoaktivierung bleiben davon unberührt.</p>
                 <div class="space-y-3">

@@ -89,7 +89,9 @@ CREATE TABLE app_settings (
     email_booking_review BOOLEAN NOT NULL DEFAULT TRUE,
     email_booking_updates BOOLEAN NOT NULL DEFAULT TRUE,
     ignored_email_addresses TEXT NOT NULL DEFAULT '',
-    booking_history_days INT NOT NULL DEFAULT 0 CHECK (booking_history_days >= 0)
+    booking_history_days INT NOT NULL DEFAULT 0 CHECK (booking_history_days >= 0),
+    bgg_sync_limit INT NOT NULL DEFAULT 20 CHECK (bgg_sync_limit BETWEEN 1 AND 100),
+    bgg_load_images BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 INSERT INTO app_settings (
