@@ -191,6 +191,7 @@ func RenderUserSettings(c *gin.Context) {
 }
 
 func RenderLoginPage(c *gin.Context) {
+	rememberLoginTarget(c)
 	renderAuthPage(c, http.StatusOK, "")
 }
 
@@ -199,6 +200,7 @@ func RenderRegisterPage(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/login")
 		return
 	}
+	rememberLoginTarget(c)
 	renderAuthPage(c, http.StatusOK, "")
 }
 

@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -195,6 +196,45 @@ func RequireBarcodesModule() gin.HandlerFunc {
 	}
 }
 
+// safeNextPath returns a same-site relative path or "" if the value is unsuitable.
+func safeNextPath(value string) string {
+	value = strings.TrimSpace(value)
+	if !strings.HasPrefix(value, "/") || strings.HasPrefix(value, "//") || strings.ContainsAny(value, "\\\r\n") {
+		return ""
+	}
+	for _, prefix := range []string{"/login", "/register", "/auth/", "/logout"} {
+		if strings.HasPrefix(value, prefix) {
+			return ""
+		}
+	}
+	return value
+}
+
+func rememberLoginTarget(c *gin.Context) {
+	next := safeNextPath(c.Query("next"))
+	if next == "" {
+		if referer, err := url.Parse(c.Request.Referer()); err == nil && referer.Host == c.Request.Host {
+			next = safeNextPath(referer.RequestURI())
+		}
+	}
+	if next == "" {
+		return
+	}
+	session := sessions.Default(c)
+	session.Set("login_next", next)
+	_ = session.Save()
+}
+
+func takeLoginTarget(c *gin.Context) string {
+	session := sessions.Default(c)
+	next, _ := session.Get("login_next").(string)
+	session.Delete("login_next")
+	if next = safeNextPath(next); next == "" {
+		return "/"
+	}
+	return next
+}
+
 func Login(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/auth/stuvus/login")
 }
@@ -219,6 +259,7 @@ func OIDCLogin(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Anmeldung konnte nicht gestartet werden")
 		return
 	}
+	rememberLoginTarget(c)
 	session := sessions.Default(c)
 	session.Set("oidc_state", state)
 	if err := session.Save(); err != nil {
@@ -299,11 +340,12 @@ func OIDCCallback(c *gin.Context) {
 	}
 	session.Set("user_id", user.ID)
 	session.Set("user_role", string(user.Role))
+	next := takeLoginTarget(c)
 	if err := session.Save(); err != nil {
 		c.String(http.StatusInternalServerError, "Sitzung konnte nicht gespeichert werden")
 		return
 	}
-	c.Redirect(http.StatusFound, "/")
+	c.Redirect(http.StatusFound, next)
 }
 
 func roleFromOIDC(roles []string) string {
@@ -333,8 +375,9 @@ func LocalLogin(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Set("user_id", user.ID)
 	session.Set("user_role", string(user.Role))
+	next := takeLoginTarget(c)
 	_ = session.Save()
-	c.Redirect(http.StatusFound, "/")
+	c.Redirect(http.StatusFound, next)
 }
 
 func RegisterLocal(c *gin.Context) {
@@ -396,8 +439,9 @@ func RegisterLocal(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Set("user_id", user.ID)
 	session.Set("user_role", string(user.Role))
+	next := takeLoginTarget(c)
 	_ = session.Save()
-	c.Redirect(http.StatusFound, "/")
+	c.Redirect(http.StatusFound, next)
 }
 
 func VerifyEmail(c *gin.Context) {
