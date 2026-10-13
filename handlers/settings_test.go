@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"testing"
 
 	"leiheV2/db"
@@ -47,5 +48,31 @@ func TestEmailSettingsControlDeliveryCategoriesAndIgnoredRecipients(t *testing.T
 	}
 	if ignoredEmailAddress(settings.IgnoredEmailAddresses, "user@example.org") {
 		t.Error("unexpectedly ignored an address not in the list")
+	}
+}
+
+func TestRoleFromOIDCGroups(t *testing.T) {
+	auth = authConfig{AdminRole: "FIUS-Admin", MaintainerRole: "/maintainer", GroupClaims: []string{"groups"}}
+	defer func() { auth = authConfig{} }()
+	for _, test := range []struct {
+		groups []string
+		want   string
+	}{
+		{nil, "user"},
+		{[]string{"other"}, "user"},
+		{[]string{"maintainer"}, "maintainer"},
+		{[]string{"/Maintainer", "fius-admin"}, "admin"},
+		{[]string{"fius-admin", "maintainer"}, "admin"},
+	} {
+		if got := roleFromOIDC(test.groups); got != test.want {
+			t.Errorf("roleFromOIDC(%v) = %q, want %q", test.groups, got, test.want)
+		}
+	}
+	groups := oidcGroups(map[string]json.RawMessage{"groups": json.RawMessage(`["a","b"]`)})
+	if len(groups) != 2 {
+		t.Errorf("groups = %v", groups)
+	}
+	if groups := oidcGroups(map[string]json.RawMessage{"groups": json.RawMessage(`"a b"`)}); len(groups) != 2 {
+		t.Errorf("string groups = %v", groups)
 	}
 }

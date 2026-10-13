@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -32,6 +33,7 @@ type authConfig struct {
 	Verifier              *oidc.IDTokenVerifier
 	AdminRole             string
 	MaintainerRole        string
+	GroupClaims           []string
 	LocalAuth             bool
 	EmailVerified         bool
 }
@@ -39,12 +41,37 @@ type authConfig struct {
 var auth authConfig
 
 type oidcClaims struct {
-	Subject    string   `json:"sub"`
-	Email      string   `json:"email"`
-	Name       string   `json:"name"`
-	GivenName  string   `json:"given_name"`
-	FamilyName string   `json:"family_name"`
-	Roles      []string `json:"roles"`
+	Subject    string `json:"sub"`
+	Email      string `json:"email"`
+	Name       string `json:"name"`
+	GivenName  string `json:"given_name"`
+	FamilyName string `json:"family_name"`
+}
+
+// oidcGroups collects group names from the configured claim names (default
+// "groups" and "roles"). Values may be a string or a list of strings.
+func oidcGroups(raw map[string]json.RawMessage) []string {
+	var groups []string
+	for _, name := range auth.GroupClaims {
+		value, ok := raw[name]
+		if !ok {
+			continue
+		}
+		var list []string
+		if err := json.Unmarshal(value, &list); err != nil {
+			var single string
+			if err := json.Unmarshal(value, &single); err != nil {
+				continue
+			}
+			list = strings.FieldsFunc(single, func(r rune) bool { return r == ',' || r == ' ' })
+		}
+		groups = append(groups, list...)
+	}
+	return groups
+}
+
+func normalizeGroup(group string) string {
+	return strings.ToLower(strings.TrimPrefix(strings.TrimSpace(group), "/"))
 }
 
 func InitAuth(ctx context.Context) error {
@@ -104,6 +131,10 @@ func InitAuth(ctx context.Context) error {
 	}
 
 	auth.Verifier = provider.Verifier(&oidc.Config{ClientID: clientID})
+	auth.GroupClaims = []string{"groups", "roles"}
+	if value := strings.TrimSpace(os.Getenv("OIDC_GROUPS_CLAIM")); value != "" {
+		auth.GroupClaims = strings.FieldsFunc(value, func(r rune) bool { return r == ',' || r == ' ' })
+	}
 	auth.AdminRole = os.Getenv("OIDC_ADMIN_ROLE")
 	auth.MaintainerRole = os.Getenv("OIDC_MAINTAINER_ROLE")
 	return nil
@@ -310,8 +341,20 @@ func OIDCCallback(c *gin.Context) {
 		c.String(http.StatusUnauthorized, "OIDC-Token enthält unvollständige Benutzerdaten")
 		return
 	}
+	var rawClaims map[string]json.RawMessage
+	_ = idToken.Claims(&rawClaims)
+	groups := oidcGroups(rawClaims)
+	if len(groups) == 0 {
+		// Some providers only deliver groups through the userinfo endpoint.
+		if info, err := auth.Provider.UserInfo(c.Request.Context(), oauth2.StaticTokenSource(token)); err == nil {
+			var infoClaims map[string]json.RawMessage
+			if err := info.Claims(&infoClaims); err == nil {
+				groups = oidcGroups(infoClaims)
+			}
+		}
+	}
 
-	role := roleFromOIDC(claims.Roles)
+	role := roleFromOIDC(groups)
 	firstName, lastName := claims.GivenName, claims.FamilyName
 	if firstName == "" && claims.Name != "" {
 		parts := strings.Fields(claims.Name)
@@ -348,16 +391,23 @@ func OIDCCallback(c *gin.Context) {
 	c.Redirect(http.StatusFound, next)
 }
 
-func roleFromOIDC(roles []string) string {
-	for _, role := range roles {
-		switch strings.TrimSpace(role) {
-		case auth.AdminRole:
+func roleFromOIDC(groups []string) string {
+	admin := normalizeGroup(auth.AdminRole)
+	maintainer := normalizeGroup(auth.MaintainerRole)
+	role := "user"
+	for _, group := range groups {
+		group = normalizeGroup(group)
+		if group == "" {
+			continue
+		}
+		if admin != "" && group == admin {
 			return "admin"
-		case auth.MaintainerRole:
-			return "maintainer"
+		}
+		if maintainer != "" && group == maintainer {
+			role = "maintainer"
 		}
 	}
-	return "user"
+	return role
 }
 
 func LocalLogin(c *gin.Context) {
