@@ -53,9 +53,15 @@
             </div>
 
             <!-- Auswahl: Kategorien -->
-            <div class="space-y-3 mb-6">
-                <label class="block text-xs font-bold text-theme-muted uppercase">Kategorien</label>
-                <div class="max-h-48 overflow-y-auto space-y-2 pr-1">
+            <div class="space-y-3 mb-6" x-data="{ categoriesOpen: false }">
+                <button type="button" @click="categoriesOpen = !categoriesOpen" :aria-expanded="categoriesOpen" aria-controls="category-filter-list"
+                        class="flex w-full items-center justify-between text-xs font-bold text-theme-muted uppercase lg:pointer-events-none">
+                    <span class="flex items-center gap-2">Kategorien
+                        <span x-show="selectedCategories.length > 0" x-text="selectedCategories.length" style="display: none;" class="rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] text-white lg:hidden"></span>
+                    </span>
+                    <svg class="h-4 w-4 transition-transform lg:hidden" :class="categoriesOpen ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="category-filter-list" :class="categoriesOpen ? '' : 'hidden lg:block'" class="max-h-48 overflow-y-auto space-y-2 pr-1">
                     {{ range .Categories }}
                     <label class="flex items-center gap-3 text-sm text-gray-200 cursor-pointer">
                         <input type="checkbox" value="{{ .Name }}" x-model="selectedCategories" class="accent-blue-500 w-4 h-4 bg-theme-bg ">
